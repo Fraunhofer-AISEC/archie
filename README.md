@@ -1,7 +1,14 @@
 # ARCHIE
 
-To use this python program, Qemu with the faultplugin is needed (which can be found in qemu-lfi-code). TODO: The specific code for the fault plugin can be found in qemi-lfi-code/tests/plugin
+ARCHIE is a QEMU-based framework for ARCHitecture-Indebendent Evaluation of faults.
+It allows the user to define fault campaigns using a JSON configuration file and automatically run the howl campaign without user input.
+ARCHIE is capable of simulating permanent and transient faults into instructions, memory, and registers.
+Behavioural data of the target is collected and stored inside an HDF5 log file for later analysis.
+
+To use this python program, Qemu with the faultplugin is needed (qemu can be found in [qemu](https://github.com/tibersam/archie-qemu), the faultplugin in the faultplugin folder).
 An exemplary analysis script for an AES round skip can be found in the folder "analysis".
+
+[[_TOC_]]
 
 ## Build
 
@@ -45,9 +52,10 @@ pandas (tested 0.25.3)
 tables (tested 3.6.1)
 python-prctl (tested 1.6.1)
 numpy (tested 1.17.4)
-json (tested 2.0.9)
+json (tested 2.0.9), or json5 (tested 0.9.6)
 ```
-
+These python3 libraries can either be installed using your linux-distribution's installation method or using pip3 
+json5 is strongly recommended as it allows integers to be represented as hexadecimal numbers.
 ### Config files
 
 To use the python3 program (controller.py), two configuration files are needed. These files are json format. See https://www.json.org/json-en.html for details.
