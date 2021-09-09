@@ -2,6 +2,20 @@
 
 The order of the blocks in the json file can be switched.
 
+[[_TOC_]]
+
+## JSON vs JSON5
+
+For ARCHIE the JSON5 python3 library is strongly recommended. The main advantage above the standard JSON library is the support for Hex integers.
+Furthermore JSON5 allows to add comments to the configuration file, while JSON does not.
+For a general overview over JSON, read [here](https://www.json.org/json-en.html).
+For a general overview what JSON5 has to offer over JSON, read [here](https://json5.org/)
+
+When using JSON5, all integers, e.g addresses, can be provided as Hex numbers or normal integers. When using JSON only normal integers are allowed.
+Configuration files for JSON will work with the JSON5 library but not the other way around.
+
+If JSON5  and JSON libraries are installed, ARCHIE will use the JSON5 library.
+
 ## General structure
 The top structure is a Dictionary (in python concepts speaking).
 Here we can define general parameters.

@@ -1,14 +1,16 @@
 from multiprocessing import Process
 from multiprocessing import Manager
 import subprocess
-
 import pandas as pd
-
-import json
 import argparse
 import time
-
 import prctl
+try:
+    import json5 as json
+    print("Found JSON5 library")
+except ModuleNotFoundError:
+    import json
+    pass
 
 from faultclass import Fault
 from faultclass import python_worker
