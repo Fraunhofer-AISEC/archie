@@ -57,7 +57,6 @@ Counter is the amount of executions of the end point. 0 means at the first encou
 The end point counter is not an absolute value, but relative to the specified "start".
 The start of counting depends on if "start" is set or not. If it is set, the end point counter is enabled as soon as the start point is reached. If it is not set, the end point is enabled from the start of the execution of the kernel. This means that as soon as the "start" address in the respective TB has been found, the counter for the end point begins to run. In case of an AES algorithm, where the start was set to round 4, and the end point was set to round 9, the end point counter will start at round 4, thus terminating the plugin tracking at 4+9 rounds. Keep that in mind!
 
-**TODO**: Kann es nicht sein, dass gerade bei Schleifen (z.B: AES), start und fault in einem Block liegen? Funktioniert das plugin tracking dann überhaupt? zeitliche Trennug notwendig, örtliche nicht unbedingt
 
 ### memorydump
 Memory dump is a list of dictionaries. Each dictionary defines a memory region that should be dumped at the end of execution.
