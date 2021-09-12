@@ -13,7 +13,7 @@ An exemplary analysis script for an AES round skip can be found in the folder "a
 ## Build
 
 For the toolchain qemu and the faultplugin needs to be compiled. This can be done by running the build.sh script.
-Please make sure the required libraries for [qemu](https://wiki.qemu.org/Hosts/Linux) and the for ARCHIE the [python libraries](#installation) are installed
+Please make sure the required libraries for [qemu](https://wiki.qemu.org/Hosts/Linux) and the for ARCHIE the [python libraries](#installation) are installed.
 ```
 ./build.sh
 ```
@@ -38,11 +38,10 @@ cd ../../../faultplugin/
 make
 ```
 
-With this, qemu is build in build/debug and the plugin is build in tests/plugin/develop
-If you change the build directory for qemu, please change the path in the Makefile in tests/plugin/develop for building the plugin.
+With this, qemu is build in qemu/build/debug/ and the plugin is build in faultplugin/
+If you change the build directory for qemu, please change the path in the [Makefile](faultplugin/Makefile) in the faultplugin/ folder for building the plugin.
 
-
-## In qemu-lfi-python
+## In ARCHIE
 
 ### Installation
 
@@ -63,9 +62,9 @@ To use the python3 program (controller.py), two configuration files are needed. 
 **qemuconf.json** contains an object containing the path to the qemu executable, the plugin library and the kernel, that should be run by qemu. See "qemuconf.json" for a valid json file with paths. Please change the paths to your respective system. The folder **miniblink** contains a demo binary for initial experimentation. To test it, modify the kernel path to ``"kernel" : "miniblink/miniblink.bin``. If another architecture should be used, change the line ``"machine" : "stm32f0discovery"`` by replacing stm32f0discovery with the associated name in qemu. To find the name, execute qemu binary with option ``-M ?``.
 
 **fault.json** contains the description of faults. It contains an object that entails the start point object, endpoint object, memdump object and an array of faults. 
-Please see the descriptions in **fault-readme.md** to see how to build this json object. An example setup for several experiments can be found in fault.json
+Please see the descriptions in [**fault-readme.md**](fault-readme.md) to see how to build this json object. An example setup for several experiments can be found in fault.json
 
-The program output will be stored in an hdf5 file. For a description of how to interpret the file content see **hdf5-readme.md**.
+The program output will be stored in an hdf5 file. For a description of how to interpret the file content see [**hdf5-readme.md**](hdf5-readme.md).
 
 ### Running the program
 
@@ -96,6 +95,4 @@ To connect from gdb to the qemu session use
 targ rem:localhost:1234
 ```
 QEMU will wait unil the GDB session is attached. The debugging mode is only suitable for the analysis of a low number of faults. Stepping through a large amount of faults is cumbersome. This should be considered when adjusting the json files.
-
-
 
