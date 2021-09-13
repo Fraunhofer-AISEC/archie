@@ -116,7 +116,7 @@ cd ..
 echo "Test ARCHIE"
 python3 controller.py --debug --qemu qemuconf.json --fault fault.json test.hdf5
 
-echo "Do you want to keep log files and HDF5 file?"
+echo "Do you want to delete log files and HDF5 file?"
 select yn in "Yes" "No"; do
 	case $yn in
 		Yes ) rm log_* && rm test.hdf5 && echo "Deleted log and HDF5 files"; break;;
