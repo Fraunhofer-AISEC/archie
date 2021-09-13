@@ -14,6 +14,7 @@ An exemplary analysis script for an AES round skip can be found in the folder "a
 
 For the toolchain qemu and the faultplugin needs to be compiled. This can be done by running the build.sh script.
 Please make sure the required libraries for [qemu](https://wiki.qemu.org/Hosts/Linux) and the for ARCHIE the [python libraries](#installation) are installed.
+For Ubuntu the build script can install the missing dependencies for qemu and python. It will ask you if it should install the dependencies.
 ```
 ./build.sh
 ```
@@ -59,7 +60,9 @@ json (tested 2.0.9), or json5 (tested 0.9.6)
 ```
 These python3 libraries can either be installed using your linux-distribution's installation method or using pip3 
 json5 is strongly recommended as it allows integers to be represented as hexadecimal numbers.
-For pip3 the [requirements.txt](requirements.txt) can be used
+
+For pip3 the [requirements.txt](requirements.txt) can be used.
+If you are using pip3, please make sure to install **libcap-dev**. It is required for python-prctl. see also [https://pythonhosted.org/python-prctl/#downloading-and-installing](https://pythonhosted.org/python-prctl/#downloading-and-installing)
 ### Config files
 
 To use the python3 program (controller.py), two configuration files are needed. These files are json format. See https://www.json.org/json-en.html for details.
