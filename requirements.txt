@@ -1,0 +1,6 @@
+libiio==0.18
+numpy==1.17.4
+pandas==0.25.3
+python-prctl==1.6.1
+tables==3.6.1
+json5==0.9.6
