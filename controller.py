@@ -62,8 +62,8 @@ def detect_type(fault_type):
         return 0
     if fault_type == "register":
         return 2
-    clogger.critical("Received wrong type. Expected flash, sram, or register. Got {}".format(fault_type))
-    raise ValueError("A type was not detected. Maybe misspelled? got {} , needed flash sram register".format(fault_type))
+    clogger.critical("Received wrong type. Expected instruction, data, or register. Got {}".format(fault_type))
+    raise ValueError("A type was not detected. Maybe misspelled? got {} , needed instruction, data, or register".format(fault_type))
 
 
 def detect_model(fault_model):
