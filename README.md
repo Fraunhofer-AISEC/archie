@@ -21,13 +21,17 @@ Alternatvely the build instructions are provided in the following sections.
 
 ## In qemu
 
-First make sure the basic requirements for qemu are installed. See wiki for needed libraries (https://wiki.qemu.org/Hosts/Linux)
+First make sure the basic requirements for qemu are installed. See wiki for needed libraries (https://wiki.qemu.org/Hosts/Linux).
+On Ubuntu systems you can install the minimum required packages with:
+```
+sudo apt install git build-essential ninja-build libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev
+```
+
 Chechout subgitmodule qemu, which should checkout tcg_plugin_dev of the git. see code segment below
 
 ```
 git submodule update --init
 cd qemu
-git checkout tcg_plugin_dev
 mkdir build
 cd build
 mkdir debug
@@ -55,6 +59,7 @@ json (tested 2.0.9), or json5 (tested 0.9.6)
 ```
 These python3 libraries can either be installed using your linux-distribution's installation method or using pip3 
 json5 is strongly recommended as it allows integers to be represented as hexadecimal numbers.
+For pip3 the [requirements.txt](requirements.txt) can be used
 ### Config files
 
 To use the python3 program (controller.py), two configuration files are needed. These files are json format. See https://www.json.org/json-en.html for details.
