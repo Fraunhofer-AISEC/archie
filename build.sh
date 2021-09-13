@@ -50,10 +50,6 @@ install_python3_packages() {
 }
 
 #Begin of installation scritp
-if [[ ! -f "qemu/README.rst" ]]; then
-	echo "Checkout submodules"
-	git submodule update --init
-fi
 
 echo "Should this script try to install the required QEMU libraries and tools?"
 select yn in "YES" "NO"; do
@@ -72,6 +68,11 @@ select yn in "YES" "NO"; do
 	esac
 	echo "use 1 or 2 to answer yes or no"
 done
+
+if [[ ! -f "qemu/README.rst" ]]; then
+	echo "Checkout submodules"
+	git submodule update --init
+fi
 
 echo "Building QEMU for archie"
 cd qemu
