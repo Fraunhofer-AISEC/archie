@@ -68,7 +68,7 @@ install_python3_packages() {
 	select answer in "pip3" "distro"; do
 		case $answer in
 			pip3 ) install_python3_pip3 ; break;;
-			distro ) sudo apt install python3-tables python3-pandas python3-prctl ; break;;
+			distro ) install_python3_distro ; break;;
 		esac
 	done
 }
