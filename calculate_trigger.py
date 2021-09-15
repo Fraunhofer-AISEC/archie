@@ -1,17 +1,15 @@
-
-import pandas as pd
-
-
 from faultclass import build_filters
 
 import logging
 logger = logging.getLogger(__name__)
 
+
 def find_tb_info_row(tb_id, goldenrun_tb_info):
     idx = goldenrun_tb_info.index[goldenrun_tb_info['id'] == tb_id]
     return idx[0]
 
-def allign_fault_to_instruction( address, tbinfo_size, tbinfo_assembler, tbinfo_id):
+
+def allign_fault_to_instruction(address, tbinfo_size, tbinfo_assembler, tbinfo_id):
     asm_addresses = []
     "Start seraching for instruction addresses"
     split = tbinfo_assembler.split('[ ')
@@ -25,17 +23,18 @@ def allign_fault_to_instruction( address, tbinfo_size, tbinfo_assembler, tbinfo_
         if address >= asm_addresses[i] and address < asm_addresses[i + 1]:
             return asm_addresses[i]
 
-def search_for_fault_location( filter_lists, trigger_position, fault_address, trigger_occurences, goldenrun_tb_exec, goldenrun_tb_info):
+
+def search_for_fault_location(filter_lists, trigger_position, fault_address, trigger_occurences, goldenrun_tb_exec, goldenrun_tb_info):
     """Automatically search for trigger instruction"""
     found_tbs = []
     logger.info("search trigger for faulting instruction address {}".format(fault_address))
     for index, tb in goldenrun_tb_info.iterrows():
         if fault_address >= tb['id'] and (fault_address < tb['id'] + tb['size']):
-                found_tbs.append(tb['id'])
+            found_tbs.append(tb['id'])
     idx = None
     first = 0
     for tbs in found_tbs:
-        tmp = goldenrun_tb_exec.index[goldenrun_tb_exec['tb'] == tbs] 
+        tmp = goldenrun_tb_exec.index[goldenrun_tb_exec['tb'] == tbs]
         if first == 0:
             first = 1
             idx = tmp
@@ -46,7 +45,7 @@ def search_for_fault_location( filter_lists, trigger_position, fault_address, tr
         return -1
     idx = idx[trigger_occurences]
     idtbinfo = find_tb_info_row(goldenrun_tb_exec.at[idx, 'tb'], goldenrun_tb_info)
-    ins = allign_fault_to_instruction( fault_address, goldenrun_tb_info.at[idtbinfo, 'size'], goldenrun_tb_info.at[ idtbinfo, 'assembler'], goldenrun_tb_info.at[ idtbinfo, 'id'])
+    ins = allign_fault_to_instruction(fault_address, goldenrun_tb_info.at[idtbinfo, 'size'], goldenrun_tb_info.at[idtbinfo, 'assembler'], goldenrun_tb_info.at[idtbinfo, 'id'])
     is_first_instruction = 0
     trigger_position = trigger_position * (-1)
     while trigger_position != 0:
@@ -63,7 +62,7 @@ def search_for_fault_location( filter_lists, trigger_position, fault_address, tr
                         trigger_position = 0
                         break
         else:
-            tb_id = goldenrun_tb_exec.at[idx , 'tb']
+            tb_id = goldenrun_tb_exec.at[idx, 'tb']
             for filt in filter_lists:
                 """found matching filter"""
                 if filt[0] == tb_id:
@@ -71,7 +70,7 @@ def search_for_fault_location( filter_lists, trigger_position, fault_address, tr
                         if filt[i] == ins:
                             is_first_instruction = 1
                             """Case ins is in the current tb"""
-                            if i >= trigger_position :
+                            if i >= trigger_position:
                                 i = i - trigger_position
                                 ins = filt[i]
                                 trigger_position = 0
@@ -80,7 +79,6 @@ def search_for_fault_location( filter_lists, trigger_position, fault_address, tr
                                 trigger_position = trigger_position - i
                                 idx = idx - 1
                             break
-    
     logger.info("Found trigger for faulting instruction address {} at {}".format(fault_address, ins))
     return ins
 
@@ -106,7 +104,12 @@ def calculate_trigger_addresses(fault_list, goldenrun_tb_exec, goldenrun_tb_info
                                     found = True
                                     break
                     if found is False:
-                        tbs= search_for_fault_location( lists, fault.trigger.address , fault.address, fault.trigger.hitcounter, goldenrun_tb_exec, goldenrun_tb_info)
+                        tbs = search_for_fault_location(lists,
+                                                       fault.trigger.address,
+                                                       fault.address,
+                                                       fault.trigger.hitcounter,
+                                                       goldenrun_tb_exec,
+                                                       goldenrun_tb_info)
                         d = {}
                         d['faultaddress'] = fault.address
                         d['triggerhitcounter'] = fault.trigger.hitcounter

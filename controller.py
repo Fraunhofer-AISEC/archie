@@ -173,11 +173,11 @@ def controller(hdf5path,
         [config_qemu['max_instruction_count'],
          goldenrun_data,
          faultlist] = run_goldenrun(config_qemu,
-                                         qemu_output,
-                                         q,
-                                         faultlist,
-                                         qemu_pre,
-                                         qemu_post)
+                                    qemu_output,
+                                    q,
+                                    faultlist,
+                                    qemu_pre,
+                                    qemu_post)
     p_logger = Process(target=logger,
                        args=(hdf5path,
                              hdf5mode,
@@ -200,9 +200,9 @@ def controller(hdf5path,
     goldenrun_data['tbexec'] = pd.DataFrame(goldenrun_data['tbexec'])
     goldenrun_data['tbinfo'] = pd.DataFrame(goldenrun_data['tbinfo'])
     goldenrun_data['meminfo'] = pd.DataFrame(goldenrun_data['meminfo'])
-    if  'armregisters' in goldenrun_data:
+    if 'armregisters' in goldenrun_data:
         goldenrun_data['armregisters'] = pd.DataFrame(goldenrun_data['armregisters'])
-    if  'riscvregisters' in goldenrun_data:
+    if 'riscvregisters' in goldenrun_data:
         goldenrun_data['riscvregisters'] = pd.DataFrame(goldenrun_data['riscvregisters'])
     itter = 0
     times = []
@@ -232,7 +232,7 @@ def controller(hdf5path,
                 p_context['start_time'] = time.time()
                 p_list.append(p_context)
                 clogger.info("Started worker {}. Running: {}.".format(faults['index'],
-                                                                len_p_list_cached + 1))
+                                                                      len_p_list_cached + 1))
             else:
                 if len(p_list) == 0 and len(faultlist) == itter:
                     clogger.info("Done inserting qemu jobs")
@@ -339,6 +339,7 @@ def get_argument_parser():
                         required=False)
     return parser
 
+
 def process_arguments(args):
     parguments = {}
     if args.append is False:
@@ -370,7 +371,7 @@ def process_arguments(args):
     if args.gdb:
         qemu_conf['gdb'] = True
         # hard set to 1 worker, because all qemus use the same port
-        num_workers = 1
+        parguments['num_workers'] = 1
 
     faultlist = json.load(args.faults)
     if 'start' in faultlist:
@@ -411,6 +412,7 @@ def process_arguments(args):
     parguments['faultlist'] = faultlist
     return parguments
 
+
 if __name__ == '__main__':
     """
     Main function to programm
@@ -426,19 +428,19 @@ if __name__ == '__main__':
     else:
         logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s : %(message)s', level=logging.INFO)
     p = Process(target=controller,
-                args=(args.hdf5file,                    #hdf5path
-                      parguments['hdf5mode'],           #hdf5mode
-                      parguments['faultlist'],          #faultlist
-                      parguments['qemu_conf'],          #config_qemu
-                      parguments['num_workers'],        #num_workers
-                      parguments['queuedepth'],         #queuedepth
-                      parguments['compressionlevel'],   #compressionlevel
-                      args.debug,                       #qemu_output
-                      parguments['goldenrun'],          #goldenrun
-                      hdf5collector,                    #logger
-                      None,                             #qemu_pre
-                      None,                             #qemu_post
-                      None)                             #logger_postprocess
+                args=(args.hdf5file,                    # hdf5path
+                      parguments['hdf5mode'],           # hdf5mode
+                      parguments['faultlist'],          # faultlist
+                      parguments['qemu_conf'],          # config_qemu
+                      parguments['num_workers'],        # num_workers
+                      parguments['queuedepth'],         # queuedepth
+                      parguments['compressionlevel'],   # compressionlevel
+                      args.debug,                       # qemu_output
+                      parguments['goldenrun'],          # goldenrun
+                      hdf5collector,                    # logger
+                      None,                             # qemu_pre
+                      None,                             # qemu_post
+                      None)                             # logger_postprocess
                 )
     p.start()
     p.join()

@@ -58,7 +58,7 @@ class Fault:
         tmp = self.mask - pow(2, 64)
         if tmp < 0:
             tmp = 0
-        out = out + " {:d} {:d} \n".format( tmp,self.mask - tmp)
+        out = out + " {:d} {:d} \n".format(tmp, self.mask - tmp)
         out = out + "$$[Fault_Ende]\n"
         tmp = fifo.write(out)
         fifo.flush()
@@ -396,6 +396,7 @@ def readout_arm_registers(line):
     armregisters['xpsr'] = int(split[18])
     return armregisters
 
+
 def readout_riscv_registers(line):
     split = line.split('|')
     riscvregister = {}
@@ -436,12 +437,14 @@ def readout_riscv_registers(line):
     riscvregister['x32'] = int(split[34])
     return riscvregister
 
+
 def readout_tb_faulted(line):
     split = line.split('|')
     tbfaulted = {}
     tbfaulted['faultaddress'] = int(split[0], 0)
     tbfaulted['assembly'] = (split[1].replace('!!', '\n'))
     return tbfaulted
+
 
 def diff_arm_registers(armregisterlist, goldenarmregisterlist):
     df1 = pd.DataFrame(armregisterlist)
@@ -620,16 +623,16 @@ def readout_data(pipe,
             elif 'meminfo' in state:
                 memlist.append(readout_meminfo(line))
             elif 'memdump' in state:
-                [memdumplist, memdumpdict, memdumptmp]  = readout_memdump(line,
-                                                                          memdumplist,
-                                                                          memdumpdict,
-                                                                          memdumptmp)
+                [memdumplist, memdumpdict, memdumptmp] = readout_memdump(line,
+                                                                         memdumplist,
+                                                                         memdumpdict,
+                                                                         memdumptmp)
             elif 'armregisters' in state:
                 registerlist.append(readout_arm_registers(line))
             elif 'riscvregisters' in state:
                 registerlist.append(readout_riscv_registers(line))
             elif 'tbfaulted' in state:
-                tbfaultedlist.append(readout_tb_faulted(line)) 
+                tbfaultedlist.append(readout_tb_faulted(line))
             else:
                 logger.warning("In exp {} unknown state {}".format(index, line))
     return mem
@@ -799,7 +802,7 @@ def python_worker(fault_list,
         logger.debug("Started QEMU")
         """Write faults to config pipe"""
         for fault in fault_list:
-            i = fault.write_to_fifo_new(config_fifo)
+            fault.write_to_fifo_new(config_fifo)
         logger.debug("Wrote config to qemu")
         """
         From here Qemu has started execution. Now prepare for
@@ -822,4 +825,3 @@ def python_worker(fault_list,
         p_qemu.terminate()
         p_qemu.join()
         logger.warning("Terminate Worker {}".format(index))
-

@@ -16,9 +16,11 @@ class translation_block_table(tables.IsDescription):
     num_exec    = tables.UInt64Col()
     assembler   = tables.StringCol(1000)
 
+
 class translation_block_faulted_table(tables.IsDescription):
     faultaddress = tables.UInt64Col()
     assembler    = tables.StringCol(1000)
+
 
 class translation_block_exec_table(tables.IsDescription):
     tb = tables.UInt64Col()
@@ -43,10 +45,12 @@ class fault_table(tables.IsDescription):
     fault_lifespan = tables.UInt64Col()
     fault_mask = tables.UInt64Col()
 
+
 class memory_dump_table(tables.IsDescription):
     address = tables.UInt64Col()
     length = tables.UInt64Col()
     numdumps = tables.UInt64Col()
+
 
 class arm_registers_table(tables.IsDescription):
     pc = tables.UInt64Col()
@@ -68,6 +72,7 @@ class arm_registers_table(tables.IsDescription):
     r14 = tables.UInt64Col()
     r15 = tables.UInt64Col()
     xpsr = tables.UInt64Col()
+
 
 class riscv_registers_table(tables.IsDescription):
     pc = tables.UInt64Col()
@@ -105,7 +110,9 @@ class riscv_registers_table(tables.IsDescription):
     x31 = tables.UInt64Col()
     x32 = tables.UInt64Col()
 
+
 binary_atom = tables.UInt8Atom()
+
 
 def process_tb_faulted(f, group, tbfaulted_list, myfilter):
     tbfaultedtable = f.create_table(group, 'tbfaulted', translation_block_faulted_table,
@@ -118,6 +125,7 @@ def process_tb_faulted(f, group, tbfaulted_list, myfilter):
         tbfaultedrow.append()
     tbfaultedtable.flush()
     tbfaultedtable.close()
+
 
 def process_riscv_registers(f, group, riscvregister_list, myfilter):
     riscvregistertable = f.create_table(group, 'riscvregisters', riscv_registers_table,
@@ -260,7 +268,7 @@ def process_tbinfo(f, group, tbinfolist, myfilter):
 def process_tbexec(f, group, tbexeclist, myfilter):
     # create table
     tbexectable = f.create_table(group, 'tbexeclist', translation_block_exec_table,
-                                 "Translation block execution list table" ,
+                                 "Translation block execution list table",
                                  expectedrows=(len(tbexeclist)), filters=myfilter)
     tbexecrow = tbexectable.row
     for tbexec in tbexeclist:
@@ -288,6 +296,7 @@ def process_memory_info(f, group, meminfolist, myfilter):
     meminfotable.flush()
     meminfotable.close()
 
+
 def hdf5collector(hdf5path, mode, q, num_exp, compressionlevel, logger_postprocess=None):
     prctl.set_name("logger")
     prctl.set_proctitle("logger")
@@ -301,7 +310,7 @@ def hdf5collector(hdf5path, mode, q, num_exp, compressionlevel, logger_postproce
     tmp = '{}'.format(num_exp)
     groupname = 'experiment{:0' + '{}'.format(len(tmp)) + 'd}'
     while(num_exp > 0):
-        #readout queue and get next output from qemu. Will block
+        # readout queue and get next output from qemu. Will block
         exp = q.get()
         t1 = time.time()
         logger.info("got exp {}, {} still need to be performed. Took {}s. Elements in queu: {}".format(exp['index'], num_exp, t1 - t0, q.qsize()))
@@ -325,7 +334,7 @@ def hdf5collector(hdf5path, mode, q, num_exp, compressionlevel, logger_postproce
             exp_group = f.create_group("/", 'Goldenrun', "Group containing all information about goldenrun")
         else:
             raise ValueError("Index is not supposed to be negative")
-        
+
         # safe tbinfo
         if 'tbinfo' in exp:
             process_tbinfo(f, exp_group, exp['tbinfo'], myfilter)

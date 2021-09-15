@@ -18,7 +18,6 @@ def run_goldenrun(config_qemu, qemu_output, data_queue,
     dummyfaultlist = []
     dummyfaultlist.append(dummyfault)
     q = Queue()
-    tb_max_absolut = 0
     data_end = {}
     goldenrun_config['qemu'] = config_qemu['qemu']
     goldenrun_config['kernel'] = config_qemu['kernel']
@@ -103,7 +102,7 @@ def checktriggers_in_tb(faultconfig, data):
     logger.info("remove del items")
     tmp.drop(idx, inplace=True)
     logger.info("fix index")
-    tmp.reset_index(drop = True, inplace = True)
+    tmp.reset_index(drop=True, inplace=True)
     tmp['index'] = tmp.index
     logger.info("convert back")
     faultconfig = tmp.to_dict('records')
