@@ -1,7 +1,7 @@
 # ARCHIE
 
-ARCHIE is a QEMU-based framework for ARCHitecture-Indebendent Evaluation of faults.
-It allows the user to define fault campaigns using a JSON configuration file and automatically run the howl campaign without user input.
+ARCHIE is a QEMU-based framework for ARCHitecture-Independent Evaluation of faults.
+It allows the user to define fault campaigns using a JSON configuration file and automatically run the whole campaign without user input.
 ARCHIE is capable of simulating permanent and transient faults into instructions, memory, and registers.
 Behavioural data of the target is collected and stored inside an HDF5 log file for later analysis.
 
@@ -18,7 +18,7 @@ For Ubuntu the build script can install the missing dependencies for qemu and py
 ```
 ./build.sh
 ```
-Alternatvely the build instructions are provided in the following sections.
+Alternatively the build instructions are provided in the following sections.
 
 ## In qemu
 
@@ -28,7 +28,7 @@ On Ubuntu systems you can install the minimum required packages with:
 sudo apt install git build-essential ninja-build libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev
 ```
 
-Chechout subgitmodule qemu, which should checkout tcg_plugin_dev of the git. see code segment below
+Checkout git submodule qemu, which should checkout tcg_plugin_dev of the git. see code segment below.
 
 ```
 git submodule update --init
@@ -63,6 +63,7 @@ json5 is strongly recommended as it allows integers to be represented as hexadec
 
 For pip3 the [requirements.txt](requirements.txt) can be used.
 If you are using pip3, please make sure to install **libcap-dev**. It is required for python-prctl. see also [https://pythonhosted.org/python-prctl/#downloading-and-installing](https://pythonhosted.org/python-prctl/#downloading-and-installing)
+
 ### Config files
 
 To use the python3 program (controller.py), two configuration files are needed. These files are json format. See https://www.json.org/json-en.html for details.
@@ -89,12 +90,11 @@ To obtain further information on the input parameters, type:
 python3 controller.py --help
 ```
 
-#### Gnu Debugger
+#### GNU Debugger
 
 It is possible to connect to a running qemu instance with gdb. To use this feature in the framework and observe introduced faults the --gdb flag can be used.
 It will start the internal qemu process with gdb enabled and stops at startup of the simulated system. To connect to qemu from gdb use port 1234.
-It also will force the framework to only spawn one worker and it will step through all faults configured in fault.json. If one specific fault is required,
- the json file needs to be edited to only contain this specific fault.
+It also will force the framework to only spawn one worker and it will step through all faults configured in fault.json. If one specific fault is required, the json file needs to be edited to only contain this specific fault.
 ```
 python3 controller.py --gdb --fault fault.json --qemu qemuconf.json output.hdf5
 ```
