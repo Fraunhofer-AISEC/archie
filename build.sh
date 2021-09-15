@@ -6,57 +6,38 @@ build_dir="build/debug"
 
 install_qemu_packages() {
 	echo "Install QEMU dependencies"
-	echo "Try to findout distro"
-	test -e /etc/os-release && os_release='/etc/os-release' || os_release='/usr/lib/os-release'
-	. "${os_release}"
+	echo "Try to find out distro"
 	echo "Running on ${PRETTY_NAME:-Linux}"
-
-	if [ -f /etc/os-release ]; then
-		if [ "${ID:-linux}" = "debian" ] || [ "${ID_LIKE#*debian*}" != "${ID_LIKE}" ]
-		then
-    			echo "Looks like Debian!"
-			sudo apt-get install git build-essential ninja-build libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev
-		else
-			echo "Distro Version not supported by script. Please install dependencies of QEMU by looking in the QEMU wiki"
-		fi
-	else 
-		echo "Distro version not supported by script. Please install dependencies described in QEMU wiki"
-	fi 
+	if [ "${ID:-linux}" = "debian" ] || [ "${ID_LIKE#*debian*}" != "${ID_LIKE}" ]
+	then
+		echo "Looks like Debian!"
+		sudo apt-get install git build-essential ninja-build libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev
+	else
+		echo "Distro Version not supported by script. Please install dependencies of QEMU by looking in the QEMU wiki"
+	fi
 }
 
 install_python3_pip3() {
-	test -e /etc/os-release && os_release='/etc/os-release' || os_release='/usr/lib/os-release'
-	. "${os_release}"
 	echo "Running on ${PRETTY_NAME:-Linux}"
-	if [ -f /etc/os-release ]; then
-		if [ "${ID:-linux}" = "debian" ] || [ "${ID_LIKE#*debian*}" != "${ID_LIKE}" ]
-		then
-    			echo "Looks like Debian!"
-			echo "Need to install libcap-dev for python-prctl"
-			sudo apt install libcap-dev
-		else
-			echo "You might need to install libcap-dev for python-prctl"
-		fi
+	if [ "${ID:-linux}" = "debian" ] || [ "${ID_LIKE#*debian*}" != "${ID_LIKE}" ]
+	then
+		echo "Looks like Debian!"
+		echo "Need to install libcap-dev for python-prctl"
+		sudo apt install libcap-dev
 	else
 		echo "You might need to install libcap-dev for python-prctl"
 	fi
 
-	echo "Use pip3"
+	echo "Install with pip3"
 	pip3 install -r requirements.txt
 }
 
 install_python3_distro() {
-	test -e /etc/os-release && os_release='/etc/os-release' || os_release='/usr/lib/os-release'
-        . "${os_release}"
-        echo "Running on ${PRETTY_NAME:-Linux}"
-        if [ -f /etc/os-release ]; then 
-                if [ "${ID:-linux}" = "debian" ] || [ "${ID_LIKE#*debian*}" != "${ID_LIKE}" ]
-                then
-                        echo "Looks like Debian!"
-			sudo apt-get install python3-tables python3-pandas python3-prctl
-		else
-			echo "Distro package manager not yet supported"
-		fi
+	echo "Running on ${PRETTY_NAME:-Linux}"
+	if [ "${ID:-linux}" = "debian" ] || [ "${ID_LIKE#*debian*}" != "${ID_LIKE}" ]
+	then
+		echo "Looks like Debian!"
+		sudo apt-get install python3-tables python3-pandas python3-prctl
 	else
 		echo "Distro package manager not yet supported"
 	fi
@@ -73,8 +54,11 @@ install_python3_packages() {
 	done
 }
 
-#Begin of installation scritp
+#Begin of installation script
 
+
+test -e /etc/os-release && os_release='/etc/os-release'  ||  test -e /usr/lib/os-release && os_release='/usr/lib/os-release' 
+. "${os_release}"
 
 echo "Should this script try to install the required QEMU libraries and tools?"
 select yn in "YES" "NO"; do
@@ -117,10 +101,10 @@ echo "Test ARCHIE"
 python3 controller.py --debug --qemu qemuconf.json --fault fault.json test.hdf5
 
 echo "Do you want to delete log files and HDF5 file?"
-select yn in "Yes" "No"; do
+select yn in "YES" "NO"; do
 	case $yn in
-		Yes ) rm log_* && rm test.hdf5 && echo "Deleted log and HDF5 files"; break;;
-		No ) echo "cmd to delete: rm log_* && rm test.hdf5"; break;;
+		YES ) rm log_* && rm test.hdf5 && echo "Deleted log and HDF5 files"; break;;
+		NO ) echo "cmd to delete: rm log_* && rm test.hdf5"; break;;
 	esac
 	echo "Please type the number corresponding to Yes or No"
 done
