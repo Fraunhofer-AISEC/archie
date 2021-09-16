@@ -1,6 +1,6 @@
 # ARCHIE
 
-[ARCHIE] (https://fdtc.deib.polimi.it/FDTC21/slides/session%201%20-%20paper%203.pdf) is a QEMU-based framework for ARCHitecture-Independent Evaluation of faults.
+[ARCHIE](https://fdtc.deib.polimi.it/FDTC21/slides/session%201%20-%20paper%203.pdf) is a QEMU-based framework for ARCHitecture-Independent Evaluation of faults.
 It allows the user to define fault campaigns using a JSON configuration file and automatically run the whole campaign without additional user input.
 ARCHIE is capable of simulating permanent and transient faults in instructions, memory, and registers.
 Behavioral data of the target is collected and stored inside an HDF5 log file for later analysis.
