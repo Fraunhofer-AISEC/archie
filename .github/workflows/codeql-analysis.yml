@@ -22,7 +22,7 @@ on:
 
 jobs:
   analyze_cpp:
-    name: Analyze cpp
+    name: Analyze
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -30,7 +30,7 @@ jobs:
       security-events: write
 
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         language: [ 'cpp', 'python' ]
         # CodeQL supports [ 'cpp', 'csharp', 'go', 'java', 'javascript', 'python' ]
@@ -45,9 +45,13 @@ jobs:
       if: ${{ matrix.language == 'cpp'}}
       run: git submodule update --init
 
-    - name: Install Packages
+    - name: Install C Packages
       if: ${{ matrix.language == 'cpp'}}
       run: sudo apt install -y build-essential ninja-build libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev
+
+    - name: Install python Packages
+      if: ${{matrix.language ==  'python'}}
+      run: sudo apt install -y python3-tables python3-pandas python3-prctl libcap-dev
 
     - name: Build QEMU
       if: ${{ matrix.language == 'cpp'}}
