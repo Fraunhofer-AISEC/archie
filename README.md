@@ -1,5 +1,7 @@
 # ARCHIE
 
+[![Build](https://github.com/Fraunhofer-AISEC/archie/actions/workflows/build.yml/badge.svg)](https://github.com/Fraunhofer-AISEC/archie/actions/workflows/build.yml)
+
 [ARCHIE](https://fdtc.deib.polimi.it/FDTC21/slides/session%201%20-%20paper%203.pdf) is a QEMU-based framework for ARCHitecture-Independent Evaluation of faults.
 It allows the user to define fault campaigns using a JSON configuration file and automatically run the whole campaign without additional user input.
 ARCHIE is capable of simulating permanent and transient faults in instructions, memory, and registers.
