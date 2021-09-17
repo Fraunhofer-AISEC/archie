@@ -9,7 +9,7 @@ Behavioral data of the target is collected and stored inside an HDF5 log file fo
 
 To use this Python program, QEMU with the fault plugin is needed (QEMU can be found in [qemu](https://github.com/Fraunhofer-AISEC/archie-qemu), the fault plugin can be found in the [faultplugin](faultplugin) folder).
 
-An exemplary analysis script for an Advanced Encryption Standard (AES) round skip can be found in the folder "analysis".
+An example project, which injects faults into an embedded TinyAES firmware, can be found unter [https://github.com/tibersam/archie-aes-example](https://github.com/tibersam/archie-aes-example)
 
 [[_TOC_]]
 
