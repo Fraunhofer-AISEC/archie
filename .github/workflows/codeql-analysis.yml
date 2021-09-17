@@ -51,7 +51,7 @@ jobs:
 
     - name: Install python Packages
       if: ${{matrix.language ==  'python'}}
-      run: sudo apt install -y python3-tables python3-pandas python3-prctl
+      run: sudo apt install -y python3-tables python3-pandas python3-prctl libcap-dev
 
     - name: Build QEMU
       if: ${{ matrix.language == 'cpp'}}
