@@ -7,7 +7,7 @@ def generate_groupname_list(faultgroup):
     for node in faultgroup._f_itter_nodes('Group'):
         yield node._v_name
 
-def findout_endstatus_stat(faultgroup, interestlist=None):
+def filter_endstatus_status(faultgroup, interestlist=None):
     """
     Sort all Experiments into reached end point (success) or not (failed).
     """
@@ -27,7 +27,7 @@ def findout_endstatus_stat(faultgroup, interestlist=None):
 # 0 memory fault
 # 1 instruction fault
 # 2 register fault 
-def findout_experiment_type(faultgroup, faulttype, interestlist=None):
+def filter_experiment_type(faultgroup, faulttype, interestlist=None):
     """
     Filters for a specific fault target. If interestlist is given only experiments in this list will be analysed.
     """
@@ -56,7 +56,7 @@ def findout_experiment_type(faultgroup, faulttype, interestlist=None):
 # 0 set 0
 # 1 set 1
 # 2 Toggle
-def findout_experiment_model(faultgroup, faultmodel, interestlist=None):
+def filter_experiment_model(faultgroup, faultmodel, interestlist=None):
     """
     Filter for a specific fault model. If interestlist is given only experiments in this list will be analysed.
     """
@@ -80,3 +80,5 @@ def findout_experiment_model(faultgroup, faultmodel, interestlist=None):
             if row['fault_type'] == faultmodel:
                 groupnames.append(node._v_name)
     return groupnames
+
+
