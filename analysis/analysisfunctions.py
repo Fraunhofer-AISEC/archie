@@ -97,3 +97,18 @@ def filter_faultaddress_exp(faultgroup , lowaddress, highaddress, interestlist=N
                 retgroups.append(node._v_name)
     return retgroups
 
+def filter_triggercounter_exp(faultgroup , lowcounter, highcounter, interestlist=None):
+    """
+    Filter for a specific trigger hit counter values. If interestlist is given only experiments in this list will be analysed
+    """
+    if interestlist is None:
+        interestlist = generate_groupname_list(faultgroup)
+
+    retgroups = []
+    for nodename in interestlist:
+        node = faultgroup._f_get_child(nodename)
+        faulttable = node.faults.read()
+        for faultrow in faulttable:
+            if (faultrow['trigger_hitcounter'] >= lowcounter) and (faultrow['trigger_hitcounter'] <= highcounter):
+                retgroups.append(node._v_name)
+    return retgroups
