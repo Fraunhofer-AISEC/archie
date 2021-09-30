@@ -7,6 +7,18 @@ def generate_groupname_list(faultgroup):
     for node in faultgroup._f_itter_nodes('Group'):
         yield node._v_name
 
+def intersectlists(list1, list2):
+    """
+    Returns list1 ^ list2 (aka the intersection between the list)
+    """
+    return list(set(list1).intersection(list2))
+
+def differenclists(list1, list2):
+    """
+    Returns list1 \ list2 (aka all elements in list 1 that are not in list 2)
+    """
+    return list(set(list1).difference(list2))
+
 def filter_endstatus_status(faultgroup, interestlist=None):
     """
     Sort all Experiments into reached end point (success) or not (failed).
