@@ -102,6 +102,25 @@ def filter_experiment_model(faultgroup, faultmodel, interestlist=None):
     return groupnames
 
 
+def filter_experiment_faultmask(faultgroup, mask, interestlist=None):
+    """
+    Filter for a certain fault maks. If interestlist is given only experiments
+    in this list will be analysed.
+    """
+    if interestlist is None:
+        interestlist = generate_groupname_list(faultgroup)
+
+    retgroups = []
+    for nodename in interestlist:
+        node = faultgroup._f_get_child(nodename)
+        faulttable = node.faults.read()
+        for faultrow in faulttable:
+            if faultrow['fault_mask'] == mask:
+                retgroups.append(node._v_name)
+                break
+    return retgroups
+
+
 def filter_faultaddress_exp(faultgroup, lowaddress, highaddress, interestlist=None):
     """
     Filter for a specific fault address range. If interestlist is given only
