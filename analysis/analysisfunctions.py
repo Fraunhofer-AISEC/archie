@@ -29,7 +29,7 @@ def findout_endstatus_stat(faultgroup, interestlist=None):
 # 2 register fault 
 def findout_experiment_type(faultgroup, faulttype, interestlist=None):
     """
-    Filters for a specific fault type. If interestlist is given only experiments in this list will be analysed.
+    Filters for a specific fault target. If interestlist is given only experiments in this list will be analysed.
     """
     groupnames = []
     if not isinstance(faulttype, int):
@@ -50,5 +50,33 @@ def findout_experiment_type(faultgroup, faulttype, interestlist=None):
         table = node.faults
         for row in table.iterrows():
             if row['fault_type'] == faulttype:
+                groupnames.append(node._v_name)
+    return groupnames
+
+# 0 set 0
+# 1 set 1
+# 2 Toggle
+def findout_experiment_model(faultgroup, faultmodel, interestlist=None):
+    """
+    Filter for a specific fault model. If interestlist is given only experiments in this list will be analysed.
+    """
+    if not isinstance(faultmodel, int):
+        if "set0" in faultmodel:
+            faultmodel = 0
+        elif "set1" in faultmodel:
+            faultmodel = 1
+        elif "toggle" in faultmodel:
+            faultmodel = 2
+        else:
+            raise ValueError("Faultmodel not understood")
+    if interestlist is None:
+        interestlist = generate_groupname_list(faultgroup)
+
+    groupnames = []
+    for nodename in interestlist:
+        node = faultgroup._f_get_child(nodename)
+        table = node.faults
+        for row in table.iterrows():
+            if row['fault_type'] == faultmodel:
                 groupnames.append(node._v_name)
     return groupnames
