@@ -5,7 +5,7 @@ def generate_groupname_list(faultgroup):
     """
     Generator to get names of all childs in faultgroup
     """
-    for node in faultgroup._f_itter_nodes('Group'):
+    for node in faultgroup._f_iter_nodes('Group'):
         yield node._v_name
 
 
