@@ -1,5 +1,6 @@
 import tables
 
+
 def generate_groupname_list(faultgroup):
     """
     Generator to get names of all childs in faultgroup
@@ -7,17 +8,20 @@ def generate_groupname_list(faultgroup):
     for node in faultgroup._f_itter_nodes('Group'):
         yield node._v_name
 
+
 def intersectlists(list1, list2):
     """
     Returns list1 ^ list2 (aka the intersection between the list)
     """
     return list(set(list1).intersection(list2))
 
+
 def differenclists(list1, list2):
     """
     Returns list1 \ list2 (aka all elements in list 1 that are not in list 2)
     """
     return list(set(list1).difference(list2))
+
 
 def filter_endstatus_status(faultgroup, interestlist=None):
     """
@@ -36,12 +40,14 @@ def filter_endstatus_status(faultgroup, interestlist=None):
             success.append(node._v_name)
     return [success, failed]
 
-# 0 memory fault
-# 1 instruction fault
-# 2 register fault 
+
 def filter_experiment_type(faultgroup, faulttype, interestlist=None):
     """
-    Filters for a specific fault target. If interestlist is given only experiments in this list will be analysed.
+    Filters for a specific fault target. If interestlist is given only
+    experiments in this list will be analysed.
+    0 memory fault
+    1 instruction fault
+    2 register fault
     """
     groupnames = []
     if not isinstance(faulttype, int):
@@ -65,12 +71,14 @@ def filter_experiment_type(faultgroup, faulttype, interestlist=None):
                 groupnames.append(node._v_name)
     return groupnames
 
-# 0 set 0
-# 1 set 1
-# 2 Toggle
+
 def filter_experiment_model(faultgroup, faultmodel, interestlist=None):
     """
-    Filter for a specific fault model. If interestlist is given only experiments in this list will be analysed.
+    Filter for a specific fault model. If interestlist is given only experiments
+    in this list will be analysed.
+    0 set 0
+    1 set 1
+    2 Toggle
     """
     if not isinstance(faultmodel, int):
         if "set0" in faultmodel:
@@ -93,9 +101,11 @@ def filter_experiment_model(faultgroup, faultmodel, interestlist=None):
                 groupnames.append(node._v_name)
     return groupnames
 
-def filter_faultaddress_exp(faultgroup , lowaddress, highaddress, interestlist=None):
+
+def filter_faultaddress_exp(faultgroup, lowaddress, highaddress, interestlist=None):
     """
-    Filter for a specific fault address range. If interestlist is given only experiments in this list will be analysed
+    Filter for a specific fault address range. If interestlist is given only
+    experiments in this list will be analysed
     """
     if interestlist is None:
         interestlist = generate_groupname_list(faultgroup)
@@ -109,9 +119,11 @@ def filter_faultaddress_exp(faultgroup , lowaddress, highaddress, interestlist=N
                 retgroups.append(node._v_name)
     return retgroups
 
-def filter_triggercounter_exp(faultgroup , lowcounter, highcounter, interestlist=None):
+
+def filter_triggercounter_exp(faultgroup, lowcounter, highcounter, interestlist=None):
     """
-    Filter for a specific trigger hit counter values. If interestlist is given only experiments in this list will be analysed
+    Filter for a specific trigger hit counter values. If interestlist is given
+    only experiments in this list will be analysed
     """
     if interestlist is None:
         interestlist = generate_groupname_list(faultgroup)
