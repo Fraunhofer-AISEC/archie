@@ -23,6 +23,25 @@ def differenclists(list1, list2):
     return list(set(list1).difference(list2))
 
 
+def generic_filter_faults(faultgroup, columname, lowvalue, highvalue=None, interestlist=None):
+    """
+    Access function to faults table and filter experiments
+    """
+    if interestlist is None:
+        interestlist = generate_groupname_list(faultgroup)
+    if highvalue is None:
+        highvalue = lowvalue
+    retgroups = []
+    for nodename in interestlist:
+        node = faultgroup._f_get_child(nodename)
+        faulttable = node.faults.read()
+        for faultrow in faulttable:
+            if (faultrow[columname] >= lowvalue) and (faultrow[columname] <= highvalue):
+                retgroups.append(node._v_name)
+                break
+    return retgroups
+
+
 def filter_endstatus_status(faultgroup, interestlist=None):
     """
     Sort all Experiments into reached end point (success) or not (failed).
@@ -49,7 +68,6 @@ def filter_experiment_type(faultgroup, faulttype, interestlist=None):
     1 instruction fault
     2 register fault
     """
-    groupnames = []
     if not isinstance(faulttype, int):
         if "memory" in faulttype:
             faulttype = 0
@@ -60,16 +78,7 @@ def filter_experiment_type(faultgroup, faulttype, interestlist=None):
         else:
             raise ValueError("Faulttype not known")
 
-    if interestlist is None:
-        interestlist = generate_groupname_list(faultgroup)
-
-    for nodename in interestlist:
-        node = faultgroup._f_get_child(nodename)
-        table = node.faults
-        for row in table.iterrows():
-            if row['fault_type'] == faulttype:
-                groupnames.append(node._v_name)
-    return groupnames
+    return generic_filter_faults(faultgroup, 'fault_type', faulttype, None, interestlist)
 
 
 def filter_experiment_model(faultgroup, faultmodel, interestlist=None):
@@ -89,17 +98,8 @@ def filter_experiment_model(faultgroup, faultmodel, interestlist=None):
             faultmodel = 2
         else:
             raise ValueError("Faultmodel not understood")
-    if interestlist is None:
-        interestlist = generate_groupname_list(faultgroup)
 
-    groupnames = []
-    for nodename in interestlist:
-        node = faultgroup._f_get_child(nodename)
-        table = node.faults
-        for row in table.iterrows():
-            if row['fault_type'] == faultmodel:
-                groupnames.append(node._v_name)
-    return groupnames
+    return generic_filter_faults(faultgroup, 'fault_model', faultmodel, None, interestlist)
 
 
 def filter_experiment_faultmask(faultgroup, mask, interestlist=None):
@@ -110,84 +110,36 @@ def filter_experiment_faultmask(faultgroup, mask, interestlist=None):
     if interestlist is None:
         interestlist = generate_groupname_list(faultgroup)
 
-    retgroups = []
-    for nodename in interestlist:
-        node = faultgroup._f_get_child(nodename)
-        faulttable = node.faults.read()
-        for faultrow in faulttable:
-            if faultrow['fault_mask'] == mask:
-                retgroups.append(node._v_name)
-                break
-    return retgroups
+    return generic_filter_faults(faultgroup, 'fault_mask', mask, None, interestlist)
 
 
-def filter_experiment_fault_address(faultgroup, lowaddress, highaddress, interestlist=None):
+def filter_experiment_fault_address(faultgroup, lowaddress, highaddress=None, interestlist=None):
     """
     Filter for a specific fault address range. If interestlist is given only
     experiments in this list will be analysed
     """
-    if interestlist is None:
-        interestlist = generate_groupname_list(faultgroup)
-
-    retgroups = []
-    for nodename in interestlist:
-        node = faultgroup._f_get_child(nodename)
-        faulttable = node.faults.read()
-        for faultrow in faulttable:
-            if (faultrow['fault_address'] >= lowaddress) and (faultrow['fault_address'] <= highaddress):
-                retgroups.append(node._v_name)
-    return retgroups
+    return generic_filter_faults(faultgroup, 'fault_address', lowaddress, highaddress, interestlist)
 
 
-def filter_experiment_trigger_counter(faultgroup, lowcounter, highcounter, interestlist=None):
+def filter_experiment_trigger_counter(faultgroup, lowcounter, highcounter=None, interestlist=None):
     """
     Filter for a specific trigger hit counter values. If interestlist is given
     only experiments in this list will be analysed
     """
-    if interestlist is None:
-        interestlist = generate_groupname_list(faultgroup)
-
-    retgroups = []
-    for nodename in interestlist:
-        node = faultgroup._f_get_child(nodename)
-        faulttable = node.faults.read()
-        for faultrow in faulttable:
-            if (faultrow['trigger_hitcounter'] >= lowcounter) and (faultrow['trigger_hitcounter'] <= highcounter):
-                retgroups.append(node._v_name)
-    return retgroups
+    return generic_filter_faults(faultgroup, 'trigger_hitcounter', lowcounter, highcounter, interestlist)
 
 
-def filter_experiment_trigger_address(faultgroup, lowaddress, highaddress, interestlist=None):
+def filter_experiment_trigger_address(faultgroup, lowaddress, highaddress=None, interestlist=None):
     """
     Filter for a specific trigger address range. If interestlist is given
     only experiments in this list will be analysed.
     """
-    if interestlist is None:
-        interestlist = generate_groupname_list(faultgroup)
-
-    retgroups=[]
-    for nodenmae in interestlist:
-        node = faultgroup._f_get_child(nodename)
-        faulttable = node.faults.read()
-        for faultrow in faulttable:
-            if(faultrow['trigger_address'] >= lowaddress) and (faultrow['trigger_address'] <= highaddress):
-                retgroups.append(node._v_name)
-    return retgroups
+    return generic_filter_faults(faultgroup, 'trigger_address', lowaddress, highaddress, interestlist)
 
 
-def filter_experiment_fault_lifespan(faultgroup, lowlifespan, highlifespan, interestlist=None):
+def filter_experiment_fault_lifespan(faultgroup, lowlifespan, highlifespan=None, interestlist=None):
     """
     Filter for a specific fault lifespan range. If interestlist is given
     only experiments in this list will be analysed.
     """
-    if interestlist is None:
-        interestlist = generate_groupname_list(faultgroup)
-
-    retgroups = []
-    for nodename in interestlist:
-        node = faultgroup._f_get_child(nodename)
-        faulttable = node.faults.read()
-        for faultrow in faulttable:
-            if(faultrow['fault_lifespan'] >= lowlifespan) and (faultrow['fault_lifespan'] <= highlifespan):
-                retgroups.append(node._v_name)
-    return retgroups
+    return generic_filter_faults(faultgroup, 'fault_lifespan', lowlifespan, highlifespan, interestlist)
