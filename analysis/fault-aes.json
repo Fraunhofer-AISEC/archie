@@ -1,0 +1,75 @@
+{
+	"max_instruction_count": 100 ,
+	"start" : {
+		"address" : 134220182,
+		"counter" : 0
+	},
+	"end" : {
+		"address" : 134220188,
+		"counter" : 2
+	},
+	"faults" :[	
+			[
+				{	
+					"fault_address"		: [3],
+					"fault_type"		: "register",
+					"fault_model"		: "set1",
+					"fault_livespan"	: [0],
+					"fault_mask"		: [1, 256, 1],
+					"trigger_address"	: [134219846],
+					"trigger_counter"	: [128, 160, 1]
+				}
+			],
+			[
+				{
+					"fault_address"		: [134219842, 134219855, 1],
+					"fault_type"		: "flash",
+					"fault_model"		: "set1",
+					"fault_livespan"	: [2],
+					"fault_mask"		: [1, 256, 1],
+					"trigger_address"	: [-1],
+					"trigger_counter"	: [141]
+				}
+			],
+			[
+				{
+					"fault_address"		: [134220088, 134220098, 1],
+					"fault_type"		: "flash",
+					"fault_model"		: "set1",
+					"fault_livespan"	: [2],
+					"fault_mask"		: { "type" : "shift" , "range" : [3, 7, 10]},
+					"trigger_address"	: [-1],
+					"trigger_counter"	: [8, 10, 1]
+				}
+			],
+			[
+				{
+					"fault_address"		: [134220088, 134220098, 1],
+					"fault_type"		: "flash",
+					"fault_model"		: "set1",
+					"fault_livespan"	: [2],
+					"fault_mask"		: [1, 256, 1],
+					"trigger_address"	: [-1],
+					"trigger_counter"	: [8, 10, 1]
+				}
+			]
+		],
+	"memorydump": [
+			{
+				"address" : 536870976 , 
+				"length" : 16
+			},
+			{
+				"address" : 536878864,
+				"length" : 176
+			},
+			{
+				"address" : 536870912,
+				"length" : 8448
+			},
+			{
+				"address" : 536870992,
+				"length" : 20
+			}
+		]
+}
