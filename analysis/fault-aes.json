@@ -11,6 +11,7 @@
 	"faults" :[	
 			[
 				{	
+					"comment" : "Change values fetched from S-Box, model flash load fault",
 					"fault_address"		: [3],
 					"fault_type"		: "register",
 					"fault_model"		: "set1",
@@ -22,8 +23,9 @@
 			],
 			[
 				{
+					"comment" : "Attack S-Box step instructions",
 					"fault_address"		: [134219842, 134219855, 1],
-					"fault_type"		: "flash",
+					"fault_type"		: "instruction",
 					"fault_model"		: "set1",
 					"fault_livespan"	: [2],
 					"fault_mask"		: [1, 256, 1],
@@ -33,8 +35,9 @@
 			],
 			[
 				{
+					"comment" : "Tenth round skip, model multibit fault between bytes",
 					"fault_address"		: [134220088, 134220098, 1],
-					"fault_type"		: "flash",
+					"fault_type"		: "instruction",
 					"fault_model"		: "set1",
 					"fault_livespan"	: [2],
 					"fault_mask"		: { "type" : "shift" , "range" : [3, 7, 10]},
@@ -44,8 +47,9 @@
 			],
 			[
 				{
+					"comment" : "Tenth round skip, model multibit fault in tenth round instructions",
 					"fault_address"		: [134220088, 134220098, 1],
-					"fault_type"		: "flash",
+					"fault_type"		: "instruction",
 					"fault_model"		: "set1",
 					"fault_livespan"	: [2],
 					"fault_mask"		: [1, 256, 1],
@@ -56,18 +60,22 @@
 		],
 	"memorydump": [
 			{
+				"comment": "Dump aes cypher state",
 				"address" : 536870976 , 
 				"length" : 16
 			},
 			{
+				"Comment" : "Dump round keys",
 				"address" : 536878864,
 				"length" : 176
 			},
 			{
+				"Comment" : "Dump complete flahs content",
 				"address" : 536870912,
 				"length" : 8448
 			},
 			{
+				"Comment" : "Forgot",
 				"address" : 536870992,
 				"length" : 20
 			}
