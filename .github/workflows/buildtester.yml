@@ -1,8 +1,8 @@
 name: build-tester
 
 on: 
-  push
-  pull_request
+  push : *
+  pull_request: *
   schedule:
     - cron: 0 8 * * 0
 
