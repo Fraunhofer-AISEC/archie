@@ -68,16 +68,6 @@
 				"Comment" : "Dump round keys",
 				"address" : 536878864,
 				"length" : 176
-			},
-			{
-				"Comment" : "Dump complete flahs content",
-				"address" : 536870912,
-				"length" : 8448
-			},
-			{
-				"Comment" : "Forgot",
-				"address" : 536870992,
-				"length" : 20
 			}
 		]
 }
