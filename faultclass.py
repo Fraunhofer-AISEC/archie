@@ -39,6 +39,7 @@ class Fault:
         self.model = fault_model
         self.lifespan = fault_lifespan
         self.mask = fault_mask
+        self.num_bytes = 0
 
     def write_to_fifo(self, fifo):
         "Write data to the config fifo, which sends binary data"
@@ -58,7 +59,8 @@ class Fault:
         tmp = self.mask - pow(2, 64)
         if tmp < 0:
             tmp = 0
-        out = out + " {:d} {:d} \n".format(tmp, self.mask - tmp)
+        out = out + " {:d} {:d} ".format(tmp, self.mask - tmp)
+        out = out + "| {:d} \n".format(self.num_bytes)
         out = out + "$$[Fault_Ende]\n"
         tmp = fifo.write(out)
         fifo.flush()
