@@ -145,6 +145,21 @@ void inject_register_fault(fault_list_t * current)
 		case TOGGLE:
 			reg = reg ^ mask;
 			break;
+		case OVERWRITE:
+			if(fault.num_bytes > 8)
+			{
+				g_string_append_printf(out, "\n[WARNGING]: For register faults currently only up to 8 Bytes are allowed. Your length is greater and all Greater Bytes are ignored\n");
+				fault.num_bytes = 8;
+			}
+			maks = 0;
+			for(int i = 0; i < fault.num_bytes; i++)
+			{
+				uint64_t clear = (0xff << 8*i);
+				reg = reg & ~(clear);
+				reg += (fault.mask[i] << 8*i)
+				mask += clear;
+			}
+			break;
 		default:
 			g_string_append_printf(out, "Fault model is wrong %li", current->fault.model);
 			break;
