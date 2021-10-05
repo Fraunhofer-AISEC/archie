@@ -390,7 +390,7 @@ int qemu_setup_config()
 			{
 				qemu_setup_config_find_char(conf, '|');
 				num_bytes = strtoimax(conf->str, NULL, 0);
-				g_string_append_printf(out, "[Info]: num_bytes for Overwrite: 0x%lx\n", num_bytes);
+				g_string_append_printf(out, "[Info]: num_bytes for Overwrite: 0x%x\n", num_bytes);
 			}
 			g_string_append(out, conf->str);
 			for(int i = 0; i < 8; i++)

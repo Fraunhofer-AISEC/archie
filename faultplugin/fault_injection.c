@@ -146,17 +146,18 @@ void inject_register_fault(fault_list_t * current)
 			reg = reg ^ mask;
 			break;
 		case OVERWRITE:
-			if(fault.num_bytes > 8)
+			if(current->fault.num_bytes > 8)
 			{
 				g_string_append_printf(out, "\n[WARNGING]: For register faults currently only up to 8 Bytes are allowed. Your length is greater and all Greater Bytes are ignored\n");
-				fault.num_bytes = 8;
+				current->fault.num_bytes = 8;
 			}
-			maks = 0;
-			for(int i = 0; i < fault.num_bytes; i++)
+			mask = 0;
+			for(int i = 0; i < current->fault.num_bytes; i++)
 			{
+				current->fault.restoremask[i] = (reg >> 8*i) & 0xff;
 				uint64_t clear = (0xff << 8*i);
 				reg = reg & ~(clear);
-				reg += (fault.mask[i] << 8*i)
+				reg += (current->fault.mask[i] << 8*i);
 				mask += clear;
 			}
 			break;

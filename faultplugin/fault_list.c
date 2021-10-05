@@ -61,7 +61,7 @@ int add_fault(uint64_t fault_address, uint64_t fault_type, uint64_t fault_model,
 	//new_fault->fault.mask = fault_mask;
 	new_fault->fault.trigger.address = fault_trigger_address;
 	new_fault->fault.trigger.hitcounter = fault_trigger_hitcounter;
-	new_fault->num_bytes = num_bytes;
+	new_fault->fault.num_bytes = num_bytes;
 	for(int i = 0; i < 16; i++)
 	{	
 		new_fault->fault.restoremask[i] = 0;
