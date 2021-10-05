@@ -66,7 +66,7 @@ select yn in "YES" "NO"; do
 		YES ) install_qemu_packages ; break;;
 		NO ) echo "See Readme for required packages"; break;;
 	esac
-	echo "use 1 or 2 to anser yes or no"
+	echo "use 1 or 2 to answer yes or no"
 done
 
 echo Should this script try to install the required libraries for the Python3 part of ARCHIE?
