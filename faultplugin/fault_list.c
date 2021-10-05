@@ -41,10 +41,11 @@ void init_fault_list()
  * fault_mask: bit mask on which bits should be targeted.
  * fault_trigger_address: Address of trigger location. Fault will be injected if this location is reached
  * fault_trigger_hitcounter: Set how many times the location needs to be reached before the fault is injected
+ * num_bytes: Used by overwrite to determen the number of bytes to overwrite
  * 
  * return -1 if fault
  */
-int add_fault(uint64_t fault_address, uint64_t fault_type, uint64_t fault_model, uint64_t fault_lifetime, uint8_t fault_mask[16], uint64_t fault_trigger_address, uint64_t fault_trigger_hitcounter )
+int add_fault(uint64_t fault_address, uint64_t fault_type, uint64_t fault_model, uint64_t fault_lifetime, uint8_t fault_mask[16], uint64_t fault_trigger_address, uint64_t fault_trigger_hitcounter, uint8_t num_bytes)
 {
 	fault_list_t *new_fault;
 	new_fault = malloc(sizeof(fault_list_t));
@@ -60,6 +61,7 @@ int add_fault(uint64_t fault_address, uint64_t fault_type, uint64_t fault_model,
 	//new_fault->fault.mask = fault_mask;
 	new_fault->fault.trigger.address = fault_trigger_address;
 	new_fault->fault.trigger.hitcounter = fault_trigger_hitcounter;
+	new_fault->num_bytes = num_bytes;
 	for(int i = 0; i < 16; i++)
 	{	
 		new_fault->fault.restoremask[i] = 0;
