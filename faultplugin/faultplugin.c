@@ -284,20 +284,32 @@ void print_assembler(struct qemu_plugin_tb *tb)
 }
 
 
+
+int qemu_setup_config_contains_char(GString* out, char c);
 void qemu_setup_config_find_char(GString* out, char c);
+
 void qemu_setup_config_find_char(GString* out, char c)
+{
+	int i = qemu_setup_config_contains_char(out, c);
+	if(i == -1)
+		return;
+	i++;
+	g_string_erase(out, 0, i++);
+}
+
+int qemu_setup_config_contains_char(GString* out, char c)
 {
 	int i = 0;
 	char *s = out->str;
-
 	
 	while(*s != c)
 	{
+		if(*s == '\0')
+			return -1;
 		i++;
 		s++;
 	}
-	i++;
-	g_string_erase(out, 0, i++);
+	return i;
 }
 
 
@@ -323,6 +335,7 @@ int qemu_setup_config()
 	uint64_t fault_trigger_hitcounter = 0;
 	uint64_t target_len = 8;
 	uint64_t tmp = 0xffffffffffffffff;
+	uint8_t num_bytes = 0;
 	g_string_printf(out, "[Info]: Start readout of FIFO\n");
 	
 	g_autoptr(GString) conf = g_string_new("");
@@ -372,6 +385,13 @@ int qemu_setup_config()
 			qemu_setup_config_find_char(conf, ' ');
 			qemu_setup_config_find_char(conf, ' ');
 			uint64_t tmp2 = strtoimax(conf->str, NULL, 0);
+
+			if(qemu_setup_config_contains_char(conf, '|'))
+			{
+				qemu_setup_config_find_char(conf, '|');
+				num_bytes = strtoimax(conf->str, NULL, 0);
+				g_string_append_printf(out, "[Info]: num_bytes for Overwrite: 0x%lx\n", num_bytes);
+			}
 			g_string_append(out, conf->str);
 			for(int i = 0; i < 8; i++)
 			{
@@ -388,7 +408,7 @@ int qemu_setup_config()
 	}
 	g_string_append(out, "[Info]: Fault pipe read done\n");
 	qemu_plugin_outs(out->str);
-	return add_fault(fault_address, fault_type, fault_model, fault_lifetime, fault_mask, fault_trigger_address, fault_trigger_hitcounter);
+	return add_fault(fault_address, fault_type, fault_model, fault_lifetime, fault_mask, fault_trigger_address, fault_trigger_hitcounter, num_bytes);
 }
 
 
