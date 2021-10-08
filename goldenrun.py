@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 def run_goldenrun(config_qemu, qemu_output, data_queue,
                   faultconfig, qemu_pre=None, qemu_post=None):
     goldenrun_config = {}
-    dummyfault = Fault(0, 0, 0, 0, 0, 0, 100)
+    dummyfault = Fault(0, 0, 0, 0, 0, 0, 100, 0)
     dummyfaultlist = []
     dummyfaultlist.append(dummyfault)
     q = Queue()

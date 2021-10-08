@@ -29,7 +29,8 @@ class Fault:
                  fault_lifespan: int,
                  fault_mask: int,
                  trigger_address: int,
-                 trigger_hitcounter: int):
+                 trigger_hitcounter: int,
+                 num_bytes: int):
         """
         Define attributes for fault types
         """
@@ -39,7 +40,7 @@ class Fault:
         self.model = fault_model
         self.lifespan = fault_lifespan
         self.mask = fault_mask
-        self.num_bytes = 0
+        self.num_bytes = num_bytes
 
     def write_to_fifo(self, fifo):
         "Write data to the config fifo, which sends binary data"
