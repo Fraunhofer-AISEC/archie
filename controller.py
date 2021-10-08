@@ -76,6 +76,8 @@ def detect_model(fault_model):
         return 0
     if fault_model == "toggle":
         return 2
+    if fault_model == "overwrite":
+        return 3
     clogger.critical("Received wrong model. Expected set0, set1, or toggle. Got {}".format(fault_model))
     raise ValueError("A model was not detected. Maybe misspelled? got {} , needed set0 set1 toggle".format(fault_model))
 
