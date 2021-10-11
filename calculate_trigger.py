@@ -11,7 +11,7 @@ def find_tb_info_row(tb_id, goldenrun_tb_info):
 
 def allign_fault_to_instruction(address, tbinfo_size, tbinfo_assembler, tbinfo_id):
     asm_addresses = []
-    "Start seraching for instruction addresses"
+    "Start searching for instruction addresses"
     split = tbinfo_assembler.split('[ ')
     for sp in split[1:]:
         "Find end of address"
@@ -71,13 +71,13 @@ def search_for_fault_location(filter_lists, trigger_position, fault_address, tri
                             is_first_instruction = 1
                             """Case ins is in the current tb"""
                             if i >= trigger_position:
-                                i = i - trigger_position
+                                i -= trigger_position
                                 ins = filt[i]
                                 trigger_position = 0
                             else:
                                 """Case ins is not in the current tb"""
-                                trigger_position = trigger_position - i
-                                idx = idx - 1
+                                trigger_position -= i
+                                idx -= 1
                             break
     logger.info("Found trigger for faulting instruction address {} at {}".format(fault_address, ins))
     return ins

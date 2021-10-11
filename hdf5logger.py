@@ -135,39 +135,8 @@ def process_riscv_registers(f, group, riscvregister_list, myfilter):
     for regs in riscvregister_list:
         riscvregsrow['pc'] = regs['pc']
         riscvregsrow['tbcounter'] = regs['tbcounter']
-        riscvregsrow['x0'] = regs['x0']
-        riscvregsrow['x1'] = regs['x1']
-        riscvregsrow['x2'] = regs['x2']
-        riscvregsrow['x3'] = regs['x3']
-        riscvregsrow['x4'] = regs['x4']
-        riscvregsrow['x4'] = regs['x5']
-        riscvregsrow['x5'] = regs['x6']
-        riscvregsrow['x6'] = regs['x7']
-        riscvregsrow['x8'] = regs['x8']
-        riscvregsrow['x9'] = regs['x9']
-        riscvregsrow['x10'] = regs['x10']
-        riscvregsrow['x11'] = regs['x11']
-        riscvregsrow['x12'] = regs['x12']
-        riscvregsrow['x13'] = regs['x13']
-        riscvregsrow['x14'] = regs['x14']
-        riscvregsrow['x15'] = regs['x15']
-        riscvregsrow['x16'] = regs['x16']
-        riscvregsrow['x17'] = regs['x17']
-        riscvregsrow['x18'] = regs['x18']
-        riscvregsrow['x19'] = regs['x19']
-        riscvregsrow['x20'] = regs['x20']
-        riscvregsrow['x21'] = regs['x21']
-        riscvregsrow['x22'] = regs['x22']
-        riscvregsrow['x23'] = regs['x23']
-        riscvregsrow['x24'] = regs['x24']
-        riscvregsrow['x25'] = regs['x25']
-        riscvregsrow['x26'] = regs['x26']
-        riscvregsrow['x27'] = regs['x27']
-        riscvregsrow['x28'] = regs['x28']
-        riscvregsrow['x29'] = regs['x29']
-        riscvregsrow['x30'] = regs['x30']
-        riscvregsrow['x31'] = regs['x31']
-        riscvregsrow['x32'] = regs['x32']
+        for i in range(0,33):
+            riscvregsrow[f'x{i}'] = regs[f'x{i}']
         riscvregsrow.append()
     riscvregistertable.flush()
     riscvregistertable.close()
@@ -181,22 +150,8 @@ def process_arm_registers(f, group, armregisters_list, myfilter):
     for regs in armregisters_list:
         armregsrow['pc'] = regs['pc']
         armregsrow['tbcounter'] = regs['tbcounter']
-        armregsrow['r0'] = regs['r0']
-        armregsrow['r1'] = regs['r1']
-        armregsrow['r2'] = regs['r2']
-        armregsrow['r3'] = regs['r3']
-        armregsrow['r4'] = regs['r4']
-        armregsrow['r5'] = regs['r5']
-        armregsrow['r6'] = regs['r6']
-        armregsrow['r7'] = regs['r7']
-        armregsrow['r8'] = regs['r8']
-        armregsrow['r9'] = regs['r9']
-        armregsrow['r10'] = regs['r10']
-        armregsrow['r11'] = regs['r11']
-        armregsrow['r12'] = regs['r12']
-        armregsrow['r13'] = regs['r13']
-        armregsrow['r14'] = regs['r14']
-        armregsrow['r15'] = regs['r15']
+        for i in range(0,16):
+            armregsrow[f'r{i}'] = regs[f'r{i}']
         armregsrow['xpsr'] = regs['xpsr']
         armregsrow.append()
     armregisterstable.flush()
@@ -249,7 +204,6 @@ def process_faults(f, group, faultlist, endpoint, myfilter):
 
 
 def process_tbinfo(f, group, tbinfolist, myfilter):
-    # create table
     tbinfotable = f.create_table(group, 'tbinfo', translation_block_table,
                                  "Translation block table containing all information collected by qemu",
                                  expectedrows=(len(tbinfolist)), filters=myfilter)
@@ -266,7 +220,6 @@ def process_tbinfo(f, group, tbinfolist, myfilter):
 
 
 def process_tbexec(f, group, tbexeclist, myfilter):
-    # create table
     tbexectable = f.create_table(group, 'tbexeclist', translation_block_exec_table,
                                  "Translation block execution list table",
                                  expectedrows=(len(tbexeclist)), filters=myfilter)
@@ -280,7 +233,6 @@ def process_tbexec(f, group, tbexeclist, myfilter):
 
 
 def process_memory_info(f, group, meminfolist, myfilter):
-    # create table
     meminfotable = f.create_table(group, 'meminfo', memory_information_table,
                                   "", expectedrows=(len(meminfolist)),
                                   filters=myfilter)

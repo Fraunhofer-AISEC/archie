@@ -28,7 +28,7 @@ def run_goldenrun(config_qemu, qemu_output, data_queue,
         goldenrun_config['memorydump'] = config_qemu['memorydump']
     if 'start' in config_qemu:
         goldenrun_config['end'] = config_qemu['start']
-        logger.info("Start testing and recording firmware til start")
+        logger.info("Start testing and recording firmware till start")
         python_worker(dummyfaultlist, goldenrun_config, -2, q, qemu_output,
                       None, False, None, qemu_pre, qemu_post)
         data_start = q.get()
@@ -36,7 +36,7 @@ def run_goldenrun(config_qemu, qemu_output, data_queue,
             logger.info("Start successfully reached")
         else:
             logger.critical("Start not reached. Was not reached after {} tb counts. Probably an error.".format(goldenrun_config['max_instruction_count']))
-            raise ValueError("Start not reached. Probably no valid instruction!. If valid increase tb max for golden run")
+            raise ValueError("Start not reached. Probably no valid instruction! If valid increase tb max for golden run")
         data_queue.put(data_start)
     if 'end' in config_qemu:
         goldenrun_config['end'] = config_qemu['end']

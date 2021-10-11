@@ -170,8 +170,7 @@ def controller(hdf5path,
     prctl.set_proctitle("Python_Controller")
     goldenrun_data = {}
     if goldenrun:
-        [config_qemu['max_instruction_count'],
-         goldenrun_data,
+        [config_qemu['max_instruction_count'], goldenrun_data,
          faultlist] = run_goldenrun(config_qemu,
                                     qemu_output,
                                     q,
@@ -212,7 +211,7 @@ def controller(hdf5path,
         if len_p_list_cached < num_workers and mem_limit_calc(mem_max, len_p_list_cached, qsizecache, time_max) < max_ram:
             if len(faultlist) > itter and qsizecache < queuedepth:
                 faults = faultlist[itter]
-                itter = itter + 1
+                itter += 1
                 p = Process(name='worker_{}'.format(faults['index']),
                             target=python_worker,
                             args=(faults['faultlist'],
@@ -313,7 +312,7 @@ def get_argument_parser():
     parser.add_argument('--append',
                         '-a',
                         action="store_true",
-                        help="append data to file instead of overwriting them",
+                        help="append data to file instead of overwriting it",
                         required=False)
     parser.add_argument('--worker',
                         '-w',
@@ -321,7 +320,7 @@ def get_argument_parser():
                         type=int,
                         required=False)
     parser.add_argument('--queuedepth',
-                        help="Set the max number of elements in queue before the scheduler starts to block start of new workers. This allows to control the memory usage, default is 15",
+                        help="Maximum number of elements in queue before scheduler blocks start of new workers. This allows to control the memory usage, default is 15",
                         type=int,
                         required=False)
     parser.add_argument('--compressionlevel',
@@ -335,7 +334,7 @@ def get_argument_parser():
                         required=False)
     parser.add_argument('--gdb',
                         action="store_true",
-                        help="This enables to connect to the target with gdb. Port 1234",
+                        help="Enables connection to the target with gdb. Port 1234",
                         required=False)
     return parser
 

@@ -377,22 +377,8 @@ def readout_arm_registers(line):
     armregisters = {}
     armregisters['pc'] = int(split[0])
     armregisters['tbcounter'] = int(split[1])
-    armregisters['r0'] = int(split[2])
-    armregisters['r1'] = int(split[3])
-    armregisters['r2'] = int(split[4])
-    armregisters['r3'] = int(split[5])
-    armregisters['r4'] = int(split[6])
-    armregisters['r5'] = int(split[7])
-    armregisters['r6'] = int(split[8])
-    armregisters['r7'] = int(split[9])
-    armregisters['r8'] = int(split[10])
-    armregisters['r9'] = int(split[11])
-    armregisters['r10'] = int(split[12])
-    armregisters['r11'] = int(split[13])
-    armregisters['r12'] = int(split[14])
-    armregisters['r13'] = int(split[15])
-    armregisters['r14'] = int(split[16])
-    armregisters['r15'] = int(split[17])
+    for i in range(0,16):
+        armregisters[f"r{i}"] = int(split[i+2])
     armregisters['xpsr'] = int(split[18])
     return armregisters
 
@@ -402,39 +388,8 @@ def readout_riscv_registers(line):
     riscvregister = {}
     riscvregister['pc'] = int(split[0])
     riscvregister['tbcounter'] = int(split[1])
-    riscvregister['x0'] = int(split[2])
-    riscvregister['x1'] = int(split[3])
-    riscvregister['x2'] = int(split[4])
-    riscvregister['x3'] = int(split[5])
-    riscvregister['x4'] = int(split[6])
-    riscvregister['x5'] = int(split[7])
-    riscvregister['x6'] = int(split[8])
-    riscvregister['x7'] = int(split[9])
-    riscvregister['x8'] = int(split[10])
-    riscvregister['x9'] = int(split[11])
-    riscvregister['x10'] = int(split[12])
-    riscvregister['x11'] = int(split[13])
-    riscvregister['x12'] = int(split[14])
-    riscvregister['x13'] = int(split[15])
-    riscvregister['x14'] = int(split[16])
-    riscvregister['x15'] = int(split[17])
-    riscvregister['x16'] = int(split[18])
-    riscvregister['x17'] = int(split[19])
-    riscvregister['x18'] = int(split[20])
-    riscvregister['x19'] = int(split[21])
-    riscvregister['x20'] = int(split[22])
-    riscvregister['x21'] = int(split[23])
-    riscvregister['x22'] = int(split[24])
-    riscvregister['x23'] = int(split[25])
-    riscvregister['x24'] = int(split[26])
-    riscvregister['x25'] = int(split[27])
-    riscvregister['x26'] = int(split[28])
-    riscvregister['x27'] = int(split[29])
-    riscvregister['x28'] = int(split[30])
-    riscvregister['x29'] = int(split[31])
-    riscvregister['x30'] = int(split[32])
-    riscvregister['x31'] = int(split[33])
-    riscvregister['x32'] = int(split[34])
+    for i in range(0,33):
+        riscvregisters[f"x{i}"] = int(split[i+2])
     return riscvregister
 
 
@@ -496,6 +451,7 @@ def readout_data(pipe,
     mem = 0
     regtype = None
     tbfaulted = 0
+
     while(1):
         line = pipe.readline()
         if '$$$' in line:
@@ -731,8 +687,7 @@ def configure_qemu(controll, config_qemu, num_faults, memorydump_list):
 
 def enable_qemu(controll):
     """
-    Starts the qemu plugin. Until this point it actively reads from control
-    pipe.
+    Starts qemu plugin. Until this point it actively reads from control pipe.
     """
     controll.write("\n$$$[Start]\n")
     controll.flush()
