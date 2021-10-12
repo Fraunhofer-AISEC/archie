@@ -1,11 +1,8 @@
-import tables
-
-
 def generate_groupname_list(faultgroup):
     """
     Generator to get names of all childs in faultgroup
     """
-    for node in faultgroup._f_iter_nodes('Group'):
+    for node in faultgroup._f_iter_nodes("Group"):
         yield node._v_name
 
 
@@ -23,7 +20,9 @@ def differenclists(list1, list2):
     return list(set(list1).difference(list2))
 
 
-def generic_filter_faults(faultgroup, columname, lowvalue, highvalue=None, interestlist=None):
+def generic_filter_faults(
+    faultgroup, columname, lowvalue, highvalue=None, interestlist=None
+):
     """
     Access function to faults table and filter experiments
     """
@@ -78,7 +77,9 @@ def filter_experiment_type(faultgroup, faulttype, interestlist=None):
         else:
             raise ValueError("Faulttype not known")
 
-    return generic_filter_faults(faultgroup, 'fault_type', faulttype, None, interestlist)
+    return generic_filter_faults(
+        faultgroup, "fault_type", faulttype, None, interestlist
+    )
 
 
 def filter_experiment_model(faultgroup, faultmodel, interestlist=None):
@@ -99,7 +100,9 @@ def filter_experiment_model(faultgroup, faultmodel, interestlist=None):
         else:
             raise ValueError("Faultmodel not understood")
 
-    return generic_filter_faults(faultgroup, 'fault_model', faultmodel, None, interestlist)
+    return generic_filter_faults(
+        faultgroup, "fault_model", faultmodel, None, interestlist
+    )
 
 
 def filter_experiment_faultmask(faultgroup, mask, interestlist=None):
@@ -110,36 +113,52 @@ def filter_experiment_faultmask(faultgroup, mask, interestlist=None):
     if interestlist is None:
         interestlist = generate_groupname_list(faultgroup)
 
-    return generic_filter_faults(faultgroup, 'fault_mask', mask, None, interestlist)
+    return generic_filter_faults(faultgroup, "fault_mask", mask, None, interestlist)
 
 
-def filter_experiment_fault_address(faultgroup, lowaddress, highaddress=None, interestlist=None):
+def filter_experiment_fault_address(
+    faultgroup, lowaddress, highaddress=None, interestlist=None
+):
     """
     Filter for a specific fault address range. If interestlist is given only
     experiments in this list will be analysed
     """
-    return generic_filter_faults(faultgroup, 'fault_address', lowaddress, highaddress, interestlist)
+    return generic_filter_faults(
+        faultgroup, "fault_address", lowaddress, highaddress, interestlist
+    )
 
 
-def filter_experiment_trigger_counter(faultgroup, lowcounter, highcounter=None, interestlist=None):
+def filter_experiment_trigger_counter(
+    faultgroup, lowcounter, highcounter=None, interestlist=None
+):
     """
     Filter for a specific trigger hit counter values. If interestlist is given
     only experiments in this list will be analysed
     """
-    return generic_filter_faults(faultgroup, 'trigger_hitcounter', lowcounter, highcounter, interestlist)
+    return generic_filter_faults(
+        faultgroup, "trigger_hitcounter", lowcounter, highcounter, interestlist
+    )
 
 
-def filter_experiment_trigger_address(faultgroup, lowaddress, highaddress=None, interestlist=None):
+def filter_experiment_trigger_address(
+    faultgroup, lowaddress, highaddress=None, interestlist=None
+):
     """
     Filter for a specific trigger address range. If interestlist is given
     only experiments in this list will be analysed.
     """
-    return generic_filter_faults(faultgroup, 'trigger_address', lowaddress, highaddress, interestlist)
+    return generic_filter_faults(
+        faultgroup, "trigger_address", lowaddress, highaddress, interestlist
+    )
 
 
-def filter_experiment_fault_lifespan(faultgroup, lowlifespan, highlifespan=None, interestlist=None):
+def filter_experiment_fault_lifespan(
+    faultgroup, lowlifespan, highlifespan=None, interestlist=None
+):
     """
     Filter for a specific fault lifespan range. If interestlist is given
     only experiments in this list will be analysed.
     """
-    return generic_filter_faults(faultgroup, 'fault_lifespan', lowlifespan, highlifespan, interestlist)
+    return generic_filter_faults(
+        faultgroup, "fault_lifespan", lowlifespan, highlifespan, interestlist
+    )

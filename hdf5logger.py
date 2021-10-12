@@ -5,21 +5,22 @@ import prctl
 import numpy
 import time
 import logging
+
 logger = logging.getLogger(__name__)
 
 
 # Tables for storing the elements from queue
 class translation_block_table(tables.IsDescription):
-    identity    = tables.UInt64Col()
-    size        = tables.UInt64Col()
-    ins_count   = tables.UInt64Col()
-    num_exec    = tables.UInt64Col()
-    assembler   = tables.StringCol(1000)
+    identity = tables.UInt64Col()
+    size = tables.UInt64Col()
+    ins_count = tables.UInt64Col()
+    num_exec = tables.UInt64Col()
+    assembler = tables.StringCol(1000)
 
 
 class translation_block_faulted_table(tables.IsDescription):
     faultaddress = tables.UInt64Col()
-    assembler    = tables.StringCol(1000)
+    assembler = tables.StringCol(1000)
 
 
 class translation_block_exec_table(tables.IsDescription):
@@ -28,12 +29,12 @@ class translation_block_exec_table(tables.IsDescription):
 
 
 class memory_information_table(tables.IsDescription):
-    insaddr     = tables.Int64Col()
-    tbid        = tables.UInt64Col()
-    size        = tables.UInt64Col()
-    address     = tables.Int64Col()
-    direction   = tables.UInt8Col()
-    counter     = tables.UInt64Col()
+    insaddr = tables.Int64Col()
+    tbid = tables.UInt64Col()
+    size = tables.UInt64Col()
+    address = tables.Int64Col()
+    direction = tables.UInt8Col()
+    counter = tables.UInt64Col()
 
 
 class fault_table(tables.IsDescription):
@@ -115,68 +116,88 @@ binary_atom = tables.UInt8Atom()
 
 
 def process_tb_faulted(f, group, tbfaulted_list, myfilter):
-    tbfaultedtable = f.create_table(group, 'tbfaulted', translation_block_faulted_table,
-                                    "Table contains the faulted assembly instructions",
-                                    expectedrows=(len(tbfaulted_list)), filters=myfilter)
+    tbfaultedtable = f.create_table(
+        group,
+        "tbfaulted",
+        translation_block_faulted_table,
+        "Table contains the faulted assembly instructions",
+        expectedrows=(len(tbfaulted_list)),
+        filters=myfilter,
+    )
     tbfaultedrow = tbfaultedtable.row
     for tbfaulted in tbfaulted_list:
-        tbfaultedrow['faultaddress'] = tbfaulted['faultaddress']
-        tbfaultedrow['assembler'] = tbfaulted['assembly']
+        tbfaultedrow["faultaddress"] = tbfaulted["faultaddress"]
+        tbfaultedrow["assembler"] = tbfaulted["assembly"]
         tbfaultedrow.append()
     tbfaultedtable.flush()
     tbfaultedtable.close()
 
 
 def process_riscv_registers(f, group, riscvregister_list, myfilter):
-    riscvregistertable = f.create_table(group, 'riscvregisters', riscv_registers_table,
-                                        "Table contains riscv registers at specific points.",
-                                        expectedrows=(len(riscvregister_list)), filters=myfilter)
+    riscvregistertable = f.create_table(
+        group,
+        "riscvregisters",
+        riscv_registers_table,
+        "Table contains riscv registers at specific points.",
+        expectedrows=(len(riscvregister_list)),
+        filters=myfilter,
+    )
     riscvregsrow = riscvregistertable.row
     for regs in riscvregister_list:
-        riscvregsrow['pc'] = regs['pc']
-        riscvregsrow['tbcounter'] = regs['tbcounter']
-        for i in range(0,33):
-            riscvregsrow[f'x{i}'] = regs[f'x{i}']
+        riscvregsrow["pc"] = regs["pc"]
+        riscvregsrow["tbcounter"] = regs["tbcounter"]
+        for i in range(0, 33):
+            riscvregsrow[f"x{i}"] = regs[f"x{i}"]
         riscvregsrow.append()
     riscvregistertable.flush()
     riscvregistertable.close()
 
 
 def process_arm_registers(f, group, armregisters_list, myfilter):
-    armregisterstable = f.create_table(group, 'armregisters', arm_registers_table,
-                                       "Table contains arm registers at specific points.",
-                                       expectedrows=(len(armregisters_list)), filters=myfilter)
+    armregisterstable = f.create_table(
+        group,
+        "armregisters",
+        arm_registers_table,
+        "Table contains arm registers at specific points.",
+        expectedrows=(len(armregisters_list)),
+        filters=myfilter,
+    )
     armregsrow = armregisterstable.row
     for regs in armregisters_list:
-        armregsrow['pc'] = regs['pc']
-        armregsrow['tbcounter'] = regs['tbcounter']
-        for i in range(0,16):
-            armregsrow[f'r{i}'] = regs[f'r{i}']
-        armregsrow['xpsr'] = regs['xpsr']
+        armregsrow["pc"] = regs["pc"]
+        armregsrow["tbcounter"] = regs["tbcounter"]
+        for i in range(0, 16):
+            armregsrow[f"r{i}"] = regs[f"r{i}"]
+        armregsrow["xpsr"] = regs["xpsr"]
         armregsrow.append()
     armregisterstable.flush()
     armregisterstable.close()
 
 
 def process_dumps(f, group, memdumplist, myfilter):
-    memdumpsgroup = f.create_group(group, 'memdumps')
-    memdumpstable = f.create_table(memdumpsgroup, 'memdumps', memory_dump_table,
-                                   "Table containing description about the dumps, that are saved as carry.",
-                                   expectedrows=(len(memdumplist)), filters=myfilter)
+    memdumpsgroup = f.create_group(group, "memdumps")
+    memdumpstable = f.create_table(
+        memdumpsgroup,
+        "memdumps",
+        memory_dump_table,
+        "Table containing description about the dumps, that are saved as carry.",
+        expectedrows=(len(memdumplist)),
+        filters=myfilter,
+    )
     memdumpsrow = memdumpstable.row
     for memdump in memdumplist:
-        name = 'location_{:08x}_{:d}_{:d}'.format(memdump['address'], memdump['len'], memdump['numdumps'])
+        name = "location_{:08x}_{:d}_{:d}".format(
+            memdump["address"], memdump["len"], memdump["numdumps"]
+        )
         if name not in memdumpsgroup._v_children:
-            memdumpsrow['address'] = memdump['address']
-            memdumpsrow['length'] = memdump['len']
-            memdumpsrow['numdumps'] = memdump['numdumps']
+            memdumpsrow["address"] = memdump["address"]
+            memdumpsrow["length"] = memdump["len"]
+            memdumpsrow["numdumps"] = memdump["numdumps"]
             # shape = (len(memdump['dumps']), memdump['len'])
-            dumpnarray = numpy.array(memdump['dumps'])
-            dumparray = f.create_carray(memdumpsgroup,
-                                        name,
-                                        binary_atom,
-                                        dumpnarray.shape,
-                                        filters=myfilter)
+            dumpnarray = numpy.array(memdump["dumps"])
+            dumparray = f.create_carray(
+                memdumpsgroup, name, binary_atom, dumpnarray.shape, filters=myfilter
+            )
             dumparray[:] = dumpnarray
             memdumpsrow.append()
     memdumpstable.flush()
@@ -185,128 +206,164 @@ def process_dumps(f, group, memdumplist, myfilter):
 
 def process_faults(f, group, faultlist, endpoint, myfilter):
     # create table
-    faulttable = f.create_table(group, 'faults', fault_table,
-                                "Fault list table that contains the fault configuration used for this experiment",
-                                expectedrows=(len(faultlist)), filters=myfilter)
+    faulttable = f.create_table(
+        group,
+        "faults",
+        fault_table,
+        "Fault list table that contains the fault configuration used for this experiment",
+        expectedrows=(len(faultlist)),
+        filters=myfilter,
+    )
     faulttable.attrs.endpoint = endpoint
     faultrow = faulttable.row
     for fault in faultlist:
-        faultrow['trigger_address'] = fault.trigger.address
-        faultrow['trigger_hitcounter'] = fault.trigger.hitcounter
-        faultrow['fault_address'] = fault.address
-        faultrow['fault_type'] = fault.type
-        faultrow['fault_model'] = fault.model
-        faultrow['fault_lifespan'] = fault.lifespan
-        faultrow['fault_mask'] = fault.mask
+        faultrow["trigger_address"] = fault.trigger.address
+        faultrow["trigger_hitcounter"] = fault.trigger.hitcounter
+        faultrow["fault_address"] = fault.address
+        faultrow["fault_type"] = fault.type
+        faultrow["fault_model"] = fault.model
+        faultrow["fault_lifespan"] = fault.lifespan
+        faultrow["fault_mask"] = fault.mask
         faultrow.append()
     faulttable.flush()
     faulttable.close()
 
 
 def process_tbinfo(f, group, tbinfolist, myfilter):
-    tbinfotable = f.create_table(group, 'tbinfo', translation_block_table,
-                                 "Translation block table containing all information collected by qemu",
-                                 expectedrows=(len(tbinfolist)), filters=myfilter)
+    tbinfotable = f.create_table(
+        group,
+        "tbinfo",
+        translation_block_table,
+        "Translation block table containing all information collected by qemu",
+        expectedrows=(len(tbinfolist)),
+        filters=myfilter,
+    )
     tbinforow = tbinfotable.row
     for tbinfo in tbinfolist:
-        tbinforow['identity'] = tbinfo['id']
-        tbinforow['size'] = tbinfo['size']
-        tbinforow['ins_count'] = tbinfo['ins_count']
-        tbinforow['num_exec'] = tbinfo['num_exec']
-        tbinforow['assembler'] = tbinfo['assembler']
+        tbinforow["identity"] = tbinfo["id"]
+        tbinforow["size"] = tbinfo["size"]
+        tbinforow["ins_count"] = tbinfo["ins_count"]
+        tbinforow["num_exec"] = tbinfo["num_exec"]
+        tbinforow["assembler"] = tbinfo["assembler"]
         tbinforow.append()
     tbinfotable.flush()
     tbinfotable.close()
 
 
 def process_tbexec(f, group, tbexeclist, myfilter):
-    tbexectable = f.create_table(group, 'tbexeclist', translation_block_exec_table,
-                                 "Translation block execution list table",
-                                 expectedrows=(len(tbexeclist)), filters=myfilter)
+    tbexectable = f.create_table(
+        group,
+        "tbexeclist",
+        translation_block_exec_table,
+        "Translation block execution list table",
+        expectedrows=(len(tbexeclist)),
+        filters=myfilter,
+    )
     tbexecrow = tbexectable.row
     for tbexec in tbexeclist:
-        tbexecrow['tb'] = tbexec['tb']
-        tbexecrow['pos'] = tbexec['pos']
+        tbexecrow["tb"] = tbexec["tb"]
+        tbexecrow["pos"] = tbexec["pos"]
         tbexecrow.append()
     tbexectable.flush()
     tbexectable.close()
 
 
 def process_memory_info(f, group, meminfolist, myfilter):
-    meminfotable = f.create_table(group, 'meminfo', memory_information_table,
-                                  "", expectedrows=(len(meminfolist)),
-                                  filters=myfilter)
+    meminfotable = f.create_table(
+        group,
+        "meminfo",
+        memory_information_table,
+        "",
+        expectedrows=(len(meminfolist)),
+        filters=myfilter,
+    )
     meminforow = meminfotable.row
     for meminfo in meminfolist:
-        meminforow['insaddr'] = meminfo['ins']
-        meminforow['tbid'] = meminfo['tbid']
-        meminforow['size'] = meminfo['size']
-        meminforow['address'] = meminfo['address']
-        meminforow['direction'] = meminfo['direction']
-        meminforow['counter'] = meminfo['counter']
+        meminforow["insaddr"] = meminfo["ins"]
+        meminforow["tbid"] = meminfo["tbid"]
+        meminforow["size"] = meminfo["size"]
+        meminforow["address"] = meminfo["address"]
+        meminforow["direction"] = meminfo["direction"]
+        meminforow["counter"] = meminfo["counter"]
         meminforow.append()
     meminfotable.flush()
     meminfotable.close()
 
 
-def hdf5collector(hdf5path, mode, q, num_exp, compressionlevel, logger_postprocess=None):
+def hdf5collector(
+    hdf5path, mode, q, num_exp, compressionlevel, logger_postprocess=None
+):
     prctl.set_name("logger")
     prctl.set_proctitle("logger")
     f = tables.open_file(hdf5path, mode)
-    if 'fault' in f.root:
+    if "fault" in f.root:
         fault_group = f.root.fault
     else:
-        fault_group = f.create_group("/", 'fault', 'Group containing fault results')
-    myfilter = tables.Filters(complevel=compressionlevel, complib='zlib')
+        fault_group = f.create_group("/", "fault", "Group containing fault results")
+    myfilter = tables.Filters(complevel=compressionlevel, complib="zlib")
     t0 = time.time()
-    tmp = '{}'.format(num_exp)
-    groupname = 'experiment{:0' + '{}'.format(len(tmp)) + 'd}'
-    while(num_exp > 0):
+    tmp = "{}".format(num_exp)
+    groupname = "experiment{:0" + "{}".format(len(tmp)) + "d}"
+    while num_exp > 0:
         # readout queue and get next output from qemu. Will block
         exp = q.get()
         t1 = time.time()
-        logger.info("got exp {}, {} still need to be performed. Took {}s. Elements in queu: {}".format(exp['index'], num_exp, t1 - t0, q.qsize()))
+        logger.info(
+            "got exp {}, {} still need to be performed. Took {}s. Elements in queu: {}".format(
+                exp["index"], num_exp, t1 - t0, q.qsize()
+            )
+        )
         t0 = t1
         # create experiment group in file
-        if(exp['index'] >= 0):
-            index = exp['index']
+        if exp["index"] >= 0:
+            index = exp["index"]
             while groupname.format(index) in fault_group:
                 index = index + 1
             exp_group = f.create_group(fault_group, groupname.format(index))
-            if exp['index'] != index:
-                logger.warning("The index provided was already used. found new one: {}".format(index))
+            if exp["index"] != index:
+                logger.warning(
+                    "The index provided was already used. found new one: {}".format(
+                        index
+                    )
+                )
             num_exp = num_exp - 1
-        elif(exp['index'] == -2):
-            if 'Pregoldenrun' in f.root:
+        elif exp["index"] == -2:
+            if "Pregoldenrun" in f.root:
                 raise ValueError("Pregoldenrun already exists!")
-            exp_group = f.create_group("/", 'Pregoldenrun', "Group containing all information regarding firmware running before start point is reached")
-        elif(exp['index'] == -1):
-            if 'Goldenrun' in f.root:
+            exp_group = f.create_group(
+                "/",
+                "Pregoldenrun",
+                "Group containing all information regarding firmware running before start point is reached",
+            )
+        elif exp["index"] == -1:
+            if "Goldenrun" in f.root:
                 raise ValueError("Goldenrun already exists!")
-            exp_group = f.create_group("/", 'Goldenrun', "Group containing all information about goldenrun")
+            exp_group = f.create_group(
+                "/", "Goldenrun", "Group containing all information about goldenrun"
+            )
         else:
             raise ValueError("Index is not supposed to be negative")
 
         # safe tbinfo
-        if 'tbinfo' in exp:
-            process_tbinfo(f, exp_group, exp['tbinfo'], myfilter)
+        if "tbinfo" in exp:
+            process_tbinfo(f, exp_group, exp["tbinfo"], myfilter)
         # safe tbexec
-        if 'tbexec' in exp:
-            process_tbexec(f, exp_group, exp['tbexec'], myfilter)
+        if "tbexec" in exp:
+            process_tbexec(f, exp_group, exp["tbexec"], myfilter)
         # safe meminfo
-        if 'meminfo' in exp:
-            process_memory_info(f, exp_group, exp['meminfo'], myfilter)
+        if "meminfo" in exp:
+            process_memory_info(f, exp_group, exp["meminfo"], myfilter)
         # safe fault config
-        process_faults(f, exp_group, exp['faultlist'], exp['endpoint'], myfilter)
+        process_faults(f, exp_group, exp["faultlist"], exp["endpoint"], myfilter)
         # safe dumps
-        if 'memdumplist' in exp:
-            process_dumps(f, exp_group, exp['memdumplist'], myfilter)
-        if 'armregisters' in exp:
-            process_arm_registers(f, exp_group, exp['armregisters'], myfilter)
-        if 'riscvregisters' in exp:
-            process_riscv_registers(f, exp_group, exp['riscvregisters'], myfilter)
-        if 'tbfaulted' in exp:
-            process_tb_faulted(f, exp_group, exp['tbfaulted'], myfilter)
+        if "memdumplist" in exp:
+            process_dumps(f, exp_group, exp["memdumplist"], myfilter)
+        if "armregisters" in exp:
+            process_arm_registers(f, exp_group, exp["armregisters"], myfilter)
+        if "riscvregisters" in exp:
+            process_riscv_registers(f, exp_group, exp["riscvregisters"], myfilter)
+        if "tbfaulted" in exp:
+            process_tb_faulted(f, exp_group, exp["tbfaulted"], myfilter)
         if callable(logger_postprocess):
             logger_postprocess(f, exp_group, exp, myfilter)
         del exp
