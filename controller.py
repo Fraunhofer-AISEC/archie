@@ -196,7 +196,9 @@ def controller(
     workers
     """
     clogger.info("Controller start")
+
     t0 = time.time()
+
     m = Manager()
     m2 = Manager()
     q = m.Queue()
@@ -204,6 +206,7 @@ def controller(
 
     prctl.set_name("Controller")
     prctl.set_proctitle("Python_Controller")
+
     goldenrun_data = {}
     if goldenrun:
         [
@@ -211,6 +214,7 @@ def controller(
             goldenrun_data,
             faultlist,
         ] = run_goldenrun(config_qemu, qemu_output, q, faultlist, qemu_pre, qemu_post)
+
     p_logger = Process(
         target=logger,
         args=(
@@ -296,9 +300,11 @@ def controller(
         for i in range(q2.qsize()):
             mem = q2.get_nowait()
             mem_list.append(mem)
+
         if len(mem_list) > 6 * num_workers + 4:
             del mem_list[0 : len(mem_list) - 6 * num_workers + 4]
         mem_max = max(mem_list)
+
         "Calculate length of running processes"
         times.clear()
         time_max = 0
@@ -333,8 +339,11 @@ def controller(
                 break
 
     clogger.info("{} experiments remaining in queue".format(q.qsize()))
+
     p_logger.join()
+
     clogger.info("Done with qemu and logger")
+
     t1 = time.time()
     m, s = divmod(t1 - t0, 60)
     h, m = divmod(m, 60)
@@ -347,7 +356,9 @@ def controller(
             tperindex, tperworker
         )
     )
+
     clogger.info("controller exit")
+
     return config_qemu
 
 
