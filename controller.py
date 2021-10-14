@@ -201,7 +201,7 @@ def controller(
     m2 = Manager()
     q = m.Queue()
     q2 = m2.Queue()
-    num_exp = len(faultlist)
+
     prctl.set_name("Controller")
     prctl.set_proctitle("Python_Controller")
     goldenrun_data = {}
@@ -336,9 +336,10 @@ def controller(
     t1 = time.time()
     m, s = divmod(t1 - t0, 60)
     h, m = divmod(m, 60)
-    clogger.info("Took {}:{}:{} to complet all experiments".format(h, m, s))
-    tperindex = (t1 - t0) / (num_exp)
-    tperworker = (t1 - t0) / (num_exp / num_workers)
+    clogger.info("Took {}:{}:{} to complete all experiments".format(h, m, s))
+
+    tperindex = (t1 - t0) / len(faultlist)
+    tperworker = tperindex / num_workers
     clogger.info(
         "Took average of {}s per fault, python worker rough runtime is {}s".format(
             tperindex, tperworker
