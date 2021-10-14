@@ -281,6 +281,10 @@ def controller(
                         faults["index"], len_p_list_cached + 1
                     )
                 )
+                clogger.debug(f"Fault address: {faults['faultlist'][0].address}")
+                clogger.debug(
+                    f"Fault trigger address: {faults['faultlist'][0].trigger.address}"
+                )
             else:
                 if len(p_list) == 0 and len(faultlist) == itter:
                     clogger.info("Done inserting qemu jobs")
