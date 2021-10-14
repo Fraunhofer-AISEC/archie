@@ -245,7 +245,6 @@ def controller(
     itter = 0
     times = []
     while 1:
-        len_p_list_cached = len(p_list)
         if (
             len(p_list) < num_workers
             and mem_limit_calc(mem_max, len(p_list), q.qsize(), time_max)
@@ -271,15 +270,9 @@ def controller(
                     ),
                 )
                 p.start()
-                p_context = {}
-                p_context["process"] = p
-                p_context["start_time"] = time.time()
-                p_list.append(p_context)
-                clogger.info(
-                    "Started worker {}. Running: {}.".format(
-                        faults["index"], len_p_list_cached + 1
-                    )
-                )
+                p_list.append({"process": p, "start_time": time.time()})
+
+                clogger.info(f"Started worker {faults['index']}. Running: {len(p_list)}.")
                 clogger.debug(f"Fault address: {faults['faultlist'][0].address}")
                 clogger.debug(
                     f"Fault trigger address: {faults['faultlist'][0].trigger.address}"
@@ -301,7 +294,7 @@ def controller(
         times.clear()
         time_max = 0
         current_time = time.time()
-        for i in range(0, len_p_list_cached):
+        for i in range(len(p_list)):
             p = p_list[i]
             tmp = current_time - p["start_time"]
             "If the current processing time is lower than moving average, do not punish the time "
@@ -313,7 +306,8 @@ def controller(
         process minus the moving average)"""
         if len(times) > 0:
             time_max = max(times)
-        for i in range(0, len_p_list_cached):
+
+        for i in range(len(p_list)):
             p = p_list[i]
             "Find finished processes"
             p["process"].join(timeout=0)
