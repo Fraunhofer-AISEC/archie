@@ -252,45 +252,47 @@ def controller(
 
     itter = 0
     while 1:
-        if (
-            len(p_list) < num_workers
-            and mem_limit_calc(mem_max, len(p_list), q.qsize(), time_max)
-            < max_ram
-        ):
-            if itter < len(faultlist) and q.qsize() < queuedepth:
-                faults = faultlist[itter]
-                itter += 1
-                p = Process(
-                    name="worker_{}".format(faults["index"]),
-                    target=python_worker,
-                    args=(
-                        faults["faultlist"],
-                        config_qemu,
-                        faults["index"],
-                        q,
-                        qemu_output,
-                        goldenrun_data,
-                        True,
-                        q2,
-                        qemu_pre,
-                        qemu_post,
-                    ),
-                )
-                p.start()
-                p_list.append({"process": p, "start_time": time.time()})
+        if len(p_list) == 0 and itter == len(faultlist):
+            clogger.info("Done inserting qemu jobs")
+            break
 
-                clogger.info(f"Started worker {faults['index']}. Running: {len(p_list)}.")
-                clogger.debug(f"Fault address: {faults['faultlist'][0].address}")
-                clogger.debug(
-                    f"Fault trigger address: {faults['faultlist'][0].trigger.address}"
-                )
-            else:
-                if len(p_list) == 0 and itter == len(faultlist):
-                    clogger.info("Done inserting qemu jobs")
-                    break
-                time.sleep(0.001)  # wait for queue to empty
+        if (
+            mem_limit_calc(mem_max, len(p_list), q.qsize(), time_max) < max_ram
+            and len(p_list) < num_workers
+            and itter < len(faultlist)
+            and q.qsize() < queuedepth
+        ):
+
+            faults = faultlist[itter]
+            itter += 1
+
+            p = Process(
+                name=f"worker_{faults['index']}",
+                target=python_worker,
+                args=(
+                    faults["faultlist"],
+                    config_qemu,
+                    faults["index"],
+                    q,
+                    qemu_output,
+                    goldenrun_data,
+                    True,
+                    q2,
+                    qemu_pre,
+                    qemu_post,
+                ),
+            )
+            p.start()
+            p_list.append({"process": p, "start_time": time.time()})
+
+            clogger.info(f"Started worker {faults['index']}. Running: {len(p_list)}.")
+            clogger.debug(f"Fault address: {faults['faultlist'][0].address}")
+            clogger.debug(
+                f"Fault trigger address: {faults['faultlist'][0].trigger.address}"
+            )
         else:
             time.sleep(0.005)  # wait for workers to finish, scheduler can wait
+
         for i in range(0, q2.qsize()):
             mem = q2.get_nowait()
             mem_list.append(mem)
