@@ -278,7 +278,7 @@ def controller(
                     f"Fault trigger address: {faults['faultlist'][0].trigger.address}"
                 )
             else:
-                if len(p_list) == 0 and len(faultlist) == itter:
+                if len(p_list) == 0 and itter == len(faultlist):
                     clogger.info("Done inserting qemu jobs")
                     break
                 time.sleep(0.001)  # wait for queue to empty
