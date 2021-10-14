@@ -252,7 +252,7 @@ def controller(
             and mem_limit_calc(mem_max, len_p_list_cached, qsizecache, time_max)
             < max_ram
         ):
-            if len(faultlist) > itter and qsizecache < queuedepth:
+            if itter < len(faultlist) and qsizecache < queuedepth:
                 faults = faultlist[itter]
                 itter += 1
                 p = Process(
