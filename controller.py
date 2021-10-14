@@ -293,7 +293,7 @@ def controller(
         else:
             time.sleep(0.005)  # wait for workers to finish, scheduler can wait
 
-        for i in range(0, q2.qsize()):
+        for i in range(q2.qsize()):
             mem = q2.get_nowait()
             mem_list.append(mem)
         if len(mem_list) > 6 * num_workers + 4:
