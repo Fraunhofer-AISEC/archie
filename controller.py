@@ -222,17 +222,24 @@ def controller(
             logger_postprocess,
         ),
     )
+
     p_logger.start()
+
     p_list = []
-    mem_list = []
+
+
     p_time_list = []
     p_time_list.append(60)
     p_time_mean = 60
-    mem_max = 0
-    max_ram = get_system_ram() * 0.9 - 2000000
-    mem_list.append(max_ram / (num_workers))
-    mem_max = max_ram / 2
+
+    times = []
     time_max = 0
+
+    mem_list = []
+    max_ram = get_system_ram() * 0.8 - 2000000
+    mem_max = max_ram / 2
+    mem_list.append(max_ram / (num_workers))
+
     goldenrun_data["tbexec"] = pd.DataFrame(goldenrun_data["tbexec"])
     goldenrun_data["tbinfo"] = pd.DataFrame(goldenrun_data["tbinfo"])
     goldenrun_data["meminfo"] = pd.DataFrame(goldenrun_data["meminfo"])
@@ -242,8 +249,8 @@ def controller(
         goldenrun_data["riscvregisters"] = pd.DataFrame(
             goldenrun_data["riscvregisters"]
         )
+
     itter = 0
-    times = []
     while 1:
         if (
             len(p_list) < num_workers
