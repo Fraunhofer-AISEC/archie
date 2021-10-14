@@ -246,13 +246,12 @@ def controller(
     times = []
     while 1:
         len_p_list_cached = len(p_list)
-        qsizecache = q.qsize()
         if (
-            len_p_list_cached < num_workers
-            and mem_limit_calc(mem_max, len_p_list_cached, qsizecache, time_max)
+            len(p_list) < num_workers
+            and mem_limit_calc(mem_max, len(p_list), q.qsize(), time_max)
             < max_ram
         ):
-            if itter < len(faultlist) and qsizecache < queuedepth:
+            if itter < len(faultlist) and q.qsize() < queuedepth:
                 faults = faultlist[itter]
                 itter += 1
                 p = Process(
