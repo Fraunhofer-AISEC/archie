@@ -202,7 +202,7 @@ def controller(
     m = Manager()
     m2 = Manager()
     q = m.Queue()
-    q2 = m2.Queue()
+    queue_ram_usage = m2.Queue()
 
     prctl.set_name("Controller")
     prctl.set_proctitle("Python_Controller")
@@ -281,7 +281,7 @@ def controller(
                     qemu_output,
                     goldenrun_data,
                     True,
-                    q2,
+                    queue_ram_usage,
                     qemu_pre,
                     qemu_post,
                 ),
@@ -297,8 +297,8 @@ def controller(
         else:
             time.sleep(0.005)  # wait for workers to finish, scheduler can wait
 
-        for i in range(q2.qsize()):
-            mem = q2.get_nowait()
+        for i in range(queue_ram_usage.qsize()):
+            mem = queue_ram_usage.get_nowait()
             mem_list.append(mem)
 
         if len(mem_list) > 6 * num_workers + 4:

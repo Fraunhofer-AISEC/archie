@@ -461,7 +461,7 @@ def readout_data(
     q,
     faultlist,
     goldenrun_data,
-    q2=None,
+    queue_ram_usage=None,
     qemu_post=None,
     qemu_pre_data=None,
 ):
@@ -524,8 +524,8 @@ def readout_data(
                     else:
                         pdtbexeclist = pd.DataFrame(tbexeclist)
                     tmp = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-                    if q2 is not None:
-                        q2.put(tmp)
+                    if queue_ram_usage is not None:
+                        queue_ram_usage.put(tmp)
                     if goldenrun_data is not None:
                         [pdtbexeclist, tblist] = filter_tb(
                             pdtbexeclist,
@@ -537,11 +537,13 @@ def readout_data(
                 if tbinfo == 1 and meminfo == 1:
                     connect_meminfo_tb(memlist, tblist)
                 output = {}
+
                 mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-                if q2 is not None:
-                    q2.put(tmp)
+                if queue_ram_usage is not None:
+                    queue_ram_usage.put(tmp)
                 if tmp > mem:
                     mem = tmp
+
                 if tbinfo == 1:
                     if goldenrun_data is not None:
                         output["tbinfo"] = diff_tbinfo(tblist, goldenrun_data["tbinfo"])
@@ -583,16 +585,16 @@ def readout_data(
                 if memdump == 1:
                     output["memdumplist"] = memdumplist
                 tmp = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-                if q2 is not None:
-                    q2.put(tmp)
+                if queue_ram_usage is not None:
+                    queue_ram_usage.put(tmp)
                 if tmp > mem:
                     mem = tmp
                 if callable(qemu_post):
                     output = qemu_post(qemu_pre_data, output)
                 q.put(output)
                 tmp = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-                if q2 is not None:
-                    q2.put(tmp)
+                if queue_ram_usage is not None:
+                    queue_ram_usage.put(tmp)
                 if tmp > mem:
                     mem = tmp
                 break
@@ -750,7 +752,7 @@ def python_worker(
     qemu_output,
     goldenrun_data=None,
     change_nice=False,
-    q2=None,
+    queue_ram_usage=None,
     qemu_pre=None,
     qemu_post=None,
 ):
@@ -823,7 +825,7 @@ def python_worker(
             q,
             fault_list,
             goldenrun_data,
-            q2,
+            queue_ram_usage,
             qemu_post=qemu_post,
             qemu_pre_data=qemu_pre_data,
         )
@@ -834,8 +836,8 @@ def python_worker(
                 index, time.time() - t0, mem
             )
         )
-        if q2 is not None:
-            q2.put(mem)
+        if queue_ram_usage is not None:
+            queue_ram_usage.put(mem)
     except KeyboardInterrupt:
         p_qemu.terminate()
         p_qemu.join()
