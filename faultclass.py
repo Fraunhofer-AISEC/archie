@@ -158,6 +158,9 @@ def write_output_wrt_goldenrun(keyword, data, goldenrun_data):
     data            pd.data_frame
     goldenrun_data  pd.data_frame
     """
+    if not isinstance(data, pd.DataFrame):
+        data = pd.DataFrame(data)
+
     if goldenrun_data is not None:
         data = [data, goldenrun_data[keyword], goldenrun_data[keyword]]
         data = pd.concat(data).drop_duplicates(keep=False)
@@ -500,21 +503,15 @@ def readout_data(
                 max_ram_usage = gather_process_ram_usage(queue_ram_usage, max_ram_usage)
 
                 datasets = []
-
-                if tbinfo == 1:
-                    datasets.append(("tbinfo", pd.DataFrame(tblist)))
-
-                if tbexec == 1:
-                    datasets.append(("tbexec", pdtbexeclist))
-
-                if meminfo == 1:
-                    datasets.append(("meminfo", pd.DataFrame(memlist)))
-
-                if regtype == "arm" or regtype == "riscv":
-                    datasets.append((f"{regtype}registers", pd.DataFrame(registerlist)))
+                datasets.append((tbinfo, "tbinfo", tblist))
+                datasets.append((tbexec, "tbexec", pdtbexeclist))
+                datasets.append((meminfo, "meminfo", memlist))
+                datasets.append((regtype, f"{regtype}registers", registerlist))
 
                 output = {}
-                for (keyword, data) in datasets:
+                for (flag, keyword, data) in datasets:
+                    if not flag:
+                        continue
                     output[keyword] = write_output_wrt_goldenrun(keyword, data, goldenrun_data)
 
                 if tbfaulted == 1:
