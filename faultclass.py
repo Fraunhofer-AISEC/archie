@@ -472,9 +472,7 @@ def readout_data(
             elif "[END]" in line:
                 state = "none"
                 logger.info(
-                    "Data received now on post processing for Experiment {}".format(
-                        index
-                    )
+                    f"Data received now on post processing for Experiment {index}"
                 )
                 tmp = 0
                 if tbexec == 1:
