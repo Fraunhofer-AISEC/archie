@@ -475,7 +475,7 @@ def readout_data(
                 logger.info(
                     f"Data received now on post processing for Experiment {index}"
                 )
-                tmp = 0
+
                 if tbexec == 1:
                     if pdtbexeclist is not None:
                         tmp = pd.DataFrame(tbexeclist)
@@ -493,11 +493,13 @@ def readout_data(
                             goldenrun_data["tbinfo"],
                             index,
                         )
+
                 if tbinfo == 1 and meminfo == 1:
                     connect_meminfo_tb(memlist, tblist)
-                output = {}
 
                 max_ram_usage = gather_process_ram_usage(queue_ram_usage, max_ram_usage)
+
+                output = {}
 
                 if tbinfo == 1:
                     keyword = "tbinfo"
