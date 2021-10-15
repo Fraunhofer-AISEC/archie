@@ -538,7 +538,7 @@ def readout_data(
                     connect_meminfo_tb(memlist, tblist)
                 output = {}
 
-                mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+                tmp = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
                 if queue_ram_usage is not None:
                     queue_ram_usage.put(tmp)
                 if tmp > mem:
