@@ -522,21 +522,15 @@ def readout_data(
                     else:
                         output["meminfo"] = memlist
 
-                if goldenrun_data is not None:
-                    if regtype == "arm":
-                        output["armregisters"] = get_diff_wrt_goldenrun(
-                            pd.DataFrame(registerlist), goldenrun_data["armregisters"]
+                if regtype == "arm" or regtype == "riscv":
+                    arch_registers = f"{regtype}registers"
+                    registerlist = pd.DataFrame(registerlist)
+                    if goldenrun_data is not None:
+                        output[arch_registers] = get_diff_wrt_goldenrun(
+                            registerlist, goldenrun_data[arch_registers]
                         )
-                    if regtype == "riscv":
-                        output["riscvregisters"] = get_diff_wrt_goldenrun(
-                            pd.DataFrame(registerlist), goldenrun_data["riscvregisters"]
-                        )
-
-                else:
-                    if regtype == "arm":
-                        output["armregisters"] = registerlist
-                    if regtype == "riscv":
-                        output["riscvregisters"] = registerlist
+                    else:
+                        output[arch_registers] = registerlist.to_dict("records")
 
                 if tbfaulted == 1:
                     output["tbfaulted"] = tbfaultedlist
