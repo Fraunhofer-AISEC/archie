@@ -4,10 +4,11 @@ from multiprocessing import Process
 import time
 import pandas as pd
 import prctl
-import resource
 
 
 import logging
+
+from util import gather_process_ram_usage
 
 logger = logging.getLogger(__name__)
 qlogger = logging.getLogger("QEMU-" + __name__)
@@ -485,7 +486,7 @@ def readout_data(
     meminfo = 0
     memdump = 0
     endpoint = 0
-    mem = 0
+    max_ram_usage = 0
     regtype = None
     tbfaulted = 0
 
@@ -523,9 +524,9 @@ def readout_data(
                         pdtbexeclist = pd.concat([pdtbexeclist, tmp], ignore_index=True)
                     else:
                         pdtbexeclist = pd.DataFrame(tbexeclist)
-                    tmp = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-                    if queue_ram_usage is not None:
-                        queue_ram_usage.put(tmp)
+
+                    gather_process_ram_usage(queue_ram_usage, 0)
+
                     if goldenrun_data is not None:
                         [pdtbexeclist, tblist] = filter_tb(
                             pdtbexeclist,
@@ -538,17 +539,14 @@ def readout_data(
                     connect_meminfo_tb(memlist, tblist)
                 output = {}
 
-                tmp = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-                if queue_ram_usage is not None:
-                    queue_ram_usage.put(tmp)
-                if tmp > mem:
-                    mem = tmp
+                max_ram_usage = gather_process_ram_usage(queue_ram_usage, max_ram_usage)
 
                 if tbinfo == 1:
                     if goldenrun_data is not None:
                         output["tbinfo"] = diff_tbinfo(tblist, goldenrun_data["tbinfo"])
                     else:
                         output["tbinfo"] = tblist
+
                 if tbexec == 1:
                     if goldenrun_data is not None:
                         output["tbexec"] = diff_tbexec(
@@ -584,19 +582,15 @@ def readout_data(
                 output["endpoint"] = endpoint
                 if memdump == 1:
                     output["memdumplist"] = memdumplist
-                tmp = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-                if queue_ram_usage is not None:
-                    queue_ram_usage.put(tmp)
-                if tmp > mem:
-                    mem = tmp
+
+                max_ram_usage = gather_process_ram_usage(queue_ram_usage, max_ram_usage)
+
                 if callable(qemu_post):
                     output = qemu_post(qemu_pre_data, output)
                 q.put(output)
-                tmp = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-                if queue_ram_usage is not None:
-                    queue_ram_usage.put(tmp)
-                if tmp > mem:
-                    mem = tmp
+
+                max_ram_usage = gather_process_ram_usage(queue_ram_usage, max_ram_usage)
+
                 break
             elif "[Arm Registers]" in line:
                 state = "armregisters"
@@ -641,7 +635,7 @@ def readout_data(
                 tbfaultedlist.append(readout_tb_faulted(line))
             else:
                 logger.warning("In exp {} unknown state {}".format(index, line))
-    return mem
+    return max_ram_usage
 
 
 def create_fifos():
