@@ -494,22 +494,28 @@ def readout_data(
         line = pipe.readline()
         if "$$$" in line:
             line = line[3:]
+
             if "[Endpoint]" in line:
                 split = line.split("]:")
                 endpoint = int(split[1], 0)
+
             elif "[TB Information]" in line:
                 state = "tbinfo"
                 tbinfo = 1
+
             elif "[TB Exec]" in line:
                 state = "tbexec"
                 tbexec = 1
+
             elif "[Mem Information]" in line:
                 tbexeclist.reverse()
                 state = "meminfo"
                 meminfo = 1
+
             elif "[Memdump]" in line:
                 state = "memdump"
                 memdump = 1
+
             elif "[END]" in line:
                 state = "none"
                 logger.info(
@@ -554,6 +560,7 @@ def readout_data(
                         )
                     else:
                         output["tbexec"] = convert_pd_frame_to_list(pdtbexeclist)
+
                 if meminfo == 1:
                     if goldenrun_data is not None:
                         output["meminfo"] = diff_meminfo(
@@ -561,6 +568,7 @@ def readout_data(
                         )
                     else:
                         output["meminfo"] = memlist
+
                 if goldenrun_data is not None:
                     if regtype == "arm":
                         output["armregisters"] = diff_arm_registers(
@@ -570,16 +578,20 @@ def readout_data(
                         output["riscvregisters"] = diff_arm_registers(
                             registerlist, goldenrun_data["riscvregisters"]
                         )
+
                 else:
                     if regtype == "arm":
                         output["armregisters"] = registerlist
                     if regtype == "riscv":
                         output["riscvregisters"] = registerlist
+
                 if tbfaulted == 1:
                     output["tbfaulted"] = tbfaultedlist
+
                 output["index"] = index
                 output["faultlist"] = faultlist
                 output["endpoint"] = endpoint
+
                 if memdump == 1:
                     output["memdumplist"] = memdumplist
 
@@ -592,6 +604,7 @@ def readout_data(
                 max_ram_usage = gather_process_ram_usage(queue_ram_usage, max_ram_usage)
 
                 break
+
             elif "[Arm Registers]" in line:
                 state = "armregisters"
                 regtype = "arm"
@@ -606,6 +619,7 @@ def readout_data(
                     "Command in exp {} not understood {}".format(index, line)
                 )
                 state = "None"
+
         elif "$$" in line:
             line = line[2:]
             if "tbinfo" in state:
