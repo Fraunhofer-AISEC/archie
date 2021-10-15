@@ -499,26 +499,22 @@ def readout_data(
 
                 max_ram_usage = gather_process_ram_usage(queue_ram_usage, max_ram_usage)
 
-                output = {}
+                datasets = []
 
                 if tbinfo == 1:
-                    keyword = "tbinfo"
-                    data = pd.DataFrame(tblist)
-                    output[keyword] = write_output_wrt_goldenrun(keyword, data, goldenrun_data)
+                    datasets.append(("tbinfo", pd.DataFrame(tblist)))
 
                 if tbexec == 1:
-                    keyword = "tbexec"
-                    data = pdtbexeclist
-                    output[keyword] = write_output_wrt_goldenrun(keyword, data, goldenrun_data)
+                    datasets.append(("tbexec", pdtbexeclist))
 
                 if meminfo == 1:
-                    keyword = "meminfo"
-                    data = pd.DataFrame(memlist)
-                    output[keyword] = write_output_wrt_goldenrun(keyword, data, goldenrun_data)
+                    datasets.append(("meminfo", pd.DataFrame(memlist)))
 
                 if regtype == "arm" or regtype == "riscv":
-                    keyword = f"{regtype}registers"
-                    data = pd.DataFrame(registerlist)
+                    datasets.append((f"{regtype}registers", pd.DataFrame(registerlist)))
+
+                output = {}
+                for (keyword, data) in datasets:
                     output[keyword] = write_output_wrt_goldenrun(keyword, data, goldenrun_data)
 
                 if tbfaulted == 1:
