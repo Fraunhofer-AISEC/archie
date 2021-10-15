@@ -452,10 +452,6 @@ def diff_tables(table, goldentable):
     return pd.concat([table, goldentable, goldentable]).drop_duplicates(keep=False)
 
 
-def convert_pd_frame_to_list(table):
-    return table.to_dict("records")
-
-
 def readout_data(
     pipe,
     index,
@@ -559,7 +555,7 @@ def readout_data(
                             pdtbexeclist, goldenrun_data["tbexec"]
                         )
                     else:
-                        output["tbexec"] = convert_pd_frame_to_list(pdtbexeclist)
+                        output["tbexec"] = pdtbexeclist.to_dict("records")
 
                 if meminfo == 1:
                     if goldenrun_data is not None:
