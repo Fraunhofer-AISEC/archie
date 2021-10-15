@@ -149,18 +149,19 @@ def readout_tbinfo(line):
     return tb
 
 
-def diff_tbinfo(tblist, goldenrun_tblist):
+def get_diff_wrt_goldenrun(data, goldenrun_data):
     """
-    Diff tblist with golden runs tblist. Convert to pandas data frame for performance reasons.
-    Naive implementation is too slow for larger datasets.
-    Also added two times golden run concat to cancel it out and only find diff to df1
-    """
-    df1 = pd.DataFrame(tblist)
-    df2 = goldenrun_tblist
-    diff = pd.concat([df1, df2, df2]).drop_duplicates(keep=False)
-    tblist_dif = diff.to_dict("records")
+    Panda dataframes for performance reasons. Naive implementation is too slow
+    for larger datasets. golden_data twice concated to only get the diff
+    (golden_data cancels it out)
 
-    return tblist_dif
+    data            pd.data_frame
+    goldenrun_data  pd.data_frame
+    """
+    data = [data, goldenrun_data, goldenrun_data]
+    diff_data = pd.concat(data).drop_duplicates(keep=False)
+
+    return diff_data.to_dict("records")
 
 
 def readout_tbexec(line, tbexeclist, tbinfo, goldenrun):
@@ -319,22 +320,6 @@ def filter_tb(tbexeclist, tbinfo, tbexecgolden, tbinfogolden, id_num):
     return [tbexecpd, tbinfopd.to_dict("records")]
 
 
-def diff_tbexec(tbexeclist, goldenrun_tbexeclist):
-    """
-    Diff tbexeclist with golden runs tbexeclist. Convert to pandas
-    dataframe for performance reasons.
-    Naive implementation is too slow for larger datasets.
-    Also added two times golden run concat to cancel it out and only find
-    diff to df1
-    """
-    df1 = tbexeclist
-    df2 = goldenrun_tbexeclist
-    diff = pd.concat([df1, df2, df2]).drop_duplicates(keep=False)
-
-    tbexeclist_diff = diff.to_dict("records")
-    return tbexeclist_diff
-
-
 def readout_meminfo(line):
     """
     Builds the dict for memory info from line provided by qemu
@@ -348,20 +333,6 @@ def readout_meminfo(line):
     mem["counter"] = int(split[4], 0)
     mem["tbid"] = 0
     return mem
-
-
-def diff_meminfo(meminfolist, goldenrun_meminfolist):
-    """
-    Diff meminfo with golden runs meminfo. Convert to pandas dataframe
-    for performance reasons. Naive implementation is too slow for larger
-    datasets. Also added two times golden run concat to cancel it out
-    and only find diff to df1
-    """
-    df1 = pd.DataFrame(meminfolist)
-    df2 = goldenrun_meminfolist
-    diff = pd.concat([df1, df2, df2]).drop_duplicates(keep=False)
-    meminfolist_diff = diff.to_dict("records")
-    return meminfolist_diff
 
 
 def connect_meminfo_tb(meminfolist, tblist):
@@ -437,21 +408,6 @@ def readout_tb_faulted(line):
     return tbfaulted
 
 
-def diff_arm_registers(armregisterlist, goldenarmregisterlist):
-    df1 = pd.DataFrame(armregisterlist)
-    df2 = goldenarmregisterlist
-    diff = pd.concat([df1, df2, df2]).drop_duplicates(keep=False)
-    armregister_diff = diff.to_dict("records")
-    return armregister_diff
-
-
-def diff_tables(table, goldentable):
-    """
-    This function expects a table and its golden table as pandas dataframe
-    """
-    return pd.concat([table, goldentable, goldentable]).drop_duplicates(keep=False)
-
-
 def readout_data(
     pipe,
     index,
@@ -488,6 +444,7 @@ def readout_data(
 
     while 1:
         line = pipe.readline()
+
         if "$$$" in line:
             line = line[3:]
 
@@ -545,13 +502,15 @@ def readout_data(
 
                 if tbinfo == 1:
                     if goldenrun_data is not None:
-                        output["tbinfo"] = diff_tbinfo(tblist, goldenrun_data["tbinfo"])
+                        output["tbinfo"] = get_diff_wrt_goldenrun(
+                            pd.DataFrame(tblist), goldenrun_data["tbinfo"]
+                        )
                     else:
                         output["tbinfo"] = tblist
 
                 if tbexec == 1:
                     if goldenrun_data is not None:
-                        output["tbexec"] = diff_tbexec(
+                        output["tbexec"] = get_diff_wrt_goldenrun(
                             pdtbexeclist, goldenrun_data["tbexec"]
                         )
                     else:
@@ -559,20 +518,20 @@ def readout_data(
 
                 if meminfo == 1:
                     if goldenrun_data is not None:
-                        output["meminfo"] = diff_meminfo(
-                            memlist, goldenrun_data["meminfo"]
+                        output["meminfo"] = get_diff_wrt_goldenrun(
+                            pd.DataFrame(memlist), goldenrun_data["meminfo"]
                         )
                     else:
                         output["meminfo"] = memlist
 
                 if goldenrun_data is not None:
                     if regtype == "arm":
-                        output["armregisters"] = diff_arm_registers(
-                            registerlist, goldenrun_data["armregisters"]
+                        output["armregisters"] = get_diff_wrt_goldenrun(
+                            pd.DataFrame(registerlist), goldenrun_data["armregisters"]
                         )
                     if regtype == "riscv":
-                        output["riscvregisters"] = diff_arm_registers(
-                            registerlist, goldenrun_data["riscvregisters"]
+                        output["riscvregisters"] = get_diff_wrt_goldenrun(
+                            pd.DataFrame(registerlist), goldenrun_data["riscvregisters"]
                         )
 
                 else:
