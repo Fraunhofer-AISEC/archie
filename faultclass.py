@@ -149,7 +149,7 @@ def readout_tbinfo(line):
     return tb
 
 
-def get_diff_wrt_goldenrun(data, goldenrun_data):
+def write_output_wrt_goldenrun(keyword, data, goldenrun_data):
     """
     Panda dataframes for performance reasons. Naive implementation is too slow
     for larger datasets. golden_data twice concated to only get the diff
@@ -158,10 +158,11 @@ def get_diff_wrt_goldenrun(data, goldenrun_data):
     data            pd.data_frame
     goldenrun_data  pd.data_frame
     """
-    data = [data, goldenrun_data, goldenrun_data]
-    diff_data = pd.concat(data).drop_duplicates(keep=False)
+    if goldenrun_data is not None:
+        data = [data, goldenrun_data[keyword], goldenrun_data[keyword]]
+        data = pd.concat(data).drop_duplicates(keep=False)
 
-    return diff_data.to_dict("records")
+    return data.to_dict("records")
 
 
 def readout_tbexec(line, tbexeclist, tbinfo, goldenrun):
@@ -499,38 +500,24 @@ def readout_data(
                 max_ram_usage = gather_process_ram_usage(queue_ram_usage, max_ram_usage)
 
                 if tbinfo == 1:
-                    if goldenrun_data is not None:
-                        output["tbinfo"] = get_diff_wrt_goldenrun(
-                            pd.DataFrame(tblist), goldenrun_data["tbinfo"]
-                        )
-                    else:
-                        output["tbinfo"] = tblist
+                    keyword = "tbinfo"
+                    data = pd.DataFrame(tblist)
+                    output[keyword] = write_output_wrt_goldenrun(keyword, data, goldenrun_data)
 
                 if tbexec == 1:
-                    if goldenrun_data is not None:
-                        output["tbexec"] = get_diff_wrt_goldenrun(
-                            pdtbexeclist, goldenrun_data["tbexec"]
-                        )
-                    else:
-                        output["tbexec"] = pdtbexeclist.to_dict("records")
+                    keyword = "tbexec"
+                    data = pdtbexeclist
+                    output[keyword] = write_output_wrt_goldenrun(keyword, data, goldenrun_data)
 
                 if meminfo == 1:
-                    if goldenrun_data is not None:
-                        output["meminfo"] = get_diff_wrt_goldenrun(
-                            pd.DataFrame(memlist), goldenrun_data["meminfo"]
-                        )
-                    else:
-                        output["meminfo"] = memlist
+                    keyword = "meminfo"
+                    data = pd.DataFrame(memlist)
+                    output[keyword] = write_output_wrt_goldenrun(keyword, data, goldenrun_data)
 
                 if regtype == "arm" or regtype == "riscv":
-                    arch_registers = f"{regtype}registers"
-                    registerlist = pd.DataFrame(registerlist)
-                    if goldenrun_data is not None:
-                        output[arch_registers] = get_diff_wrt_goldenrun(
-                            registerlist, goldenrun_data[arch_registers]
-                        )
-                    else:
-                        output[arch_registers] = registerlist.to_dict("records")
+                    keyword = f"{regtype}registers"
+                    data = pd.DataFrame(registerlist)
+                    output[keyword] = write_output_wrt_goldenrun(keyword, data, goldenrun_data)
 
                 if tbfaulted == 1:
                     output["tbfaulted"] = tbfaultedlist
