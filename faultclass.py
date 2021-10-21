@@ -8,6 +8,7 @@ import resource
 
 
 import logging
+
 logger = logging.getLogger(__name__)
 qlogger = logging.getLogger("QEMU-" + __name__)
 
@@ -22,14 +23,16 @@ class Trigger:
 
 
 class Fault:
-    def __init__(self,
-                 fault_address: int,
-                 fault_type: int,
-                 fault_model: int,
-                 fault_lifespan: int,
-                 fault_mask: int,
-                 trigger_address: int,
-                 trigger_hitcounter: int):
+    def __init__(
+        self,
+        fault_address: int,
+        fault_type: int,
+        fault_model: int,
+        fault_lifespan: int,
+        fault_mask: int,
+        trigger_address: int,
+        trigger_hitcounter: int,
+    ):
         """
         Define attributes for fault types
         """
@@ -42,19 +45,30 @@ class Fault:
 
     def write_to_fifo(self, fifo):
         "Write data to the config fifo, which sends binary data"
-        numbytes = fifo.write(self.address.to_bytes(8, byteorder='big'))
-        numbytes = numbytes + fifo.write(self.type.to_bytes(8, byteorder='big'))
-        numbytes = numbytes + fifo.write(self.model.to_bytes(8, byteorder='big'))
-        numbytes = numbytes + fifo.write(self.lifespan.to_bytes(8, byteorder='big'))
-        numbytes = numbytes + fifo.write(self.mask.to_bytes(16, byteorder='big'))
-        numbytes = numbytes + fifo.write(self.trigger.address.to_bytes(8, byteorder='big'))
-        numbytes = numbytes + fifo.write(self.trigger.hitcounter.to_bytes(8, byteorder='big'))
+        numbytes = fifo.write(self.address.to_bytes(8, byteorder="big"))
+        numbytes = numbytes + fifo.write(self.type.to_bytes(8, byteorder="big"))
+        numbytes = numbytes + fifo.write(self.model.to_bytes(8, byteorder="big"))
+        numbytes = numbytes + fifo.write(self.lifespan.to_bytes(8, byteorder="big"))
+        numbytes = numbytes + fifo.write(self.mask.to_bytes(16, byteorder="big"))
+        numbytes = numbytes + fifo.write(
+            self.trigger.address.to_bytes(8, byteorder="big")
+        )
+        numbytes = numbytes + fifo.write(
+            self.trigger.hitcounter.to_bytes(8, byteorder="big")
+        )
         fifo.flush()
         return numbytes
 
     def write_to_fifo_new(self, fifo):
         out = "\n$$[Fault]\n"
-        out = out + "% {:d} | {:d} | {:d} | {:d} | {:d} | {:d} | ".format(self.address, self.type, self.model, self.lifespan, self.trigger.address, self.trigger.hitcounter)
+        out = out + "% {:d} | {:d} | {:d} | {:d} | {:d} | {:d} | ".format(
+            self.address,
+            self.type,
+            self.model,
+            self.lifespan,
+            self.trigger.address,
+            self.trigger.hitcounter,
+        )
         tmp = self.mask - pow(2, 64)
         if tmp < 0:
             tmp = 0
@@ -65,17 +79,19 @@ class Fault:
         return tmp
 
 
-def run_qemu(controll,
-             config,
-             data,
-             qemu_monitor_fifo,
-             qemu_path,
-             kernel_path,
-             plugin_path,
-             machine,
-             qemu_output,
-             index,
-             qemu_custom_paths=None):
+def run_qemu(
+    controll,
+    config,
+    data,
+    qemu_monitor_fifo,
+    qemu_path,
+    kernel_path,
+    plugin_path,
+    machine,
+    qemu_output,
+    index,
+    qemu_custom_paths=None,
+):
     """
     This function calls qemu with the required arguments.
     """
@@ -92,17 +108,27 @@ def run_qemu(controll,
         if qemu_custom_paths is None:
             qemu_custom_paths = " "
 
-        qemustring = "{3!s} -plugin {5!s},arg=\"{0!s}\",arg=\"{1!s}\",arg=\"{2!s}\" {6!s} {7!s} -M {8!s} -monitor none  -kernel {4!s}".format(controll, config, data, qemu_path, kernel_path, plugin_path, output, qemu_custom_paths, machine)
-        ps = subprocess.Popen(qemustring, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        qemustring = '{3!s} -plugin {5!s},arg="{0!s}",arg="{1!s}",arg="{2!s}" {6!s} {7!s} -M {8!s} -monitor none  -kernel {4!s}'.format(
+            controll,
+            config,
+            data,
+            qemu_path,
+            kernel_path,
+            plugin_path,
+            output,
+            qemu_custom_paths,
+            machine,
+        )
+        ps = subprocess.Popen(
+            qemustring, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+        )
         while ps.poll() is None:
             tmp = ps.stdout.read()
             if qemu_output is True:
-                f = open("log_{}.txt".format(index), 'wt', encoding='utf-8')
-                f.write(tmp.decode('utf-8'))
-                qlogger.debug(tmp.decode('utf-8'))
-        qlogger.info("Ended qemu for exp {}! Took {}".format(index,
-                                                             time.time()-t0)
-                     )
+                f = open("log_{}.txt".format(index), "wt", encoding="utf-8")
+                f.write(tmp.decode("utf-8"))
+                qlogger.debug(tmp.decode("utf-8"))
+        qlogger.info("Ended qemu for exp {}! Took {}".format(index, time.time() - t0))
     except KeyboardInterrupt:
         ps.kill()
         logger.warning("Terminate QEMU {}".format(index))
@@ -112,13 +138,13 @@ def readout_tbinfo(line):
     """
     Builds the dict for tb info from line provided by qemu
     """
-    split = line.split('|')
+    split = line.split("|")
     tb = {}
-    tb['id'] = int(split[0], 0)
-    tb['size'] = int(split[1], 0)
-    tb['ins_count'] = int(split[2], 0)
-    tb['num_exec'] = int(split[3], 0)
-    tb['assembler'] = split[4].replace('!!', '\n')
+    tb["id"] = int(split[0], 0)
+    tb["size"] = int(split[1], 0)
+    tb["ins_count"] = int(split[2], 0)
+    tb["num_exec"] = int(split[3], 0)
+    tb["assembler"] = split[4].replace("!!", "\n")
     return tb
 
 
@@ -131,7 +157,7 @@ def diff_tbinfo(tblist, goldenrun_tblist):
     df1 = pd.DataFrame(tblist)
     df2 = goldenrun_tblist
     diff = pd.concat([df1, df2, df2]).drop_duplicates(keep=False)
-    tblist_dif = diff.to_dict('records')
+    tblist_dif = diff.to_dict("records")
 
     return tblist_dif
 
@@ -140,11 +166,11 @@ def readout_tbexec(line, tbexeclist, tbinfo, goldenrun):
     """
     Builds the dict for tb exec from line provided by qemu
     """
-    split = line.split('|')
+    split = line.split("|")
     # generate list element
     execdic = {}
-    execdic['tb'] = int(split[0], 0)
-    execdic['pos'] = int(split[1], 0)
+    execdic["tb"] = int(split[0], 0)
+    execdic["pos"] = int(split[1], 0)
     return execdic
 
 
@@ -154,16 +180,16 @@ def build_filters(tbinfogolden):
     """
     filter_return = []
     """Each assembler string"""
-    for tb in tbinfogolden['assembler']:
+    for tb in tbinfogolden["assembler"]:
         tb_filter = []
         """remove first split, as it is empty"""
-        split = tb.split('[ ')
+        split = tb.split("[ ")
         """For each line"""
         for sp in split[1:]:
             """select address"""
-            s = sp.split(']')
+            s = sp.split("]")
             """Add to filter"""
-            tb_filter.append(int("0x"+s[0].strip(), 0))
+            tb_filter.append(int("0x" + s[0].strip(), 0))
         """Sort addresses"""
         tb_filter.sort()
         """Reverse list so that last element is first"""
@@ -186,7 +212,7 @@ def recursive_filter(tbexecpd, tbinfopd, index, filt):
     """Select element to test"""
     tb = tbexecpd.loc[index]
     """Make sure it is part of filter"""
-    if (tb['tb'] == filt[0]):
+    if tb["tb"] == filt[0]:
         if len(filt) == 1:
             """Reached start of original tb"""
             return [True, tbexecpd, tbinfopd]
@@ -195,19 +221,21 @@ def recursive_filter(tbexecpd, tbinfopd, index, filt):
             fi = filt.pop(0)
             index = index + 1
             """Call recursively"""
-            [flag, tbexecpd, tbinfopd] = recursive_filter(tbexecpd, tbinfopd, index, filt)
+            [flag, tbexecpd, tbinfopd] = recursive_filter(
+                tbexecpd, tbinfopd, index, filt
+            )
             index = index - 1
             """If true, we have a match"""
             if flag is True:
                 """Invalidate element in tb exec list"""
-                tbexecpd.at[index, 'tb'] = -1
-                tbexecpd.at[index, 'tb-1'] = -1
+                tbexecpd.at[index, "tb"] = -1
+                tbexecpd.at[index, "tb-1"] = -1
                 """Search tb in tb info"""
-                idx = tbinfopd.index[tbinfopd['id'] == fi]
+                idx = tbinfopd.index[tbinfopd["id"] == fi]
                 for ind in idx:
                     """Only invalidate if tb only contains one element, as these are artefacts of singlestep"""
-                    if tbinfopd.at[ind, 'ins_count'] == 1:
-                        tbinfopd.at[ind, 'num_exec'] = tbinfopd.at[ind, 'num_exec'] - 1
+                    if tbinfopd.at[ind, "ins_count"] == 1:
+                        tbinfopd.at[ind, "num_exec"] = tbinfopd.at[ind, "num_exec"] - 1
             return [flag, tbexecpd, tbinfopd]
     else:
         return [False, tbexecpd, tbinfopd]
@@ -215,20 +243,20 @@ def recursive_filter(tbexecpd, tbinfopd, index, filt):
 
 def decrese_tb_info_element(tb_id, number, tbinfopd):
     """Find all matches to the tb id"""
-    idx = tbinfopd.index[tbinfopd['id'] == tb_id]
+    idx = tbinfopd.index[tbinfopd["id"] == tb_id]
     """Decrement all matches by number of occurrence in tb exec"""
     for i in idx:
-        tbinfopd.at[i, 'num_exec'] = tbinfopd.at[i, 'num_exec'] - number
+        tbinfopd.at[i, "num_exec"] = tbinfopd.at[i, "num_exec"] - number
 
 
 def filter_function(tbexecpd, filt, tbinfopd):
     """Find all possible matches for first element of filter"""
-    idx = tbexecpd.index[(tbexecpd['tb'] == filt[0])]
+    idx = tbexecpd.index[(tbexecpd["tb"] == filt[0])]
     for f in filt[1:]:
         """Increment to next possible match position"""
         idx = idx + 1
         """Find all possible matches for next filter value"""
-        tmp = tbexecpd.index[(tbexecpd['tb']) == f]
+        tmp = tbexecpd.index[(tbexecpd["tb"]) == f]
         """Find matching indexes between both indexes"""
         idx = idx.intersection(tmp)
     """We now will step through the filter backwards"""
@@ -238,8 +266,8 @@ def filter_function(tbexecpd, filt, tbinfopd):
         idx = idx - 1
         for i in idx:
             """Invalidate all positions"""
-            tbexecpd.at[i, 'tb'] = -1
-            tbexecpd.at[i, 'tb-1'] = -1
+            tbexecpd.at[i, "tb"] = -1
+            tbexecpd.at[i, "tb-1"] = -1
         """Decrement artefacts in tb info list"""
         decrese_tb_info_element(f, len(idx), tbinfopd)
 
@@ -251,9 +279,9 @@ def filter_tb(tbexeclist, tbinfo, tbexecgolden, tbinfogolden, id_num):
     filters = build_filters(tbinfogolden)
     tbexecpd = tbexeclist
     """Sort and re-index tb exec list"""
-    tbexecpd.sort_values(by=['pos'], ascending=False, inplace=True)
+    tbexecpd.sort_values(by=["pos"], ascending=False, inplace=True)
     tbexecpd.reset_index(drop=True, inplace=True)
-    tbexecpd['tb-1'] = tbexecpd['tb'].shift(periods=-1, fill_value=0)
+    tbexecpd["tb-1"] = tbexecpd["tb"].shift(periods=-1, fill_value=0)
     """Generate pandas frame for tbinfo"""
     tbinfopd = pd.DataFrame(tbinfo)
     for filt in filters:
@@ -264,26 +292,30 @@ def filter_tb(tbexeclist, tbinfo, tbexecgolden, tbinfogolden, id_num):
 
     diff = len(tbexecpd)
     """ Search found filter matches """
-    idx = tbexecpd.index[tbexecpd['tb-1'] == -1]
+    idx = tbexecpd.index[tbexecpd["tb-1"] == -1]
     """Drop them from table"""
     tbexecpd.drop(idx, inplace=True)
     """Drop temporary column"""
-    tbexecpd.drop(columns=['tb-1'], inplace=True)
+    tbexecpd.drop(columns=["tb-1"], inplace=True)
     """Reverse list, because it is given reversed from qemu"""
-    tbexecpd.sort_values(by=['pos'], inplace=True)
+    tbexecpd.sort_values(by=["pos"], inplace=True)
     """ Fix broken position index"""
     tbexecpd.reset_index(drop=True, inplace=True)
-    tbexecpd['pos'] = tbexecpd.index
+    tbexecpd["pos"] = tbexecpd.index
     """Again reverse list to go back to original orientation"""
     tbexecpd = tbexecpd.iloc[::-1]
-    logger.debug("worker {} length diff of tbexec {}".format(id_num, diff - len(tbexecpd)))
+    logger.debug(
+        "worker {} length diff of tbexec {}".format(id_num, diff - len(tbexecpd))
+    )
     diff = len(tbinfopd)
     """Search each tb info, that was completely removed from tbexec list"""
-    idx = tbinfopd.index[tbinfopd['num_exec'] <= 0]
+    idx = tbinfopd.index[tbinfopd["num_exec"] <= 0]
     """Drop the now not relevant tbinfo elements"""
     tbinfopd.drop(idx, inplace=True)
-    logger.debug("worker {} Length diff of tbinfo {}".format(id_num, diff - len(tbinfopd)))
-    return [tbexecpd, tbinfopd.to_dict('records')]
+    logger.debug(
+        "worker {} Length diff of tbinfo {}".format(id_num, diff - len(tbinfopd))
+    )
+    return [tbexecpd, tbinfopd.to_dict("records")]
 
 
 def diff_tbexec(tbexeclist, goldenrun_tbexeclist):
@@ -298,7 +330,7 @@ def diff_tbexec(tbexeclist, goldenrun_tbexeclist):
     df2 = goldenrun_tbexeclist
     diff = pd.concat([df1, df2, df2]).drop_duplicates(keep=False)
 
-    tbexeclist_diff = diff.to_dict('records')
+    tbexeclist_diff = diff.to_dict("records")
     return tbexeclist_diff
 
 
@@ -306,14 +338,14 @@ def readout_meminfo(line):
     """
     Builds the dict for memory info from line provided by qemu
     """
-    split = line.split('|')
+    split = line.split("|")
     mem = {}
-    mem['ins'] = int(split[0], 0)
-    mem['size'] = int(split[1], 0)
-    mem['address'] = int(split[2], 0)
-    mem['direction'] = int(split[3], 0)
-    mem['counter'] = int(split[4], 0)
-    mem['tbid'] = 0
+    mem["ins"] = int(split[0], 0)
+    mem["size"] = int(split[1], 0)
+    mem["address"] = int(split[2], 0)
+    mem["direction"] = int(split[3], 0)
+    mem["counter"] = int(split[4], 0)
+    mem["tbid"] = 0
     return mem
 
 
@@ -327,15 +359,18 @@ def diff_meminfo(meminfolist, goldenrun_meminfolist):
     df1 = pd.DataFrame(meminfolist)
     df2 = goldenrun_meminfolist
     diff = pd.concat([df1, df2, df2]).drop_duplicates(keep=False)
-    meminfolist_diff = diff.to_dict('records')
+    meminfolist_diff = diff.to_dict("records")
     return meminfolist_diff
 
 
 def connect_meminfo_tb(meminfolist, tblist):
     for meminfo in meminfolist:
         for tbinfo in tblist:
-            if meminfo['ins'] > tbinfo['id'] and meminfo['ins'] < tbinfo['id'] + tbinfo['size']:
-                meminfo['tbid'] = tbinfo['id']
+            if (
+                meminfo["ins"] > tbinfo["id"]
+                and meminfo["ins"] < tbinfo["id"] + tbinfo["size"]
+            ):
+                meminfo["tbid"] = tbinfo["id"]
                 break
 
 
@@ -350,54 +385,54 @@ def readout_memdump(line, memdumplist, memdumpdict, memdumptmp):
     is added to the memdumplist
     """
 
-    if '[memorydump]' in line:
-        split = line.split(']:')
+    if "[memorydump]" in line:
+        split = line.split("]:")
         info = split[1]
-        split = info.split('|')
-        memdumpdict['address'] = int(split[0], 0)
-        memdumpdict['len'] = int(split[1], 0)
-        memdumpdict['numdumps'] = int(split[2], 0)
-        memdumpdict['dumps'] = []
-    if 'B:' in line:
-        split = line.split('B: ')
-        binary = split[1].split(' ')
+        split = info.split("|")
+        memdumpdict["address"] = int(split[0], 0)
+        memdumpdict["len"] = int(split[1], 0)
+        memdumpdict["numdumps"] = int(split[2], 0)
+        memdumpdict["dumps"] = []
+    if "B:" in line:
+        split = line.split("B: ")
+        binary = split[1].split(" ")
         for b in binary:
             memdumptmp.append(int(b, 0))
-    if '[Dump end]' in line:
-        memdumpdict['dumps'].append(memdumptmp)
+    if "[Dump end]" in line:
+        memdumpdict["dumps"].append(memdumptmp)
         memdumptmp = []
-    if '[memorydump end]' in line:
+    if "[memorydump end]" in line:
         memdumplist.append(memdumpdict)
         memdumpdict = {}
     return [memdumplist, memdumpdict, memdumptmp]
 
 
 def readout_arm_registers(line):
-    split = line.split('|')
+    split = line.split("|")
     armregisters = {}
-    armregisters['pc'] = int(split[0])
-    armregisters['tbcounter'] = int(split[1])
-    for i in range(0,16):
-        armregisters[f"r{i}"] = int(split[i+2])
-    armregisters['xpsr'] = int(split[18])
+    armregisters["pc"] = int(split[0])
+    armregisters["tbcounter"] = int(split[1])
+    for i in range(0, 16):
+        armregisters[f"r{i}"] = int(split[i + 2])
+    armregisters["xpsr"] = int(split[18])
     return armregisters
 
 
 def readout_riscv_registers(line):
-    split = line.split('|')
+    split = line.split("|")
     riscvregister = {}
-    riscvregister['pc'] = int(split[0])
-    riscvregister['tbcounter'] = int(split[1])
-    for i in range(0,33):
-        riscvregisters[f"x{i}"] = int(split[i+2])
+    riscvregister["pc"] = int(split[0])
+    riscvregister["tbcounter"] = int(split[1])
+    for i in range(0, 33):
+        riscvregisters[f"x{i}"] = int(split[i + 2])
     return riscvregister
 
 
 def readout_tb_faulted(line):
-    split = line.split('|')
+    split = line.split("|")
     tbfaulted = {}
-    tbfaulted['faultaddress'] = int(split[0], 0)
-    tbfaulted['assembly'] = (split[1].replace('!!', '\n'))
+    tbfaulted["faultaddress"] = int(split[0], 0)
+    tbfaulted["assembly"] = split[1].replace("!!", "\n")
     return tbfaulted
 
 
@@ -405,7 +440,7 @@ def diff_arm_registers(armregisterlist, goldenarmregisterlist):
     df1 = pd.DataFrame(armregisterlist)
     df2 = goldenarmregisterlist
     diff = pd.concat([df1, df2, df2]).drop_duplicates(keep=False)
-    armregister_diff = diff.to_dict('records')
+    armregister_diff = diff.to_dict("records")
     return armregister_diff
 
 
@@ -417,23 +452,25 @@ def diff_tables(table, goldentable):
 
 
 def convert_pd_frame_to_list(table):
-    return table.to_dict('records')
+    return table.to_dict("records")
 
 
-def readout_data(pipe,
-                 index,
-                 q,
-                 faultlist,
-                 goldenrun_data,
-                 q2=None,
-                 qemu_post=None,
-                 qemu_pre_data=None):
+def readout_data(
+    pipe,
+    index,
+    q,
+    faultlist,
+    goldenrun_data,
+    q2=None,
+    qemu_post=None,
+    qemu_pre_data=None,
+):
     """
     This function will permanently try to read data from data pipe
     Furthermore it then builds the internal representation, which is collected
     by the process writing to hdf 5 file
     """
-    state = 'None'
+    state = "None"
     tblist = []
     tbexeclist = []
     pdtbexeclist = None
@@ -452,46 +489,51 @@ def readout_data(pipe,
     regtype = None
     tbfaulted = 0
 
-    while(1):
+    while 1:
         line = pipe.readline()
-        if '$$$' in line:
+        if "$$$" in line:
             line = line[3:]
-            if '[Endpoint]' in line:
-                split = line.split(']:')
+            if "[Endpoint]" in line:
+                split = line.split("]:")
                 endpoint = int(split[1], 0)
-            elif '[TB Information]' in line:
-                state = 'tbinfo'
+            elif "[TB Information]" in line:
+                state = "tbinfo"
                 tbinfo = 1
-            elif '[TB Exec]' in line:
-                state = 'tbexec'
+            elif "[TB Exec]" in line:
+                state = "tbexec"
                 tbexec = 1
-            elif '[Mem Information]' in line:
+            elif "[Mem Information]" in line:
                 tbexeclist.reverse()
-                state = 'meminfo'
+                state = "meminfo"
                 meminfo = 1
-            elif '[Memdump]' in line:
-                state = 'memdump'
+            elif "[Memdump]" in line:
+                state = "memdump"
                 memdump = 1
-            elif '[END]' in line:
-                state = 'none'
-                logger.info("Data received now on post processing for Experiment {}".format(index))
+            elif "[END]" in line:
+                state = "none"
+                logger.info(
+                    "Data received now on post processing for Experiment {}".format(
+                        index
+                    )
+                )
                 tmp = 0
                 if tbexec == 1:
                     if pdtbexeclist is not None:
                         tmp = pd.DataFrame(tbexeclist)
-                        pdtbexeclist = pd.concat([pdtbexeclist, tmp],
-                                                 ignore_index=True)
+                        pdtbexeclist = pd.concat([pdtbexeclist, tmp], ignore_index=True)
                     else:
                         pdtbexeclist = pd.DataFrame(tbexeclist)
                     tmp = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
                     if q2 is not None:
                         q2.put(tmp)
                     if goldenrun_data is not None:
-                        [pdtbexeclist, tblist] = filter_tb(pdtbexeclist,
-                                                           tblist,
-                                                           goldenrun_data['tbexec'],
-                                                           goldenrun_data['tbinfo'],
-                                                           index)
+                        [pdtbexeclist, tblist] = filter_tb(
+                            pdtbexeclist,
+                            tblist,
+                            goldenrun_data["tbexec"],
+                            goldenrun_data["tbinfo"],
+                            index,
+                        )
                 if tbinfo == 1 and meminfo == 1:
                     connect_meminfo_tb(memlist, tblist)
                 output = {}
@@ -502,39 +544,44 @@ def readout_data(pipe,
                     mem = tmp
                 if tbinfo == 1:
                     if goldenrun_data is not None:
-                        output['tbinfo'] = diff_tbinfo(tblist,
-                                                       goldenrun_data['tbinfo'])
+                        output["tbinfo"] = diff_tbinfo(tblist, goldenrun_data["tbinfo"])
                     else:
-                        output['tbinfo'] = tblist
+                        output["tbinfo"] = tblist
                 if tbexec == 1:
                     if goldenrun_data is not None:
-                        output['tbexec'] = diff_tbexec(pdtbexeclist,
-                                                       goldenrun_data['tbexec'])
+                        output["tbexec"] = diff_tbexec(
+                            pdtbexeclist, goldenrun_data["tbexec"]
+                        )
                     else:
-                        output['tbexec'] = convert_pd_frame_to_list(pdtbexeclist)
+                        output["tbexec"] = convert_pd_frame_to_list(pdtbexeclist)
                 if meminfo == 1:
                     if goldenrun_data is not None:
-                        output['meminfo'] = diff_meminfo(memlist,
-                                                         goldenrun_data['meminfo'])
+                        output["meminfo"] = diff_meminfo(
+                            memlist, goldenrun_data["meminfo"]
+                        )
                     else:
-                        output['meminfo'] = memlist
+                        output["meminfo"] = memlist
                 if goldenrun_data is not None:
-                    if regtype == 'arm':
-                        output['armregisters'] = diff_arm_registers(registerlist, goldenrun_data['armregisters'])
-                    if regtype == 'riscv':
-                        output['riscvregisters'] = diff_arm_registers(registerlist, goldenrun_data['riscvregisters'])
+                    if regtype == "arm":
+                        output["armregisters"] = diff_arm_registers(
+                            registerlist, goldenrun_data["armregisters"]
+                        )
+                    if regtype == "riscv":
+                        output["riscvregisters"] = diff_arm_registers(
+                            registerlist, goldenrun_data["riscvregisters"]
+                        )
                 else:
-                    if regtype == 'arm':
-                        output['armregisters'] = registerlist
-                    if regtype == 'riscv':
-                        output['riscvregisters'] = registerlist
+                    if regtype == "arm":
+                        output["armregisters"] = registerlist
+                    if regtype == "riscv":
+                        output["riscvregisters"] = registerlist
                 if tbfaulted == 1:
-                    output['tbfaulted'] = tbfaultedlist
-                output['index'] = index
-                output['faultlist'] = faultlist
-                output['endpoint'] = endpoint
+                    output["tbfaulted"] = tbfaultedlist
+                output["index"] = index
+                output["faultlist"] = faultlist
+                output["endpoint"] = endpoint
                 if memdump == 1:
-                    output['memdumplist'] = memdumplist
+                    output["memdumplist"] = memdumplist
                 tmp = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
                 if q2 is not None:
                     q2.put(tmp)
@@ -549,45 +596,46 @@ def readout_data(pipe,
                 if tmp > mem:
                     mem = tmp
                 break
-            elif '[Arm Registers]' in line:
-                state = 'armregisters'
-                regtype = 'arm'
-            elif '[RiscV Registers]' in line:
-                state = 'riscvregisters'
-                regtype = 'riscv'
-            elif '[TB Faulted]' in line:
-                state = 'tbfaulted'
+            elif "[Arm Registers]" in line:
+                state = "armregisters"
+                regtype = "arm"
+            elif "[RiscV Registers]" in line:
+                state = "riscvregisters"
+                regtype = "riscv"
+            elif "[TB Faulted]" in line:
+                state = "tbfaulted"
                 tbfaulted = 1
             else:
-                logger.warning("Command in exp {} not understood {}".format(index, line))
-                state = 'None'
-        elif '$$' in line:
+                logger.warning(
+                    "Command in exp {} not understood {}".format(index, line)
+                )
+                state = "None"
+        elif "$$" in line:
             line = line[2:]
-            if 'tbinfo' in state:
+            if "tbinfo" in state:
                 tblist.append(readout_tbinfo(line))
-            elif 'tbexec' in state:
-                tbexeclist.append(readout_tbexec(line, tbexeclist,
-                                                 tblist, goldenrun_data))
+            elif "tbexec" in state:
+                tbexeclist.append(
+                    readout_tbexec(line, tbexeclist, tblist, goldenrun_data)
+                )
                 if len(tbexeclist) > 10000:
                     if pdtbexeclist is None:
                         pdtbexeclist = pd.DataFrame(tbexeclist)
                     else:
                         tmp = pd.DataFrame(tbexeclist)
-                        pdtbexeclist = pd.concat([pdtbexeclist, tmp],
-                                                 ignore_index=True)
+                        pdtbexeclist = pd.concat([pdtbexeclist, tmp], ignore_index=True)
                     tbexeclist = []
-            elif 'meminfo' in state:
+            elif "meminfo" in state:
                 memlist.append(readout_meminfo(line))
-            elif 'memdump' in state:
-                [memdumplist, memdumpdict, memdumptmp] = readout_memdump(line,
-                                                                         memdumplist,
-                                                                         memdumpdict,
-                                                                         memdumptmp)
-            elif 'armregisters' in state:
+            elif "memdump" in state:
+                [memdumplist, memdumpdict, memdumptmp] = readout_memdump(
+                    line, memdumplist, memdumpdict, memdumptmp
+                )
+            elif "armregisters" in state:
                 registerlist.append(readout_arm_registers(line))
-            elif 'riscvregisters' in state:
+            elif "riscvregisters" in state:
                 registerlist.append(readout_riscv_registers(line))
-            elif 'tbfaulted' in state:
+            elif "tbfaulted" in state:
                 tbfaultedlist.append(readout_tb_faulted(line))
             else:
                 logger.warning("In exp {} unknown state {}".format(index, line))
@@ -605,28 +653,28 @@ def create_fifos():
     # set mode for filesystem in tmp
     mode = 0o664
     path = path + "qemu_fault/"
-    if(not os.path.exists(path)):
+    if not os.path.exists(path):
         os.mkdir(path)
     path = path + "{}/".format(os.getpid())
-    if(not os.path.exists(path)):
+    if not os.path.exists(path):
         os.mkdir(path)
     controll = path + "controll"
     config = path + "config"
     data = path + "data"
     qemu = path + "qemu"
-    if(not os.path.exists(controll)):
+    if not os.path.exists(controll):
         os.mkfifo(controll, mode)
-    if(not os.path.exists(config)):
+    if not os.path.exists(config):
         os.mkfifo(config, mode)
-    if(not os.path.exists(data)):
+    if not os.path.exists(data):
         os.mkfifo(data, mode)
-    if(not os.path.exists(qemu)):
+    if not os.path.exists(qemu):
         os.mkfifo(qemu, mode)
     paths = {}
-    paths['controll'] = controll
-    paths['config'] = config
-    paths['data'] = data
-    paths['qemu'] = qemu
+    paths["controll"] = controll
+    paths["config"] = config
+    paths["data"] = data
+    paths["qemu"] = qemu
     return paths
 
 
@@ -646,41 +694,42 @@ def configure_qemu(controll, config_qemu, num_faults, memorydump_list):
     Function to write commands and configuration needed to start qemu plugin
     """
     out = "\n$$$[Config]\n"
-    out = out + "$$ max_duration: {}\n".format(config_qemu['max_instruction_count'])
+    out = out + "$$ max_duration: {}\n".format(config_qemu["max_instruction_count"])
     out = out + "$$ num_faults: {}\n".format(num_faults)
 
-    if 'tb_exec_list' in config_qemu:
-        if config_qemu['tb_exec_list'] is False:
+    if "tb_exec_list" in config_qemu:
+        if config_qemu["tb_exec_list"] is False:
             out = out + "$$disable_tb_exec_list"
         else:
             out = out + "$$enable_tb_exec_list"
 
-    if 'tb_info' in config_qemu:
-        if config_qemu['tb_info'] is False:
+    if "tb_info" in config_qemu:
+        if config_qemu["tb_info"] is False:
             out = out + "$$disable_tb_info"
         else:
             out = out + "$$enable_tb_info"
 
-    if 'mem_info' in config_qemu:
-        if config_qemu['mem_info'] is False:
+    if "mem_info" in config_qemu:
+        if config_qemu["mem_info"] is False:
             out = out + "$$disable_mem_info"
         else:
             out = out + "$$enable_mem_info"
 
-    if 'start' in config_qemu:
-        out = out + "$$ start_address: {}\n".format((config_qemu['start'])['address'])
-        out = out + "$$ start_counter: {}\n".format((config_qemu['start'])['counter'])
+    if "start" in config_qemu:
+        out = out + "$$ start_address: {}\n".format((config_qemu["start"])["address"])
+        out = out + "$$ start_counter: {}\n".format((config_qemu["start"])["counter"])
 
-    if 'end' in config_qemu:
-        out = out + "$$ end_address: {}\n".format((config_qemu['end'])['address'])
-        out = out + "$$ end_counter: {}\n".format((config_qemu['end'])['counter'])
+    if "end" in config_qemu:
+        out = out + "$$ end_address: {}\n".format((config_qemu["end"])["address"])
+        out = out + "$$ end_counter: {}\n".format((config_qemu["end"])["counter"])
 
     if memorydump_list is not None:
         out = out + "$$num_memregions: {}\n".format(len(memorydump_list))
         out = out + "$$$[Memory]\n"
         for memorydump in memorydump_list:
-            out = out + "$$memoryregion: {} || {}\n".format(memorydump['address'],
-                                                            memorydump['length'])
+            out = out + "$$memoryregion: {} || {}\n".format(
+                memorydump["address"], memorydump["length"]
+            )
     controll.write(out)
     controll.flush()
 
@@ -693,16 +742,18 @@ def enable_qemu(controll):
     controll.flush()
 
 
-def python_worker(fault_list,
-                  config_qemu,
-                  index,
-                  q,
-                  qemu_output,
-                  goldenrun_data=None,
-                  change_nice=False,
-                  q2=None,
-                  qemu_pre=None,
-                  qemu_post=None):
+def python_worker(
+    fault_list,
+    config_qemu,
+    index,
+    q,
+    qemu_output,
+    goldenrun_data=None,
+    change_nice=False,
+    q2=None,
+    qemu_pre=None,
+    qemu_post=None,
+):
     """
     Qemu worker creates qemu controller, fills the pipes and collects the
     output of qemu
@@ -723,32 +774,35 @@ def python_worker(fault_list,
         else:
             qemu_pre_data = None
             qemu_custom_paths = None
-        if 'gdb' in config_qemu:
+        if "gdb" in config_qemu:
             if qemu_custom_paths is None:
                 qemu_custom_paths = " -S -s "
             else:
                 qemu_custom_paths = qemu_custom_paths + " -S -s "
-        p_qemu = Process(target=run_qemu,
-                         args=(paths['controll'],
-                               paths['config'],
-                               paths['data'],
-                               paths['qemu'],
-                               config_qemu['qemu'],
-                               config_qemu['kernel'],
-                               config_qemu['plugin'],
-                               config_qemu['machine'],
-                               qemu_output,
-                               index,
-                               qemu_custom_paths)
-                         )
+        p_qemu = Process(
+            target=run_qemu,
+            args=(
+                paths["controll"],
+                paths["config"],
+                paths["data"],
+                paths["qemu"],
+                config_qemu["qemu"],
+                config_qemu["kernel"],
+                config_qemu["plugin"],
+                config_qemu["machine"],
+                qemu_output,
+                index,
+                qemu_custom_paths,
+            ),
+        )
         p_qemu.start()
         logger.debug("Started QEMU process")
-        controll_fifo = open(paths['controll'], mode='w')
-        config_fifo = open(paths['config'], mode='w')
-        data_fifo = open(paths['data'], mode='r', buffering=1)
+        controll_fifo = open(paths["controll"], mode="w")
+        config_fifo = open(paths["config"], mode="w")
+        data_fifo = open(paths["data"], mode="r", buffering=1)
         logger.debug("opened fifos")
-        if 'memorydump' in config_qemu:
-            memorydump = config_qemu['memorydump']
+        if "memorydump" in config_qemu:
+            memorydump = config_qemu["memorydump"]
         else:
             memorydump = None
         logger.debug("Start configuring")
@@ -763,17 +817,23 @@ def python_worker(fault_list,
         From here Qemu has started execution. Now prepare for
         data extraction
         """
-        mem = readout_data(data_fifo,
-                           index,
-                           q,
-                           fault_list,
-                           goldenrun_data,
-                           q2,
-                           qemu_post=qemu_post,
-                           qemu_pre_data=qemu_pre_data)
+        mem = readout_data(
+            data_fifo,
+            index,
+            q,
+            fault_list,
+            goldenrun_data,
+            q2,
+            qemu_post=qemu_post,
+            qemu_pre_data=qemu_pre_data,
+        )
         p_qemu.join()
         delete_fifos()
-        logger.info("Python worker for experiment {} done. Took {}s, mem usage {}KiB".format(index, time.time()-t0, mem))
+        logger.info(
+            "Python worker for experiment {} done. Took {}s, mem usage {}KiB".format(
+                index, time.time() - t0, mem
+            )
+        )
         if q2 is not None:
             q2.put(mem)
     except KeyboardInterrupt:
