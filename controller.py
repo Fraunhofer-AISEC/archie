@@ -201,7 +201,7 @@ def controller(
 
     m = Manager()
     m2 = Manager()
-    q = m.Queue()
+    queue_output = m.Queue()
     queue_ram_usage = m2.Queue()
 
     prctl.set_name("Controller")
@@ -213,14 +213,16 @@ def controller(
             config_qemu["max_instruction_count"],
             goldenrun_data,
             faultlist,
-        ] = run_goldenrun(config_qemu, qemu_output, q, faultlist, qemu_pre, qemu_post)
+        ] = run_goldenrun(
+            config_qemu, qemu_output, queue_output, faultlist, qemu_pre, qemu_post
+        )
 
     p_logger = Process(
         target=logger,
         args=(
             hdf5path,
             hdf5mode,
-            q,
+            queue_output,
             len(faultlist),
             compressionlevel,
             logger_postprocess,
@@ -230,7 +232,6 @@ def controller(
     p_logger.start()
 
     p_list = []
-
 
     p_time_list = []
     p_time_list.append(60)
@@ -261,10 +262,11 @@ def controller(
             break
 
         if (
-            mem_limit_calc(mem_max, len(p_list), q.qsize(), time_max) < max_ram
+            mem_limit_calc(mem_max, len(p_list), queue_output.qsize(), time_max)
+            < max_ram
             and len(p_list) < num_workers
             and itter < len(faultlist)
-            and q.qsize() < queuedepth
+            and queue_output.qsize() < queuedepth
         ):
 
             faults = faultlist[itter]
@@ -277,7 +279,7 @@ def controller(
                     faults["faultlist"],
                     config_qemu,
                     faults["index"],
-                    q,
+                    queue_output,
                     qemu_output,
                     goldenrun_data,
                     True,
@@ -338,7 +340,7 @@ def controller(
                 p_list.pop(i)
                 break
 
-    clogger.info("{} experiments remaining in queue".format(q.qsize()))
+    clogger.info("{} experiments remaining in queue".format(queue_output.qsize()))
 
     p_logger.join()
 

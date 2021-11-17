@@ -19,7 +19,7 @@ def run_goldenrun(
     dummyfault = Fault(0, 0, 0, 0, 0, 0, 100)
     dummyfaultlist = []
     dummyfaultlist.append(dummyfault)
-    q = Queue()
+    queue_output = Queue()
     data_end = {}
     goldenrun_config["qemu"] = config_qemu["qemu"]
     goldenrun_config["kernel"] = config_qemu["kernel"]
@@ -35,7 +35,7 @@ def run_goldenrun(
             dummyfaultlist,
             goldenrun_config,
             -2,
-            q,
+            queue_output,
             qemu_output,
             None,
             False,
@@ -43,7 +43,7 @@ def run_goldenrun(
             qemu_pre,
             qemu_post,
         )
-        data_start = q.get()
+        data_start = queue_output.get()
         if data_start["endpoint"] == 1:
             logger.info("Start successfully reached")
         else:
@@ -65,7 +65,7 @@ def run_goldenrun(
             dummyfaultlist,
             goldenrun_config,
             -1,
-            q,
+            queue_output,
             qemu_output,
             None,
             False,
@@ -73,7 +73,7 @@ def run_goldenrun(
             qemu_pre,
             qemu_post,
         )
-        data_end = q.get()
+        data_end = queue_output.get()
         if data_end["endpoint"] == 1:
             logger.info("End point successfully reached")
         else:

@@ -291,7 +291,7 @@ def process_memory_info(f, group, meminfolist, myfilter):
 
 
 def hdf5collector(
-    hdf5path, mode, q, num_exp, compressionlevel, logger_postprocess=None
+    hdf5path, mode, queue_output, num_exp, compressionlevel, logger_postprocess=None
 ):
     prctl.set_name("logger")
     prctl.set_proctitle("logger")
@@ -306,11 +306,11 @@ def hdf5collector(
     groupname = "experiment{:0" + "{}".format(len(tmp)) + "d}"
     while num_exp > 0:
         # readout queue and get next output from qemu. Will block
-        exp = q.get()
+        exp = queue_output.get()
         t1 = time.time()
         logger.info(
             "got exp {}, {} still need to be performed. Took {}s. Elements in queu: {}".format(
-                exp["index"], num_exp, t1 - t0, q.qsize()
+                exp["index"], num_exp, t1 - t0, queue_output.qsize()
             )
         )
         t0 = t1
