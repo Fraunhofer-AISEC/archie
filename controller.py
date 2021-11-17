@@ -217,6 +217,7 @@ def controller(
             config_qemu, qemu_output, queue_output, faultlist, qemu_pre, qemu_post
         )
 
+
     p_logger = Process(
         target=logger,
         args=(
@@ -245,15 +246,11 @@ def controller(
     mem_max = max_ram / 2
     mem_list.append(max_ram / (num_workers))
 
-    goldenrun_data["tbexec"] = pd.DataFrame(goldenrun_data["tbexec"])
-    goldenrun_data["tbinfo"] = pd.DataFrame(goldenrun_data["tbinfo"])
-    goldenrun_data["meminfo"] = pd.DataFrame(goldenrun_data["meminfo"])
-    if "armregisters" in goldenrun_data:
-        goldenrun_data["armregisters"] = pd.DataFrame(goldenrun_data["armregisters"])
-    if "riscvregisters" in goldenrun_data:
-        goldenrun_data["riscvregisters"] = pd.DataFrame(
-            goldenrun_data["riscvregisters"]
-        )
+    keywords = ["tbexec", "tbinfo", "meminfo", "armregisters", "riscvregisters"]
+    for keyword in keywords:
+        if keyword not in goldenrun_data:
+            continue
+        goldenrun_data[keyword] = pd.DataFrame(goldenrun_data[keyword])
 
     itter = 0
     while 1:
