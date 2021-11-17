@@ -123,31 +123,33 @@ def checktriggers_in_tb(faultconfig, data):
             )
         )
         for fault in faultdescription["faultlist"]:
-            if not (fault.trigger.address in valid_triggers):
-                if fault.trigger.address in invalid_triggers:
-                    faultdescription["del"] = True
-                else:
-                    if find_insn_addresses_in_tb(fault.trigger.address, data):
-                        valid_triggers.append(fault.trigger.address)
-                    else:
-                        invalid_triggers.append(fault.trigger.address)
-                        faultdescription["del"] = True
-                        logger.critical(
-                            "Trigger address {} was not found in tbs executed in golden run!".format(
-                                fault.trigger.address
-                            )
-                        )
-                        logger.critical(
-                            "This is the fault description unrolled that caused this error. Please fix your input: {}".format(
-                                faultdescription
-                            )
-                        )
-                        for fault in faultdescription["faultlist"]:
-                            logger.critical(
-                                "fault: {}, triggeraddress:{}, faultaddress:{}".format(
-                                    fault, fault.trigger.address, fault.address
-                                )
-                            )
+            if fault.trigger.address in valid_triggers:
+                continue
+
+            if fault.trigger.address in invalid_triggers:
+                faultdescription["del"] = True
+                continue
+
+            if find_insn_addresses_in_tb(fault.trigger.address, data):
+                valid_triggers.append(fault.trigger.address)
+                continue
+
+            invalid_triggers.append(fault.trigger.address)
+            faultdescription["del"] = True
+
+            error_message = (
+                f"Trigger address {fault.trigger.address} not found in tbs "
+                f"executed in golden run! \nInvalid fault description: "
+                f"{faultdescription}"
+            )
+            for fault in faultdescription["faultlist"]:
+                error_message += (
+                    f"\nfault: {fault}, "
+                    f"triggeraddress: {fault.trigger.address}, "
+                    f"faultaddress: {fault.address}"
+                )
+            logger.critical(error_message)
+
     logger.info("Convert to pandas")
     tmp = pd.DataFrame(faultconfig)
     logger.info("filter for del items")
