@@ -512,16 +512,14 @@ if __name__ == "__main__":
 
     parguments = process_arguments(args)
 
+    logging_level = logging.INFO
     if args.debug:
-        logging.basicConfig(
-            format="%(asctime)s - %(name)s - %(levelname)s : %(message)s",
-            level=logging.DEBUG,
-        )
-    else:
-        logging.basicConfig(
-            format="%(asctime)s - %(name)s - %(levelname)s : %(message)s",
-            level=logging.INFO,
-        )
+        logging_level = logging.DEBUG
+    logging.basicConfig(
+        format="%(asctime)s - %(name)s - %(levelname)s : %(message)s",
+        level=logging_level,
+    )
+
     p = Process(
         target=controller,
         args=(
