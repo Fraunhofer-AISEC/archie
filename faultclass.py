@@ -161,7 +161,7 @@ def write_output_wrt_goldenrun(keyword, data, goldenrun_data):
     if not isinstance(data, pd.DataFrame):
         data = pd.DataFrame(data)
 
-    if goldenrun_data is not None:
+    if goldenrun_data:
         data = [data, goldenrun_data[keyword], goldenrun_data[keyword]]
         data = pd.concat(data).drop_duplicates(keep=False)
 
@@ -488,7 +488,7 @@ def readout_data(
 
                     gather_process_ram_usage(queue_ram_usage, 0)
 
-                    if goldenrun_data is not None:
+                    if goldenrun_data:
                         [pdtbexeclist, tblist] = filter_tb(
                             pdtbexeclist,
                             tblist,
