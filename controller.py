@@ -520,23 +520,18 @@ if __name__ == "__main__":
         level=logging_level,
     )
 
-    p = Process(
-        target=controller,
-        args=(
-            args.hdf5file,  # hdf5path
-            parguments["hdf5mode"],  # hdf5mode
-            parguments["faultlist"],  # faultlist
-            parguments["qemu_conf"],  # config_qemu
-            parguments["num_workers"],  # num_workers
-            parguments["queuedepth"],  # queuedepth
-            parguments["compressionlevel"],  # compressionlevel
-            args.debug,  # qemu_output
-            parguments["goldenrun"],  # goldenrun
-            hdf5collector,  # logger
-            None,  # qemu_pre
-            None,  # qemu_post
-            None,
-        ),  # logger_postprocess
+    controller(
+        args.hdf5file,  # hdf5path
+        parguments["hdf5mode"],  # hdf5mode
+        parguments["faultlist"],  # faultlist
+        parguments["qemu_conf"],  # config_qemu
+        parguments["num_workers"],  # num_workers
+        parguments["queuedepth"],  # queuedepth
+        parguments["compressionlevel"],  # compressionlevel
+        args.debug,  # qemu_output
+        parguments["goldenrun"],  # goldenrun
+        hdf5collector,  # logger
+        None,  # qemu_pre
+        None,  # qemu_post
+        None,  # logger_postprocess
     )
-    p.start()
-    p.join()
