@@ -15,26 +15,47 @@ logger = logging.getLogger(__name__)
 def run_goldenrun(
     config_qemu, qemu_output, data_queue, faultconfig, qemu_pre=None, qemu_post=None
 ):
-    goldenrun_config = {}
-    dummyfault = Fault(0, 0, 0, 0, 0, 0, 100)
-    dummyfaultlist = []
-    dummyfaultlist.append(dummyfault)
+    dummyfaultlist = [Fault(0, 0, 0, 0, 0, 0, 100)]
+
     queue_output = Queue()
-    data_end = {}
+
+    goldenrun_config = {}
     goldenrun_config["qemu"] = config_qemu["qemu"]
     goldenrun_config["kernel"] = config_qemu["kernel"]
     goldenrun_config["plugin"] = config_qemu["plugin"]
     goldenrun_config["machine"] = config_qemu["machine"]
-    goldenrun_config["max_instruction_count"] = 10000000000000
+    if "max_instruction_count" in config_qemu:
+        goldenrun_config["max_instruction_count"] = config_qemu["max_instruction_count"]
     if "memorydump" in config_qemu:
         goldenrun_config["memorydump"] = config_qemu["memorydump"]
+
+    experiments = []
     if "start" in config_qemu:
-        goldenrun_config["end"] = config_qemu["start"]
-        logger.info("Start testing and recording firmware till start")
+        pre_goldenrun = {"type": "pre_goldenrun", "index": -2, "data": {}}
+        experiments.append(pre_goldenrun)
+    goldenrun = {"type": "goldenrun", "index": -1, "data": {}}
+    experiments.append(goldenrun)
+
+    for experiment in experiments:
+        if experiment["type"] == "pre_goldenrun":
+            goldenrun_config["end"] = config_qemu["start"]
+            # Set max_insn_count to ridiculous high number to never reach it
+            goldenrun_config["max_instruction_count"] = 10000000000000
+
+        elif experiment["type"] == "goldenrun":
+            if "start" in config_qemu:
+                goldenrun_config["start"] = config_qemu["start"]
+            if "end" in config_qemu:
+                goldenrun_config["end"] = config_qemu["end"]
+            if "start" in config_qemu and "end" in config_qemu:
+                # Set max_insn_count to ridiculous high number to never reach it
+                goldenrun_config["max_instruction_count"] = 10000000000000
+
+        logger.info(f"{experiment['type']} started...")
         python_worker(
             dummyfaultlist,
             goldenrun_config,
-            -2,
+            experiment["index"],
             queue_output,
             qemu_output,
             None,
@@ -43,59 +64,38 @@ def run_goldenrun(
             qemu_pre,
             qemu_post,
         )
-        data_start = queue_output.get()
-        if data_start["endpoint"] == 1:
-            logger.info("Start successfully reached")
+        experiment["data"] = queue_output.get()
+        if experiment["data"]["endpoint"] == 1:
+            logger.info(f"experiment['type'] successfully finished.")
         else:
             logger.critical(
-                "Start not reached. Was not reached after {} tb counts. Probably an error.".format(
-                    goldenrun_config["max_instruction_count"]
-                )
+                f"{experiment['type']} not finished after "
+                f"{experiment_config['max_instruction_count']} tb counts."
             )
             raise ValueError(
-                "Start not reached. Probably no valid instruction! If valid increase tb max for golden run"
+                f"{experiment['type']} not finished. Probably no valid instruction! "
+                f"If valid increase tb max for golden run"
             )
-        data_queue.put(data_start)
-    if "end" in config_qemu:
-        goldenrun_config["end"] = config_qemu["end"]
-        if "start" in config_qemu:
-            goldenrun_config["start"] = config_qemu["start"]
-        logger.info("End testing and recording firmware from start till end")
-        python_worker(
-            dummyfaultlist,
-            goldenrun_config,
-            -1,
-            queue_output,
-            qemu_output,
-            None,
-            False,
-            None,
-            qemu_pre,
-            qemu_post,
-        )
-        data_end = queue_output.get()
-        if data_end["endpoint"] == 1:
-            logger.info("End point successfully reached")
-        else:
-            logger.critical(
-                "End point not reached. Was not reached after {} tb counts. Probably an error.".format(
-                    goldenrun_config["max_instruction_count"]
-                )
-            )
-            raise ValueError(
-                "End point not reached. Probably not valid instruction! If valid increase tb max for golden run"
-            )
-        data_queue.put(data_end)
-        tbexec = pd.DataFrame(data_end["tbexec"])
-        tbinfo = pd.DataFrame(data_end["tbinfo"])
+        data_queue.put(experiment["data"])
+
+        if experiment["type"] != "goldenrun":
+            continue
+
+        tbexec = pd.DataFrame(experiment["data"]["tbexec"])
+        tbinfo = pd.DataFrame(experiment["data"]["tbinfo"])
         calculate_trigger_addresses(faultconfig, tbexec, tbinfo)
-        faultconfig = checktriggers_in_tb(faultconfig, data_end)
-        ins_max_absolut = 0
-        for tb in data_end["tbinfo"]:
-            ins_max_absolut = ins_max_absolut + tb["num_exec"] * tb["ins_count"]
-        ins_max_absolut = ins_max_absolut + config_qemu["max_instruction_count"]
-        logger.info("Max instruction count is {}".format(ins_max_absolut))
-    return [ins_max_absolut, data_end, faultconfig]
+        faultconfig = checktriggers_in_tb(faultconfig, experiment["data"])
+
+        if "end" in config_qemu:
+            for tb in experiment["data"]["tbinfo"]:
+                config_qemu["max_instruction_count"] += tb["num_exec"] * tb["ins_count"]
+            logger.info(
+                "Max instruction count is {}".format(
+                    config_qemu["max_instruction_count"]
+                )
+            )
+
+    return [config_qemu["max_instruction_count"], experiment["data"], faultconfig]
 
 
 def find_insn_addresses_in_tb(insn_address, data):
