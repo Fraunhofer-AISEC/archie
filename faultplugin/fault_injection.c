@@ -145,6 +145,22 @@ void inject_register_fault(fault_list_t * current)
 		case TOGGLE:
 			reg = reg ^ mask;
 			break;
+		case OVERWRITE:
+			if(current->fault.num_bytes > 8)
+			{
+				g_string_append_printf(out, "\n[WARNGING]: For register faults currently only up to 8 Bytes are allowed. Your length is greater and all Greater Bytes are ignored\n");
+				current->fault.num_bytes = 8;
+			}
+			mask = 0;
+			for(int i = 0; i < current->fault.num_bytes; i++)
+			{
+				current->fault.restoremask[i] = (reg >> 8*i) & 0xff;
+				uint64_t clear = (0xff << 8*i);
+				reg = reg & ~(clear);
+				reg += (current->fault.mask[i] << 8*i);
+				mask += clear;
+			}
+			break;
 		default:
 			g_string_append_printf(out, "Fault model is wrong %li", current->fault.model);
 			break;
@@ -196,11 +212,50 @@ void inject_memory_fault(fault_list_t * current)
 			g_string_append_printf(out, "Toggle fault to address %lx\n", current->fault.address);
 			process_toggle_memory(current->fault.address, current->fault.mask, current->fault.restoremask);
 			break;
+		case OVERWRITE:
+			g_string_append_printf(out, "Overwrite fault at address %lx\n", current->fault.address);
+			process_overwrite_memory(current->fault.address, current->fault.num_bytes, current->fault.mask, current->fault.restoremask);
 		default:
 			break;
 	}
 	qemu_plugin_outs(out->str);
 
+}
+
+/**
+ * process_overwrite_memory
+ *
+ * Read memory, then overwrite the bytes specified by mask value. Num_bytes specify the number of bytes. currently max 16 bytes.
+ *
+ * address: base address of lowest byte
+ * maks: Values to overwrite the bytes at address location.
+ * num_bytes: Number of bytes to be overwritten.
+ * restoremask: Mask used to restore back values to original values for temoporary faults
+ */
+void process_overwrite_memory(uint64_t address, uint8_t num_bytes, uint8_t mask[], uint8_t restoremask[])
+{
+	int ret;
+	uint8_t value[16];
+	if(num_bytes > 16)
+	{
+		num_bytes = 16;
+		qemu_plugin_outs("[WARNING]: Currently only up to 16 bytes can be overwritten!");
+	}
+	for(int i = 0; i < 16; i++)
+	{
+		restoremask[i] = 0;
+	}
+	ret = plugin_rw_memory_cpu(address, value, num_bytes, 0);
+	for( int i = 0; i < num_bytes; i++)
+	{
+		restoremask[i] = value[i];
+		value[i] = mask[i];
+	}
+	ret += plugin_rw_memory_cpu(address, value, num_bytes, 0);
+	if(ret < 0)
+	{
+		qemu_plugin_outs("[ERROR]: Something went wrong in read/write to cpu in process_overwrite_memory\n");
+	}
 }
 
 /**

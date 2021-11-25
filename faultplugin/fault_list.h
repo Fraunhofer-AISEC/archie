@@ -35,6 +35,7 @@ typedef struct
 	uint64_t type; //Typedef enum?
 	uint64_t model;
 	uint64_t lifetime;
+	uint8_t num_bytes; // Used by overwrite to find out how many bytes to overwrite
 	uint8_t mask[16]; // uint8_t array?
 	uint8_t restoremask[16];
 	fault_trigger_t trigger;
@@ -63,10 +64,11 @@ void init_fault_list();
  * fault_mask: bit mask on which bits should be targeted.
  * fault_trigger_address: Address of trigger location. Fault will be injected if this location is reached
  * fault_trigger_hitcounter: set how many times the location needs to be reached before the fault is injected
+* num_bytes: Used by overwrite to determen the number of bytes to overwrite 
  * 
  * return -1 if fault
  */
-int add_fault(uint64_t fault_address, uint64_t fault_type, uint64_t fault_model, uint64_t fault_lifetime, uint8_t fault_mask[16], uint64_t fault_trigger_address, uint64_t fault_trigger_hitcounter );
+int add_fault(uint64_t fault_address, uint64_t fault_type, uint64_t fault_model, uint64_t fault_lifetime, uint8_t fault_mask[16], uint64_t fault_trigger_address, uint64_t fault_trigger_hitcounter, uint8_t num_bytes);
 
 /**
  *
