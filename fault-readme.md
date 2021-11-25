@@ -130,22 +130,22 @@ Example for "reg": Fault in R5 :
 ```
 
 For all fault types a register dump is generated at the point of injection and, if non permanent, also after lifespan expired.
-For "data" and "instruction" a memory dump of at faul_address is generated. It contains the condition Pre-fault, After fault and after lifespan.
-Furthermore for "instruction" a dissasembly of the faulted assembly instruction is generated.
+For "data" and "instruction" a memory dump of a fault_address is generated. It contains the condition Pre-fault, After fault and after lifespan.
+Furthermore for "instruction" a disassembly of the faulted assembly instruction is generated.
 
 ###### fault_model
 Currently, three fault models are implemented: "set1", "set0" and "toggle".
 "set1" replaces all bits that are defined by fault_mask with 1 (OR), "set0" with 0 (NAND) and "toggle" toggles these bits (XOR).
 
 ##### fault_lifespan
-Defines the number of instructions a fault is valid. If fault_lifespan is [0] it means the fault is permanent. If it is a positive number, fault_lifespan defines how many instructions the fault remains in the system. After this number of instructions, the fault is reverted. This has the potential to behave in a strange way, if the system changed the content at the respective address while the temporary fault was still active. It will only revert flipped bits back to the original state. Temporary faults are, thus, only recommended for flash memory, since usually in case of flash, less write accesses are occuring. 
+Defines the number of instructions a fault is valid. If fault_lifespan is [0] it means the fault is permanent. If it is a positive number, fault_lifespan defines how many instructions the fault remains in the system. After this number of instructions, the fault is reverted. This has the potential to behave in a strange way, if the system changed the content at the respective address while the temporary fault was still active. It will only revert flipped bits back to the original state. Temporary faults are, thus, only recommended for flash memory, since usually in case of flash, less write accesses are occurring. 
 
 ##### fault_mask
 Defines which bits to flip. It can be any number, however what matters is the bit representation. Each bit set will result in a fault in this location. The fault mask can also be defined as a range, e.g.
 ```
    "fault_masks" : [1, 20, 1]
 ```
-The framework internally uses a bit mask of 128 bits, so any positiv number from 0 to 2^128 is valid.
+The framework internally uses a bit mask of 128 bits, so any positive number from 0 to 2^128 is valid.
 
 Alternatively it is possible to use a dictionary instead of a range.
 In this case there exists at least the entry type. Other entries depend on the type.

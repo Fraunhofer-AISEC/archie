@@ -1,0 +1,73 @@
+{
+	"max_instruction_count": 100 ,
+	"start" : {
+		"address" : 134220182,
+		"counter" : 0
+	},
+	"end" : {
+		"address" : 134220188,
+		"counter" : 2
+	},
+	"faults" :[	
+			[
+				{	
+					"comment" : "Change values fetched from S-Box, model flash load fault",
+					"fault_address"		: [3],
+					"fault_type"		: "register",
+					"fault_model"		: "set1",
+					"fault_livespan"	: [0],
+					"fault_mask"		: [1, 256, 1],
+					"trigger_address"	: [134219846],
+					"trigger_counter"	: [128, 160, 1]
+				}
+			],
+			[
+				{
+					"comment" : "Attack S-Box step instructions",
+					"fault_address"		: [134219842, 134219855, 1],
+					"fault_type"		: "instruction",
+					"fault_model"		: "set1",
+					"fault_livespan"	: [2],
+					"fault_mask"		: [1, 256, 1],
+					"trigger_address"	: [-1],
+					"trigger_counter"	: [141]
+				}
+			],
+			[
+				{
+					"comment" : "Tenth round skip, model multibit fault between bytes",
+					"fault_address"		: [134220088, 134220098, 1],
+					"fault_type"		: "instruction",
+					"fault_model"		: "set1",
+					"fault_livespan"	: [2],
+					"fault_mask"		: { "type" : "shift" , "range" : [3, 7, 10]},
+					"trigger_address"	: [-1],
+					"trigger_counter"	: [8, 10, 1]
+				}
+			],
+			[
+				{
+					"comment" : "Tenth round skip, model multibit fault in tenth round instructions",
+					"fault_address"		: [134220088, 134220098, 1],
+					"fault_type"		: "instruction",
+					"fault_model"		: "set1",
+					"fault_livespan"	: [2],
+					"fault_mask"		: [1, 256, 1],
+					"trigger_address"	: [-1],
+					"trigger_counter"	: [8, 10, 1]
+				}
+			]
+		],
+	"memorydump": [
+			{
+				"comment": "Dump aes cypher state",
+				"address" : 536870976 , 
+				"length" : 16
+			},
+			{
+				"Comment" : "Dump round keys",
+				"address" : 536878864,
+				"length" : 176
+			}
+		]
+}
