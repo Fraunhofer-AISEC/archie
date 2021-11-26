@@ -89,6 +89,7 @@ def filter_experiment_model(faultgroup, faultmodel, interestlist=None):
     0 set 0
     1 set 1
     2 Toggle
+    3 Overwrite
     """
     if not isinstance(faultmodel, int):
         if "set0" in faultmodel:
@@ -97,6 +98,8 @@ def filter_experiment_model(faultgroup, faultmodel, interestlist=None):
             faultmodel = 1
         elif "toggle" in faultmodel:
             faultmodel = 2
+        elif "overwrite" in faultmodel:
+            faultmodel = 3
         else:
             raise ValueError("Faultmodel not understood")
 
@@ -161,4 +164,15 @@ def filter_experiment_fault_lifespan(
     """
     return generic_filter_faults(
         faultgroup, "fault_lifespan", lowlifespan, highlifespan, interestlist
+    )
+
+def filter_experiment_faults_num_bytes(
+    faultgroup, lowbound, highbound=None, interestlist=None
+):
+    """
+    Filter for a specific num bytes range. If interestlist is given
+    only experiments in this list will be analysed.
+    """
+    return generic_filter_faults(
+        faultgroup, "fault_num_bytes", lowbound, highbound, interestlist
     )

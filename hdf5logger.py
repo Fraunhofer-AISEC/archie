@@ -45,6 +45,7 @@ class fault_table(tables.IsDescription):
     fault_model = tables.UInt8Col()
     fault_lifespan = tables.UInt64Col()
     fault_mask = tables.UInt64Col()
+    fault_num_bytes = tables.UInt8Col()
 
 
 class memory_dump_table(tables.IsDescription):
@@ -224,6 +225,7 @@ def process_faults(f, group, faultlist, endpoint, myfilter):
         faultrow["fault_model"] = fault.model
         faultrow["fault_lifespan"] = fault.lifespan
         faultrow["fault_mask"] = fault.mask
+        faultrow["fault_num_bytes"] = fault.num_bytes
         faultrow.append()
     faulttable.flush()
     faulttable.close()
