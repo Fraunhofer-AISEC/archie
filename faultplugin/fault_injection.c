@@ -251,7 +251,7 @@ void process_overwrite_memory(uint64_t address, uint8_t num_bytes, uint8_t mask[
 		restoremask[i] = value[i];
 		value[i] = mask[i];
 	}
-	ret += plugin_rw_memory_cpu(address, value, num_bytes, 0);
+	ret += plugin_rw_memory_cpu(address, value, num_bytes, 1);
 	if(ret < 0)
 	{
 		qemu_plugin_outs("[ERROR]: Something went wrong in read/write to cpu in process_overwrite_memory\n");
