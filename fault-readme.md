@@ -174,8 +174,8 @@ In case of a negative trigger_address, trigger_counter represents the number of 
 In the experiments, not all TBs are seen, but only the ones where a difference compared to the golden run can be observed.
 The trigger counter can also be defined as a range, e.g. [128, 160, 1]. In this example, after 128, 129, 130, ... until 160 instruction executions, a fault is injected.
 
-#### num_bytes
-Num bytes is currently only used by the "overwrite" fault model. See section [fault_model](# fault_model). For all other fault models this parameter is not used and ignored. If it is not proved within a fault dictionary it is added. It therefore can be left out if a fault model does not use "num_bytes".
+##### num_bytes
+Num bytes is currently only used by the "overwrite" fault model. See section [fault_model](#fault_model). For all other fault models this parameter is not used and ignored. If it is not proved within a fault dictionary it is added. It therefore can be left out if a fault model does not use "num_bytes".
 
 **Attention!** If a range is specified despite it being not used it is stille unrolled. This leads to multiple faults with the same configuration!
 
