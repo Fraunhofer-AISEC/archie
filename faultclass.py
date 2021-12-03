@@ -161,7 +161,7 @@ def write_output_wrt_goldenrun(keyword, data, goldenrun_data):
     if not isinstance(data, pd.DataFrame):
         data = pd.DataFrame(data)
 
-    if goldenrun_data is not None:
+    if goldenrun_data:
         data = [data, goldenrun_data[keyword], goldenrun_data[keyword]]
         data = pd.concat(data).drop_duplicates(keep=False)
 
@@ -415,7 +415,7 @@ def readout_tb_faulted(line):
 def readout_data(
     pipe,
     index,
-    q,
+    queue_output,
     faultlist,
     goldenrun_data,
     queue_ram_usage=None,
@@ -488,7 +488,7 @@ def readout_data(
 
                     gather_process_ram_usage(queue_ram_usage, 0)
 
-                    if goldenrun_data is not None:
+                    if goldenrun_data:
                         [pdtbexeclist, tblist] = filter_tb(
                             pdtbexeclist,
                             tblist,
@@ -528,7 +528,7 @@ def readout_data(
 
                 if callable(qemu_post):
                     output = qemu_post(qemu_pre_data, output)
-                q.put(output)
+                queue_output.put(output)
 
                 max_ram_usage = gather_process_ram_usage(queue_ram_usage, max_ram_usage)
 
@@ -685,7 +685,7 @@ def python_worker(
     fault_list,
     config_qemu,
     index,
-    q,
+    queue_output,
     qemu_output,
     goldenrun_data=None,
     change_nice=False,
@@ -759,7 +759,7 @@ def python_worker(
         mem = readout_data(
             data_fifo,
             index,
-            q,
+            queue_output,
             fault_list,
             goldenrun_data,
             queue_ram_usage,

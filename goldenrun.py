@@ -19,7 +19,7 @@ def run_goldenrun(
     dummyfault = Fault(0, 0, 0, 0, 0, 0, 100)
     dummyfaultlist = []
     dummyfaultlist.append(dummyfault)
-    q = Queue()
+    queue_output = Queue()
     data_end = {}
     goldenrun_config["qemu"] = config_qemu["qemu"]
     goldenrun_config["kernel"] = config_qemu["kernel"]
@@ -35,7 +35,7 @@ def run_goldenrun(
             dummyfaultlist,
             goldenrun_config,
             -2,
-            q,
+            queue_output,
             qemu_output,
             None,
             False,
@@ -43,7 +43,7 @@ def run_goldenrun(
             qemu_pre,
             qemu_post,
         )
-        data_start = q.get()
+        data_start = queue_output.get()
         if data_start["endpoint"] == 1:
             logger.info("Start successfully reached")
         else:
@@ -65,7 +65,7 @@ def run_goldenrun(
             dummyfaultlist,
             goldenrun_config,
             -1,
-            q,
+            queue_output,
             qemu_output,
             None,
             False,
@@ -73,7 +73,7 @@ def run_goldenrun(
             qemu_pre,
             qemu_post,
         )
-        data_end = q.get()
+        data_end = queue_output.get()
         if data_end["endpoint"] == 1:
             logger.info("End point successfully reached")
         else:
@@ -123,31 +123,33 @@ def checktriggers_in_tb(faultconfig, data):
             )
         )
         for fault in faultdescription["faultlist"]:
-            if not (fault.trigger.address in valid_triggers):
-                if fault.trigger.address in invalid_triggers:
-                    faultdescription["del"] = True
-                else:
-                    if find_insn_addresses_in_tb(fault.trigger.address, data):
-                        valid_triggers.append(fault.trigger.address)
-                    else:
-                        invalid_triggers.append(fault.trigger.address)
-                        faultdescription["del"] = True
-                        logger.critical(
-                            "Trigger address {} was not found in tbs executed in golden run!".format(
-                                fault.trigger.address
-                            )
-                        )
-                        logger.critical(
-                            "This is the fault description unrolled that caused this error. Please fix your input: {}".format(
-                                faultdescription
-                            )
-                        )
-                        for fault in faultdescription["faultlist"]:
-                            logger.critical(
-                                "fault: {}, triggeraddress:{}, faultaddress:{}".format(
-                                    fault, fault.trigger.address, fault.address
-                                )
-                            )
+            if fault.trigger.address in valid_triggers:
+                continue
+
+            if fault.trigger.address in invalid_triggers:
+                faultdescription["del"] = True
+                continue
+
+            if find_insn_addresses_in_tb(fault.trigger.address, data):
+                valid_triggers.append(fault.trigger.address)
+                continue
+
+            invalid_triggers.append(fault.trigger.address)
+            faultdescription["del"] = True
+
+            error_message = (
+                f"Trigger address {fault.trigger.address} not found in tbs "
+                f"executed in golden run! \nInvalid fault description: "
+                f"{faultdescription}"
+            )
+            for fault in faultdescription["faultlist"]:
+                error_message += (
+                    f"\nfault: {fault}, "
+                    f"triggeraddress: {fault.trigger.address}, "
+                    f"faultaddress: {fault.address}"
+                )
+            logger.critical(error_message)
+
     logger.info("Convert to pandas")
     tmp = pd.DataFrame(faultconfig)
     logger.info("filter for del items")

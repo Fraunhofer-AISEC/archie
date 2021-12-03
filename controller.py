@@ -201,7 +201,7 @@ def controller(
 
     m = Manager()
     m2 = Manager()
-    q = m.Queue()
+    queue_output = m.Queue()
     queue_ram_usage = m2.Queue()
 
     prctl.set_name("Controller")
@@ -213,14 +213,17 @@ def controller(
             config_qemu["max_instruction_count"],
             goldenrun_data,
             faultlist,
-        ] = run_goldenrun(config_qemu, qemu_output, q, faultlist, qemu_pre, qemu_post)
+        ] = run_goldenrun(
+            config_qemu, qemu_output, queue_output, faultlist, qemu_pre, qemu_post
+        )
+
 
     p_logger = Process(
         target=logger,
         args=(
             hdf5path,
             hdf5mode,
-            q,
+            queue_output,
             len(faultlist),
             compressionlevel,
             logger_postprocess,
@@ -230,7 +233,6 @@ def controller(
     p_logger.start()
 
     p_list = []
-
 
     p_time_list = []
     p_time_list.append(60)
@@ -244,15 +246,11 @@ def controller(
     mem_max = max_ram / 2
     mem_list.append(max_ram / (num_workers))
 
-    goldenrun_data["tbexec"] = pd.DataFrame(goldenrun_data["tbexec"])
-    goldenrun_data["tbinfo"] = pd.DataFrame(goldenrun_data["tbinfo"])
-    goldenrun_data["meminfo"] = pd.DataFrame(goldenrun_data["meminfo"])
-    if "armregisters" in goldenrun_data:
-        goldenrun_data["armregisters"] = pd.DataFrame(goldenrun_data["armregisters"])
-    if "riscvregisters" in goldenrun_data:
-        goldenrun_data["riscvregisters"] = pd.DataFrame(
-            goldenrun_data["riscvregisters"]
-        )
+    keywords = ["tbexec", "tbinfo", "meminfo", "armregisters", "riscvregisters"]
+    for keyword in keywords:
+        if keyword not in goldenrun_data:
+            continue
+        goldenrun_data[keyword] = pd.DataFrame(goldenrun_data[keyword])
 
     itter = 0
     while 1:
@@ -261,10 +259,11 @@ def controller(
             break
 
         if (
-            mem_limit_calc(mem_max, len(p_list), q.qsize(), time_max) < max_ram
+            mem_limit_calc(mem_max, len(p_list), queue_output.qsize(), time_max)
+            < max_ram
             and len(p_list) < num_workers
             and itter < len(faultlist)
-            and q.qsize() < queuedepth
+            and queue_output.qsize() < queuedepth
         ):
 
             faults = faultlist[itter]
@@ -277,7 +276,7 @@ def controller(
                     faults["faultlist"],
                     config_qemu,
                     faults["index"],
-                    q,
+                    queue_output,
                     qemu_output,
                     goldenrun_data,
                     True,
@@ -338,7 +337,7 @@ def controller(
                 p_list.pop(i)
                 break
 
-    clogger.info("{} experiments remaining in queue".format(q.qsize()))
+    clogger.info("{} experiments remaining in queue".format(queue_output.qsize()))
 
     p_logger.join()
 
@@ -513,33 +512,26 @@ if __name__ == "__main__":
 
     parguments = process_arguments(args)
 
+    logging_level = logging.INFO
     if args.debug:
-        logging.basicConfig(
-            format="%(asctime)s - %(name)s - %(levelname)s : %(message)s",
-            level=logging.DEBUG,
-        )
-    else:
-        logging.basicConfig(
-            format="%(asctime)s - %(name)s - %(levelname)s : %(message)s",
-            level=logging.INFO,
-        )
-    p = Process(
-        target=controller,
-        args=(
-            args.hdf5file,  # hdf5path
-            parguments["hdf5mode"],  # hdf5mode
-            parguments["faultlist"],  # faultlist
-            parguments["qemu_conf"],  # config_qemu
-            parguments["num_workers"],  # num_workers
-            parguments["queuedepth"],  # queuedepth
-            parguments["compressionlevel"],  # compressionlevel
-            args.debug,  # qemu_output
-            parguments["goldenrun"],  # goldenrun
-            hdf5collector,  # logger
-            None,  # qemu_pre
-            None,  # qemu_post
-            None,
-        ),  # logger_postprocess
+        logging_level = logging.DEBUG
+    logging.basicConfig(
+        format="%(asctime)s - %(name)s - %(levelname)s : %(message)s",
+        level=logging_level,
     )
-    p.start()
-    p.join()
+
+    controller(
+        args.hdf5file,  # hdf5path
+        parguments["hdf5mode"],  # hdf5mode
+        parguments["faultlist"],  # faultlist
+        parguments["qemu_conf"],  # config_qemu
+        parguments["num_workers"],  # num_workers
+        parguments["queuedepth"],  # queuedepth
+        parguments["compressionlevel"],  # compressionlevel
+        args.debug,  # qemu_output
+        parguments["goldenrun"],  # goldenrun
+        hdf5collector,  # logger
+        None,  # qemu_pre
+        None,  # qemu_post
+        None,  # logger_postprocess
+    )
