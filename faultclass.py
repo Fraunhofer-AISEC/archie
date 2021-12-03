@@ -4,10 +4,11 @@ from multiprocessing import Process
 import time
 import pandas as pd
 import prctl
-import resource
 
 
 import logging
+
+from util import gather_process_ram_usage
 
 logger = logging.getLogger(__name__)
 qlogger = logging.getLogger("QEMU-" + __name__)
@@ -148,18 +149,23 @@ def readout_tbinfo(line):
     return tb
 
 
-def diff_tbinfo(tblist, goldenrun_tblist):
+def write_output_wrt_goldenrun(keyword, data, goldenrun_data):
     """
-    Diff tblist with golden runs tblist. Convert to pandas data frame for performance reasons.
-    Naive implementation is too slow for larger datasets.
-    Also added two times golden run concat to cancel it out and only find diff to df1
-    """
-    df1 = pd.DataFrame(tblist)
-    df2 = goldenrun_tblist
-    diff = pd.concat([df1, df2, df2]).drop_duplicates(keep=False)
-    tblist_dif = diff.to_dict("records")
+    Panda dataframes for performance reasons. Naive implementation is too slow
+    for larger datasets. golden_data twice concated to only get the diff
+    (golden_data cancels it out)
 
-    return tblist_dif
+    data            pd.data_frame
+    goldenrun_data  pd.data_frame
+    """
+    if not isinstance(data, pd.DataFrame):
+        data = pd.DataFrame(data)
+
+    if goldenrun_data is not None:
+        data = [data, goldenrun_data[keyword], goldenrun_data[keyword]]
+        data = pd.concat(data).drop_duplicates(keep=False)
+
+    return data.to_dict("records")
 
 
 def readout_tbexec(line, tbexeclist, tbinfo, goldenrun):
@@ -318,22 +324,6 @@ def filter_tb(tbexeclist, tbinfo, tbexecgolden, tbinfogolden, id_num):
     return [tbexecpd, tbinfopd.to_dict("records")]
 
 
-def diff_tbexec(tbexeclist, goldenrun_tbexeclist):
-    """
-    Diff tbexeclist with golden runs tbexeclist. Convert to pandas
-    dataframe for performance reasons.
-    Naive implementation is too slow for larger datasets.
-    Also added two times golden run concat to cancel it out and only find
-    diff to df1
-    """
-    df1 = tbexeclist
-    df2 = goldenrun_tbexeclist
-    diff = pd.concat([df1, df2, df2]).drop_duplicates(keep=False)
-
-    tbexeclist_diff = diff.to_dict("records")
-    return tbexeclist_diff
-
-
 def readout_meminfo(line):
     """
     Builds the dict for memory info from line provided by qemu
@@ -347,20 +337,6 @@ def readout_meminfo(line):
     mem["counter"] = int(split[4], 0)
     mem["tbid"] = 0
     return mem
-
-
-def diff_meminfo(meminfolist, goldenrun_meminfolist):
-    """
-    Diff meminfo with golden runs meminfo. Convert to pandas dataframe
-    for performance reasons. Naive implementation is too slow for larger
-    datasets. Also added two times golden run concat to cancel it out
-    and only find diff to df1
-    """
-    df1 = pd.DataFrame(meminfolist)
-    df2 = goldenrun_meminfolist
-    diff = pd.concat([df1, df2, df2]).drop_duplicates(keep=False)
-    meminfolist_diff = diff.to_dict("records")
-    return meminfolist_diff
 
 
 def connect_meminfo_tb(meminfolist, tblist):
@@ -436,32 +412,13 @@ def readout_tb_faulted(line):
     return tbfaulted
 
 
-def diff_arm_registers(armregisterlist, goldenarmregisterlist):
-    df1 = pd.DataFrame(armregisterlist)
-    df2 = goldenarmregisterlist
-    diff = pd.concat([df1, df2, df2]).drop_duplicates(keep=False)
-    armregister_diff = diff.to_dict("records")
-    return armregister_diff
-
-
-def diff_tables(table, goldentable):
-    """
-    This function expects a table and its golden table as pandas dataframe
-    """
-    return pd.concat([table, goldentable, goldentable]).drop_duplicates(keep=False)
-
-
-def convert_pd_frame_to_list(table):
-    return table.to_dict("records")
-
-
 def readout_data(
     pipe,
     index,
     q,
     faultlist,
     goldenrun_data,
-    q2=None,
+    queue_ram_usage=None,
     qemu_post=None,
     qemu_pre_data=None,
 ):
@@ -485,47 +442,52 @@ def readout_data(
     meminfo = 0
     memdump = 0
     endpoint = 0
-    mem = 0
+    max_ram_usage = 0
     regtype = None
     tbfaulted = 0
 
     while 1:
         line = pipe.readline()
+
         if "$$$" in line:
             line = line[3:]
+
             if "[Endpoint]" in line:
                 split = line.split("]:")
                 endpoint = int(split[1], 0)
+
             elif "[TB Information]" in line:
                 state = "tbinfo"
                 tbinfo = 1
+
             elif "[TB Exec]" in line:
                 state = "tbexec"
                 tbexec = 1
+
             elif "[Mem Information]" in line:
                 tbexeclist.reverse()
                 state = "meminfo"
                 meminfo = 1
+
             elif "[Memdump]" in line:
                 state = "memdump"
                 memdump = 1
+
             elif "[END]" in line:
                 state = "none"
                 logger.info(
-                    "Data received now on post processing for Experiment {}".format(
-                        index
-                    )
+                    f"Data received now on post processing for Experiment {index}"
                 )
-                tmp = 0
+
                 if tbexec == 1:
                     if pdtbexeclist is not None:
                         tmp = pd.DataFrame(tbexeclist)
                         pdtbexeclist = pd.concat([pdtbexeclist, tmp], ignore_index=True)
                     else:
                         pdtbexeclist = pd.DataFrame(tbexeclist)
-                    tmp = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-                    if q2 is not None:
-                        q2.put(tmp)
+
+                    gather_process_ram_usage(queue_ram_usage, 0)
+
                     if goldenrun_data is not None:
                         [pdtbexeclist, tblist] = filter_tb(
                             pdtbexeclist,
@@ -534,68 +496,44 @@ def readout_data(
                             goldenrun_data["tbinfo"],
                             index,
                         )
+
                 if tbinfo == 1 and meminfo == 1:
                     connect_meminfo_tb(memlist, tblist)
+
+                max_ram_usage = gather_process_ram_usage(queue_ram_usage, max_ram_usage)
+
+                datasets = []
+                datasets.append((tbinfo, "tbinfo", tblist))
+                datasets.append((tbexec, "tbexec", pdtbexeclist))
+                datasets.append((meminfo, "meminfo", memlist))
+                datasets.append((regtype, f"{regtype}registers", registerlist))
+
                 output = {}
-                mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-                if q2 is not None:
-                    q2.put(tmp)
-                if tmp > mem:
-                    mem = tmp
-                if tbinfo == 1:
-                    if goldenrun_data is not None:
-                        output["tbinfo"] = diff_tbinfo(tblist, goldenrun_data["tbinfo"])
-                    else:
-                        output["tbinfo"] = tblist
-                if tbexec == 1:
-                    if goldenrun_data is not None:
-                        output["tbexec"] = diff_tbexec(
-                            pdtbexeclist, goldenrun_data["tbexec"]
-                        )
-                    else:
-                        output["tbexec"] = convert_pd_frame_to_list(pdtbexeclist)
-                if meminfo == 1:
-                    if goldenrun_data is not None:
-                        output["meminfo"] = diff_meminfo(
-                            memlist, goldenrun_data["meminfo"]
-                        )
-                    else:
-                        output["meminfo"] = memlist
-                if goldenrun_data is not None:
-                    if regtype == "arm":
-                        output["armregisters"] = diff_arm_registers(
-                            registerlist, goldenrun_data["armregisters"]
-                        )
-                    if regtype == "riscv":
-                        output["riscvregisters"] = diff_arm_registers(
-                            registerlist, goldenrun_data["riscvregisters"]
-                        )
-                else:
-                    if regtype == "arm":
-                        output["armregisters"] = registerlist
-                    if regtype == "riscv":
-                        output["riscvregisters"] = registerlist
+                for (flag, keyword, data) in datasets:
+                    if not flag:
+                        continue
+                    output[keyword] = write_output_wrt_goldenrun(keyword, data, goldenrun_data)
+
                 if tbfaulted == 1:
                     output["tbfaulted"] = tbfaultedlist
+
                 output["index"] = index
                 output["faultlist"] = faultlist
                 output["endpoint"] = endpoint
+
                 if memdump == 1:
                     output["memdumplist"] = memdumplist
-                tmp = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-                if q2 is not None:
-                    q2.put(tmp)
-                if tmp > mem:
-                    mem = tmp
+
+                max_ram_usage = gather_process_ram_usage(queue_ram_usage, max_ram_usage)
+
                 if callable(qemu_post):
                     output = qemu_post(qemu_pre_data, output)
                 q.put(output)
-                tmp = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-                if q2 is not None:
-                    q2.put(tmp)
-                if tmp > mem:
-                    mem = tmp
+
+                max_ram_usage = gather_process_ram_usage(queue_ram_usage, max_ram_usage)
+
                 break
+
             elif "[Arm Registers]" in line:
                 state = "armregisters"
                 regtype = "arm"
@@ -610,6 +548,7 @@ def readout_data(
                     "Command in exp {} not understood {}".format(index, line)
                 )
                 state = "None"
+
         elif "$$" in line:
             line = line[2:]
             if "tbinfo" in state:
@@ -639,7 +578,7 @@ def readout_data(
                 tbfaultedlist.append(readout_tb_faulted(line))
             else:
                 logger.warning("In exp {} unknown state {}".format(index, line))
-    return mem
+    return max_ram_usage
 
 
 def create_fifos():
@@ -750,7 +689,7 @@ def python_worker(
     qemu_output,
     goldenrun_data=None,
     change_nice=False,
-    q2=None,
+    queue_ram_usage=None,
     qemu_pre=None,
     qemu_post=None,
 ):
@@ -823,7 +762,7 @@ def python_worker(
             q,
             fault_list,
             goldenrun_data,
-            q2,
+            queue_ram_usage,
             qemu_post=qemu_post,
             qemu_pre_data=qemu_pre_data,
         )
@@ -834,8 +773,8 @@ def python_worker(
                 index, time.time() - t0, mem
             )
         )
-        if q2 is not None:
-            q2.put(mem)
+        if queue_ram_usage is not None:
+            queue_ram_usage.put(mem)
     except KeyboardInterrupt:
         p_qemu.terminate()
         p_qemu.join()
