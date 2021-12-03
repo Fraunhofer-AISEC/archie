@@ -1,10 +1,12 @@
-from multiprocessing import Process
-from multiprocessing import Manager
-import subprocess
-import pandas as pd
 import argparse
-import time
+import logging
+import lzma
+from multiprocessing import Manager, Process
+import pandas as pd
+import pickle
 import prctl
+import subprocess
+import time
 
 try:
     import json5 as json
@@ -19,8 +21,6 @@ from faultclass import Fault
 from faultclass import python_worker
 from hdf5logger import hdf5collector
 from goldenrun import run_goldenrun
-
-import logging
 
 clogger = logging.getLogger(__name__)
 
@@ -207,6 +207,8 @@ def controller(
     prctl.set_name("Controller")
     prctl.set_proctitle("Python_Controller")
 
+    # Storing and restoring goldenrun_data with pickle is a temporary fix
+    # A better solution is to parse the goldenrun_data from the existing hdf5 file
     goldenrun_data = {}
     if goldenrun:
         [
@@ -216,7 +218,16 @@ def controller(
         ] = run_goldenrun(
             config_qemu, qemu_output, queue_output, faultlist, qemu_pre, qemu_post
         )
-
+        pickle.dump(
+            (config_qemu["max_instruction_count"], goldenrun_data, faultlist),
+            lzma.open("bkup_goldenrun_results.xz", "wb"),
+        )
+    else:
+        (
+            config_qemu["max_instruction_count"],
+            goldenrun_data,
+            faultlist,
+        ) = pickle.load(lzma.open("bkup_goldenrun_results.xz", "rb"))
 
     p_logger = Process(
         target=logger,
