@@ -1,10 +1,12 @@
-from multiprocessing import Process
-from multiprocessing import Manager
-import subprocess
-import pandas as pd
 import argparse
-import time
+import logging
+import lzma
+from multiprocessing import Manager, Process
+import pandas as pd
+import pickle
 import prctl
+import subprocess
+import time
 
 try:
     import json5 as json
@@ -19,8 +21,6 @@ from faultclass import Fault
 from faultclass import python_worker
 from hdf5logger import hdf5collector
 from goldenrun import run_goldenrun
-
-import logging
 
 clogger = logging.getLogger(__name__)
 
@@ -203,109 +203,130 @@ def controller(
     workers
     """
     clogger.info("Controller start")
+
     t0 = time.time()
+
     m = Manager()
     m2 = Manager()
-    q = m.Queue()
-    q2 = m2.Queue()
-    num_exp = len(faultlist)
+    queue_output = m.Queue()
+    queue_ram_usage = m2.Queue()
+
     prctl.set_name("Controller")
     prctl.set_proctitle("Python_Controller")
+
+    # Storing and restoring goldenrun_data with pickle is a temporary fix
+    # A better solution is to parse the goldenrun_data from the existing hdf5 file
     goldenrun_data = {}
     if goldenrun:
         [
             config_qemu["max_instruction_count"],
             goldenrun_data,
             faultlist,
-        ] = run_goldenrun(config_qemu, qemu_output, q, faultlist, qemu_pre, qemu_post)
+        ] = run_goldenrun(
+            config_qemu, qemu_output, queue_output, faultlist, qemu_pre, qemu_post
+        )
+        pickle.dump(
+            (config_qemu["max_instruction_count"], goldenrun_data, faultlist),
+            lzma.open("bkup_goldenrun_results.xz", "wb"),
+        )
+    else:
+        (
+            config_qemu["max_instruction_count"],
+            goldenrun_data,
+            faultlist,
+        ) = pickle.load(lzma.open("bkup_goldenrun_results.xz", "rb"))
+
     p_logger = Process(
         target=logger,
         args=(
             hdf5path,
             hdf5mode,
-            q,
+            queue_output,
             len(faultlist),
             compressionlevel,
             logger_postprocess,
         ),
     )
+
     p_logger.start()
+
     p_list = []
-    mem_list = []
+
     p_time_list = []
     p_time_list.append(60)
     p_time_mean = 60
-    mem_max = 0
-    max_ram = get_system_ram() * 0.9 - 2000000
-    mem_list.append(max_ram / (num_workers))
-    mem_max = max_ram / 2
-    time_max = 0
-    goldenrun_data["tbexec"] = pd.DataFrame(goldenrun_data["tbexec"])
-    goldenrun_data["tbinfo"] = pd.DataFrame(goldenrun_data["tbinfo"])
-    goldenrun_data["meminfo"] = pd.DataFrame(goldenrun_data["meminfo"])
-    if "armregisters" in goldenrun_data:
-        goldenrun_data["armregisters"] = pd.DataFrame(goldenrun_data["armregisters"])
-    if "riscvregisters" in goldenrun_data:
-        goldenrun_data["riscvregisters"] = pd.DataFrame(
-            goldenrun_data["riscvregisters"]
-        )
-    itter = 0
+
     times = []
+    time_max = 0
+
+    mem_list = []
+    max_ram = get_system_ram() * 0.8 - 2000000
+    mem_max = max_ram / 2
+    mem_list.append(max_ram / (num_workers))
+
+    keywords = ["tbexec", "tbinfo", "meminfo", "armregisters", "riscvregisters"]
+    for keyword in keywords:
+        if keyword not in goldenrun_data:
+            continue
+        goldenrun_data[keyword] = pd.DataFrame(goldenrun_data[keyword])
+
+    itter = 0
     while 1:
-        len_p_list_cached = len(p_list)
-        qsizecache = q.qsize()
+        if len(p_list) == 0 and itter == len(faultlist):
+            clogger.info("Done inserting qemu jobs")
+            break
+
         if (
-            len_p_list_cached < num_workers
-            and mem_limit_calc(mem_max, len_p_list_cached, qsizecache, time_max)
+            mem_limit_calc(mem_max, len(p_list), queue_output.qsize(), time_max)
             < max_ram
+            and len(p_list) < num_workers
+            and itter < len(faultlist)
+            and queue_output.qsize() < queuedepth
         ):
-            if len(faultlist) > itter and qsizecache < queuedepth:
-                faults = faultlist[itter]
-                itter += 1
-                p = Process(
-                    name="worker_{}".format(faults["index"]),
-                    target=python_worker,
-                    args=(
-                        faults["faultlist"],
-                        config_qemu,
-                        faults["index"],
-                        q,
-                        qemu_output,
-                        goldenrun_data,
-                        True,
-                        q2,
-                        qemu_pre,
-                        qemu_post,
-                    ),
-                )
-                p.start()
-                p_context = {}
-                p_context["process"] = p
-                p_context["start_time"] = time.time()
-                p_list.append(p_context)
-                clogger.info(
-                    "Started worker {}. Running: {}.".format(
-                        faults["index"], len_p_list_cached + 1
-                    )
-                )
-            else:
-                if len(p_list) == 0 and len(faultlist) == itter:
-                    clogger.info("Done inserting qemu jobs")
-                    break
-                time.sleep(0.001)  # wait for queue to empty
+
+            faults = faultlist[itter]
+            itter += 1
+
+            p = Process(
+                name=f"worker_{faults['index']}",
+                target=python_worker,
+                args=(
+                    faults["faultlist"],
+                    config_qemu,
+                    faults["index"],
+                    queue_output,
+                    qemu_output,
+                    goldenrun_data,
+                    True,
+                    queue_ram_usage,
+                    qemu_pre,
+                    qemu_post,
+                ),
+            )
+            p.start()
+            p_list.append({"process": p, "start_time": time.time()})
+
+            clogger.info(f"Started worker {faults['index']}. Running: {len(p_list)}.")
+            clogger.debug(f"Fault address: {faults['faultlist'][0].address}")
+            clogger.debug(
+                f"Fault trigger address: {faults['faultlist'][0].trigger.address}"
+            )
         else:
             time.sleep(0.005)  # wait for workers to finish, scheduler can wait
-        for i in range(0, q2.qsize()):
-            mem = q2.get_nowait()
+
+        for i in range(queue_ram_usage.qsize()):
+            mem = queue_ram_usage.get_nowait()
             mem_list.append(mem)
+
         if len(mem_list) > 6 * num_workers + 4:
             del mem_list[0 : len(mem_list) - 6 * num_workers + 4]
         mem_max = max(mem_list)
+
         "Calculate length of running processes"
         times.clear()
         time_max = 0
         current_time = time.time()
-        for i in range(0, len_p_list_cached):
+        for i in range(len(p_list)):
             p = p_list[i]
             tmp = current_time - p["start_time"]
             "If the current processing time is lower than moving average, do not punish the time "
@@ -317,7 +338,8 @@ def controller(
         process minus the moving average)"""
         if len(times) > 0:
             time_max = max(times)
-        for i in range(0, len_p_list_cached):
+
+        for i in range(len(p_list)):
             p = p_list[i]
             "Find finished processes"
             p["process"].join(timeout=0)
@@ -333,21 +355,27 @@ def controller(
                 p_list.pop(i)
                 break
 
-    clogger.info("{} experiments remaining in queue".format(q.qsize()))
+    clogger.info("{} experiments remaining in queue".format(queue_output.qsize()))
+
     p_logger.join()
+
     clogger.info("Done with qemu and logger")
+
     t1 = time.time()
     m, s = divmod(t1 - t0, 60)
     h, m = divmod(m, 60)
-    clogger.info("Took {}:{}:{} to complet all experiments".format(h, m, s))
-    tperindex = (t1 - t0) / (num_exp)
-    tperworker = (t1 - t0) / (num_exp / num_workers)
+    clogger.info("Took {}:{}:{} to complete all experiments".format(h, m, s))
+
+    tperindex = (t1 - t0) / len(faultlist)
+    tperworker = tperindex / num_workers
     clogger.info(
         "Took average of {}s per fault, python worker rough runtime is {}s".format(
             tperindex, tperworker
         )
     )
+
     clogger.info("controller exit")
+
     return config_qemu
 
 
@@ -502,33 +530,26 @@ if __name__ == "__main__":
 
     parguments = process_arguments(args)
 
+    logging_level = logging.INFO
     if args.debug:
-        logging.basicConfig(
-            format="%(asctime)s - %(name)s - %(levelname)s : %(message)s",
-            level=logging.DEBUG,
-        )
-    else:
-        logging.basicConfig(
-            format="%(asctime)s - %(name)s - %(levelname)s : %(message)s",
-            level=logging.INFO,
-        )
-    p = Process(
-        target=controller,
-        args=(
-            args.hdf5file,  # hdf5path
-            parguments["hdf5mode"],  # hdf5mode
-            parguments["faultlist"],  # faultlist
-            parguments["qemu_conf"],  # config_qemu
-            parguments["num_workers"],  # num_workers
-            parguments["queuedepth"],  # queuedepth
-            parguments["compressionlevel"],  # compressionlevel
-            args.debug,  # qemu_output
-            parguments["goldenrun"],  # goldenrun
-            hdf5collector,  # logger
-            None,  # qemu_pre
-            None,  # qemu_post
-            None,
-        ),  # logger_postprocess
+        logging_level = logging.DEBUG
+    logging.basicConfig(
+        format="%(asctime)s - %(name)s - %(levelname)s : %(message)s",
+        level=logging_level,
     )
-    p.start()
-    p.join()
+
+    controller(
+        args.hdf5file,  # hdf5path
+        parguments["hdf5mode"],  # hdf5mode
+        parguments["faultlist"],  # faultlist
+        parguments["qemu_conf"],  # config_qemu
+        parguments["num_workers"],  # num_workers
+        parguments["queuedepth"],  # queuedepth
+        parguments["compressionlevel"],  # compressionlevel
+        args.debug,  # qemu_output
+        parguments["goldenrun"],  # goldenrun
+        hdf5collector,  # logger
+        None,  # qemu_pre
+        None,  # qemu_post
+        None,  # logger_postprocess
+    )

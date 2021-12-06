@@ -293,7 +293,7 @@ def process_memory_info(f, group, meminfolist, myfilter):
 
 
 def hdf5collector(
-    hdf5path, mode, q, num_exp, compressionlevel, logger_postprocess=None
+    hdf5path, mode, queue_output, num_exp, compressionlevel, logger_postprocess=None
 ):
     prctl.set_name("logger")
     prctl.set_proctitle("logger")
@@ -308,11 +308,11 @@ def hdf5collector(
     groupname = "experiment{:0" + "{}".format(len(tmp)) + "d}"
     while num_exp > 0:
         # readout queue and get next output from qemu. Will block
-        exp = q.get()
+        exp = queue_output.get()
         t1 = time.time()
         logger.info(
             "got exp {}, {} still need to be performed. Took {}s. Elements in queu: {}".format(
-                exp["index"], num_exp, t1 - t0, q.qsize()
+                exp["index"], num_exp, t1 - t0, queue_output.qsize()
             )
         )
         t0 = t1
@@ -346,28 +346,27 @@ def hdf5collector(
         else:
             raise ValueError("Index is not supposed to be negative")
 
-        # safe tbinfo
-        if "tbinfo" in exp:
-            process_tbinfo(f, exp_group, exp["tbinfo"], myfilter)
-        # safe tbexec
-        if "tbexec" in exp:
-            process_tbexec(f, exp_group, exp["tbexec"], myfilter)
-        # safe meminfo
-        if "meminfo" in exp:
-            process_memory_info(f, exp_group, exp["meminfo"], myfilter)
+        datasets = []
+        datasets.append((process_tbinfo, "tbinfo"))
+        datasets.append((process_tbexec, "tbexec"))
+        datasets.append((process_memory_info, "meminfo"))
+        datasets.append((process_dumps, "memdumplist"))
+        datasets.append((process_arm_registers, "armregisters"))
+        datasets.append((process_riscv_registers, "riscvregisters"))
+        datasets.append((process_tb_faulted, "tbfaulted"))
+
+        for (fn_ptr, keyword) in datasets:
+            if keyword not in exp:
+                continue
+            fn_ptr(f, exp_group, exp[keyword], myfilter)
+
         # safe fault config
         process_faults(f, exp_group, exp["faultlist"], exp["endpoint"], myfilter)
-        # safe dumps
-        if "memdumplist" in exp:
-            process_dumps(f, exp_group, exp["memdumplist"], myfilter)
-        if "armregisters" in exp:
-            process_arm_registers(f, exp_group, exp["armregisters"], myfilter)
-        if "riscvregisters" in exp:
-            process_riscv_registers(f, exp_group, exp["riscvregisters"], myfilter)
-        if "tbfaulted" in exp:
-            process_tb_faulted(f, exp_group, exp["tbfaulted"], myfilter)
+
         if callable(logger_postprocess):
             logger_postprocess(f, exp_group, exp, myfilter)
+
         del exp
+
     f.close()
     logger.info("Data Logging done")
