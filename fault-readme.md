@@ -82,6 +82,7 @@ The faults dictionary contains the following members
 * fault_mask
 * trigger_address
 * trigger_counter
+* num_bytes (optional)
 
 Except for fault_type and fault_model, it is possible to define a range of values for the parameters.
 That is why each element is placed inside a list. Each list has either one or three members. Three members are decoded as python3 ranged parameters. One member is processed as single value.
@@ -134,8 +135,11 @@ For "data" and "instruction" a memory dump of a fault_address is generated. It c
 Furthermore for "instruction" a disassembly of the faulted assembly instruction is generated.
 
 ###### fault_model
-Currently, three fault models are implemented: "set1", "set0" and "toggle".
+Currently, four fault models are implemented: "set1", "set0", "toggle", and "overwrite".
 "set1" replaces all bits that are defined by fault_mask with 1 (OR), "set0" with 0 (NAND) and "toggle" toggles these bits (XOR).
+
+Overwrite allows to set a location ( instruction, memory or register) to a specific value. With it an instruction could be rewritten to a nop instruction on the fly. This is done with the overwrite example in fault.json file. The value to be written is defined by "fault_mask" parameter. It is written to "fault_address", beginning with the lowest byte and incrementing. It therefore is little-endian.
+num_bytes is used to determen how many bytes should be overwritten. Up to a maximum of 16 bytes can currently be overwritten with the help of this model.
 
 ##### fault_lifespan
 Defines the number of instructions a fault is valid. If fault_lifespan is [0] it means the fault is permanent. If it is a positive number, fault_lifespan defines how many instructions the fault remains in the system. After this number of instructions, the fault is reverted. This has the potential to behave in a strange way, if the system changed the content at the respective address while the temporary fault was still active. It will only revert flipped bits back to the original state. Temporary faults are, thus, only recommended for flash memory, since usually in case of flash, less write accesses are occurring. 
@@ -170,7 +174,10 @@ In case of a negative trigger_address, trigger_counter represents the number of 
 In the experiments, not all TBs are seen, but only the ones where a difference compared to the golden run can be observed.
 The trigger counter can also be defined as a range, e.g. [128, 160, 1]. In this example, after 128, 129, 130, ... until 160 instruction executions, a fault is injected.
 
+##### num_bytes
+Num bytes is currently only used by the "overwrite" fault model. See section [fault_model](#fault_model). For all other fault models this parameter is not used and ignored. If it is not proved within a fault dictionary it is added. It therefore can be left out if a fault model does not use "num_bytes".
 
+**Attention!** If a range is specified despite it being not used it is stille unrolled. This leads to multiple faults with the same configuration!
 
 
  

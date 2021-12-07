@@ -64,6 +64,18 @@ void reverse_register_fault(fault_list_t * current);
 void inject_memory_fault(fault_list_t * current);
 
 /**
+ * process_overwrite_memory
+ *
+ * Read memory, then overwrite the bytes specified by mask value. Num_bytes specify the number of bytes. currently max 16 bytes.
+ *
+ * address: base address of lowest byte
+ * maks: Values to overwrite the bytes at address location.
+ * num_bytes: Number of bytes to be overwritten.
+ * restoremask: Mask used to restore back values to original values for temoporary faults
+ */
+void process_overwrite_memory(uint64_t address, uint8_t num_bytes, uint8_t mask[], uint8_t restoremask[]);
+
+/**
  * process_set1_memory
  *
  * Read memory, then set bits according to mask, then write memory back

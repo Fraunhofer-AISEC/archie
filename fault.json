@@ -41,6 +41,18 @@
 					"trigger_address"	: [134217954],
 					"trigger_counter"	: [1]
 				}
+			],
+			[
+				{
+					"fault_address"		: [134217962],
+					"fault_type"		: "instruction",
+					"fault_model"		: "overwrite",
+					"fault_livespan"	: [0, 3, 2],
+					"fault_mask"		: [191], 
+					"trigger_address"	: [-1],
+					"trigger_counter"	: [3],
+					"num_bytes"		: [2]
+				}
 			]
 		],
 	"memorydump": [

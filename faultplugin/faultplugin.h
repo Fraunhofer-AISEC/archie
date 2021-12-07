@@ -25,7 +25,7 @@
 #include "fault_list.h"
 
 enum{ DATA, INSTRUCTION, REGISTER};
-enum{ SET0, SET1, TOGGLE};
+enum{ SET0, SET1, TOGGLE, OVERWRITE};
 
 
 int register_live_faults_callback(fault_list_t *fault);

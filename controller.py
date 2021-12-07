@@ -95,16 +95,19 @@ def detect_model(fault_model):
         return 0
     if fault_model == "toggle":
         return 2
+    if fault_model == "overwrite":
+        return 3
     clogger.critical(
-        "Received wrong model. Expected set0, set1, or toggle. Got {}".format(
+        "Received wrong model. Expected set0, set1, toggle, or overwrite. Got {}".format(
             fault_model
         )
     )
     raise ValueError(
-        "A model was not detected. Maybe misspelled? got {} , needed set0 set1 toggle".format(
+        "A model was not detected. Maybe misspelled? got {} , needed set0 set1 toggle overwrite".format(
             fault_model
         )
     )
+
 
 
 def build_fault_list(conf_list, combined_faults, ret_faults):
@@ -117,6 +120,8 @@ def build_fault_list(conf_list, combined_faults, ret_faults):
     faultdev = conf_list.pop()
     if "fault_livespan" in faultdev:
         faultdev["fault_lifespan"] = faultdev["fault_livespan"]
+    if not 'num_bytes' in faultdev:
+        faultdev['num_bytes'] = [0]
     ftype = detect_type(faultdev["fault_type"])
     fmodel = detect_model(faultdev["fault_model"])
     for faddress in build_ranges(faultdev["fault_address"]):
@@ -124,29 +129,31 @@ def build_fault_list(conf_list, combined_faults, ret_faults):
             for fmask in build_ranges(faultdev["fault_mask"]):
                 for taddress in build_ranges(faultdev["trigger_address"]):
                     for tcounter in build_ranges(faultdev["trigger_counter"]):
-                        int_faults = (
-                            combined_faults.copy()
-                        )  # copy list, otherwise int fault referres to the same list as combined_faults
-                        if faddress == -1:
-                            faddress = taddress
+                        for numbytes in build_ranges(faultdev['num_bytes']):
+                            int_faults = (
+                                combined_faults.copy()
+                            )  # copy list, otherwise int fault referres to the same list as combined_faults
+                            if faddress == -1:
+                                faddress = taddress
 
-                        int_faults.append(
-                            Fault(
-                                faddress,
-                                ftype,
-                                fmodel,
-                                flifespan,
-                                fmask,
-                                taddress,
-                                tcounter,
+                            int_faults.append(
+                                Fault(
+                                    faddress,
+                                    ftype,
+                                    fmodel,
+                                    flifespan,
+                                    fmask,
+                                    taddress,
+                                    tcounter,
+                                    numbytes,
+                                )
                             )
-                        )
-                        if len(conf_list) == 0:
-                            ret_int_faults.append(int_faults)
-                        else:
-                            ret_int_faults = build_fault_list(
-                                conf_list.copy(), int_faults.copy(), ret_faults
-                            )
+                            if len(conf_list) == 0:
+                                ret_int_faults.append(int_faults)
+                            else:
+                                ret_int_faults = build_fault_list(
+                                    conf_list.copy(), int_faults.copy(), ret_faults
+                                )
     return ret_int_faults
 
 
