@@ -1281,7 +1281,7 @@ QEMU_PLUGIN_EXPORT int qemu_plugin_install(qemu_plugin_id_t id,
 	{
 		valid_architecture = ARM;
 	}
-	if(strcmp(info->target_name, "riscv32") == 0)
+	if(strcmp(info->target_name, "riscv32") == 0 || strcmp(info->target_name, "riscv64") == 0)
 	{
 		valid_architecture = RISCV;
 	}
