@@ -4,6 +4,7 @@ from multiprocessing import Process
 import time
 import pandas as pd
 import prctl
+import shlex
 
 
 import logging
@@ -126,7 +127,10 @@ def run_qemu(
             additional_qemu_args,
         )
         ps = subprocess.Popen(
-            qemustring, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+            shlex.split(qemustring),
+            shell=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
         )
         while ps.poll() is None:
             tmp = ps.stdout.read()
