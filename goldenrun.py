@@ -66,11 +66,11 @@ def run_goldenrun(
         )
         experiment["data"] = queue_output.get()
         if experiment["data"]["endpoint"] == 1:
-            logger.info(f"experiment['type'] successfully finished.")
+            logger.info(f"{experiment['type']} successfully finished.")
         else:
             logger.critical(
                 f"{experiment['type']} not finished after "
-                f"{experiment_config['max_instruction_count']} tb counts."
+                f"{goldenrun_config['max_instruction_count']} tb counts."
             )
             raise ValueError(
                 f"{experiment['type']} not finished. Probably no valid instruction! "
@@ -127,7 +127,7 @@ def checktriggers_in_tb(faultconfig, data):
                 continue
 
             if fault.trigger.address in invalid_triggers:
-                faultdescription["del"] = True
+                faultdescription["delete"] = True
                 continue
 
             if find_insn_addresses_in_tb(fault.trigger.address, data):
@@ -135,7 +135,7 @@ def checktriggers_in_tb(faultconfig, data):
                 continue
 
             invalid_triggers.append(fault.trigger.address)
-            faultdescription["del"] = True
+            faultdescription["delete"] = True
 
             error_message = (
                 f"Trigger address {fault.trigger.address} not found in tbs "
@@ -150,17 +150,15 @@ def checktriggers_in_tb(faultconfig, data):
                 )
             logger.critical(error_message)
 
-    logger.info("Convert to pandas")
+    logger.info("Filtering faultlist ...")
+    len_faultlist = len(faultconfig)
+
     tmp = pd.DataFrame(faultconfig)
-    logger.info("filter for del items")
-    idx = tmp.index[tmp["del"] == True]
-    logger.info("remove del items")
-    tmp.drop(idx, inplace=True)
-    logger.info("fix index")
+    tmp = tmp.query("delete == False")
     tmp.reset_index(drop=True, inplace=True)
     tmp["index"] = tmp.index
-    logger.info("convert back")
     faultconfig = tmp.to_dict("records")
-    print(faultconfig[0])
-    print(len(faultconfig))
+
+    logger.info(f"{len(faultconfig)}/{len_faultlist} faults passed the filter.")
+
     return faultconfig
