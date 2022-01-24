@@ -2,5 +2,6 @@
 	"qemu" : "qemu/build/debug/arm-softmmu/qemu-system-arm",
 	"kernel" : "miniblink/miniblink.bin",
 	"plugin" : "faultplugin/libfaultplugin.so",
-	"machine" : "stm32f0discovery"
+	"machine" : "stm32f0discovery",
+	"additional_qemu_args" : ""
 }
