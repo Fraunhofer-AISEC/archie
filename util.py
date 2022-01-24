@@ -1,5 +1,6 @@
 import resource
 
+
 def gather_process_ram_usage(queue_ram_usage, max_ram_usage):
     process_ram_usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
 
@@ -10,4 +11,3 @@ def gather_process_ram_usage(queue_ram_usage, max_ram_usage):
         max_ram_usage = process_ram_usage
 
     return max_ram_usage
-
