@@ -52,7 +52,7 @@ def search_for_fault_location(
             idx = idx.union(tmp)
     """Identify desired occurrence"""
     if trigger_occurrences > len(idx):
-        return -1
+        return [-1, trigger_occurrences]
     idx = idx[trigger_occurrences - 1]
     idtbinfo = find_tb_info_row(goldenrun_tb_exec.at[idx, "tb"], goldenrun_tb_info)
     ins = allign_fault_to_instruction(
@@ -61,11 +61,11 @@ def search_for_fault_location(
         goldenrun_tb_info.at[idtbinfo, "assembler"],
         goldenrun_tb_info.at[idtbinfo, "id"],
     )
-    is_first_instruction = 0
+    trigger_not_in_same_tb = 0
     trigger_position = trigger_position * (-1)
     while trigger_position != 0:
         idtbinfo = find_tb_info_row(goldenrun_tb_exec.at[idx, "tb"], goldenrun_tb_info)
-        if is_first_instruction == 1:
+        if trigger_not_in_same_tb == 1:
             """Is current tb to short for trigger position"""
             if trigger_position > goldenrun_tb_info.at[idtbinfo, "ins_count"]:
                 idx = idx - 1
@@ -85,7 +85,6 @@ def search_for_fault_location(
                 if filt[0] == tb_id:
                     for i in range(0, len(filt), 1):
                         if filt[i] == ins:
-                            is_first_instruction = 1
                             """Case ins is in the current tb"""
                             if i >= trigger_position:
                                 i -= trigger_position
@@ -93,15 +92,27 @@ def search_for_fault_location(
                                 trigger_position = 0
                             else:
                                 """Case ins is not in the current tb"""
+                                trigger_not_in_same_tb = 1
                                 trigger_position -= i
                                 idx -= 1
                             break
+    # Got trigger address, now calculate the adjusted hitcounter. If the trigger
+    # address is in a different TB to the fault address, it may be executed more
+    # often than the TB with the fault address itself. To still trigger the
+    # correct fault, the hitcounter has to be adjusted.
+    if trigger_not_in_same_tb == 1:
+        trigger_tb = goldenrun_tb_exec.at[idx, "tb"]
+        trigger_hitcounter = goldenrun_tb_exec.iloc[0 : idx + 1].tb.value_counts()[
+            trigger_tb
+        ]
+    else:
+        trigger_hitcounter = trigger_occurrences
+
     logger.info(
-        "Found trigger for faulting instruction address {} at {}".format(
-            fault_address, ins
-        )
+        "Found trigger for faulting instruction address {} at {} with "
+        "hitcounter {}".format(fault_address, ins, trigger_hitcounter)
     )
-    return ins
+    return [ins, trigger_hitcounter]
 
 
 def calculate_trigger_addresses(fault_list, goldenrun_tb_exec, goldenrun_tb_info):
@@ -123,7 +134,8 @@ def calculate_trigger_addresses(fault_list, goldenrun_tb_exec, goldenrun_tb_info
                     and tdict["triggerhitcounter"] == fault.trigger.hitcounter
                     and tdict["triggeraddress"] == fault.trigger.address
                 ):
-                    fault.trigger.address = tdict["answer"]
+                    fault.trigger.address = tdict["answer"][0]
+                    fault.trigger.hitcounter = tdict["answer"][1]
                     found = True
                     break
             if found is True:
@@ -143,4 +155,5 @@ def calculate_trigger_addresses(fault_list, goldenrun_tb_exec, goldenrun_tb_info
             d["triggeraddress"] = fault.trigger.address
             d["answer"] = tbs
             cachelist.insert(0, d)
-            fault.trigger.address = tbs
+            fault.trigger.address = tbs[0]
+            fault.trigger.hitcounter = tbs[1]
