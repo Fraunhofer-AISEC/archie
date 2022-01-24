@@ -148,7 +148,7 @@ void read_riscv_registers(void)
 		g_string_printf(out, "$$ %lx | %lx ", current->pc, current->tbcount);
 		for(int i = 0; i < 33; i++)
 		{
-			g_string_printf(out, "| %lx ", current->regs[i]);
+			g_string_append_printf(out, "| %lx ", current->regs[i]);
 		}
 		g_string_append(out, "\n");
 		plugin_write_to_data_pipe(out->str, out->len);

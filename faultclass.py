@@ -400,10 +400,10 @@ def readout_arm_registers(line):
 def readout_riscv_registers(line):
     split = line.split("|")
     riscvregisters = {}
-    riscvregisters["pc"] = int(split[0])
-    riscvregisters["tbcounter"] = int(split[1])
+    riscvregisters["pc"] = int(split[0], 16)
+    riscvregisters["tbcounter"] = int(split[1], 16)
     for i in range(0, 33):
-        riscvregisters[f"x{i}"] = int(split[i + 2])
+        riscvregisters[f"x{i}"] = int(split[i + 2], 16)
     return riscvregisters
 
 
