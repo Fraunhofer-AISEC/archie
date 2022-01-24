@@ -515,7 +515,9 @@ def readout_data(
                 for (flag, keyword, data) in datasets:
                     if not flag:
                         continue
-                    output[keyword] = write_output_wrt_goldenrun(keyword, data, goldenrun_data)
+                    output[keyword] = write_output_wrt_goldenrun(
+                        keyword, data, goldenrun_data
+                    )
 
                 if tbfaulted == 1:
                     output["tbfaulted"] = tbfaultedlist

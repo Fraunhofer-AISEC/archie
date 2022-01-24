@@ -109,7 +109,6 @@ def detect_model(fault_model):
     )
 
 
-
 def build_fault_list(conf_list, combined_faults, ret_faults):
     """
     Unrolling of multiple faults, that are combined. Will use recursive until
@@ -120,8 +119,8 @@ def build_fault_list(conf_list, combined_faults, ret_faults):
     faultdev = conf_list.pop()
     if "fault_livespan" in faultdev:
         faultdev["fault_lifespan"] = faultdev["fault_livespan"]
-    if not 'num_bytes' in faultdev:
-        faultdev['num_bytes'] = [0]
+    if not "num_bytes" in faultdev:
+        faultdev["num_bytes"] = [0]
     ftype = detect_type(faultdev["fault_type"])
     fmodel = detect_model(faultdev["fault_model"])
     for faddress in build_ranges(faultdev["fault_address"]):
@@ -129,7 +128,7 @@ def build_fault_list(conf_list, combined_faults, ret_faults):
             for fmask in build_ranges(faultdev["fault_mask"]):
                 for taddress in build_ranges(faultdev["trigger_address"]):
                     for tcounter in build_ranges(faultdev["trigger_counter"]):
-                        for numbytes in build_ranges(faultdev['num_bytes']):
+                        for numbytes in build_ranges(faultdev["num_bytes"]):
                             int_faults = (
                                 combined_faults.copy()
                             )  # copy list, otherwise int fault referres to the same list as combined_faults
