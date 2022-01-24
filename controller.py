@@ -119,7 +119,7 @@ def build_fault_list(conf_list, combined_faults, ret_faults):
     faultdev = conf_list.pop()
     if "fault_livespan" in faultdev:
         faultdev["fault_lifespan"] = faultdev["fault_livespan"]
-    if not "num_bytes" in faultdev:
+    if "num_bytes" not in faultdev:
         faultdev["num_bytes"] = [0]
     ftype = detect_type(faultdev["fault_type"])
     fmodel = detect_model(faultdev["fault_model"])
@@ -512,7 +512,7 @@ def process_arguments(args):
         faultconfig = {}
         faultconfig["index"] = i + indexbase
         faultconfig["faultlist"] = ret_list.pop()
-        faultconfig["del"] = False
+        faultconfig["delete"] = False
         faultlist.append(faultconfig)
 
     parguments["faultlist"] = faultlist

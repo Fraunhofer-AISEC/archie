@@ -399,12 +399,12 @@ def readout_arm_registers(line):
 
 def readout_riscv_registers(line):
     split = line.split("|")
-    riscvregister = {}
-    riscvregister["pc"] = int(split[0])
-    riscvregister["tbcounter"] = int(split[1])
+    riscvregisters = {}
+    riscvregisters["pc"] = int(split[0])
+    riscvregisters["tbcounter"] = int(split[1])
     for i in range(0, 33):
         riscvregisters[f"x{i}"] = int(split[i + 2])
-    return riscvregister
+    return riscvregisters
 
 
 def readout_tb_faulted(line):

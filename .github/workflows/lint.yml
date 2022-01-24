@@ -14,7 +14,7 @@ jobs:
       - run: pip3 install flake8
       - run: pip3 install black
       - run: >
-            flake8 --exclude .git,__pycache__
+            flake8 --exclude .git,__pycache__,analysis
             --max-line-length=88
             --ignore=E203,E266,E501,W503
         continue-on-error: true

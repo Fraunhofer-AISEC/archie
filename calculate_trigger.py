@@ -109,8 +109,8 @@ def calculate_trigger_addresses(fault_list, goldenrun_tb_exec, goldenrun_tb_info
     "check every fault list"
     cachelist = []
     lists = build_filters(goldenrun_tb_info)
-    for l in lists:
-        l = l.reverse()
+    for list in lists:
+        list = list.reverse()
     for faults in fault_list:
         "Check each fault"
         for fault in faults["faultlist"]:
