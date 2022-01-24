@@ -112,31 +112,35 @@ def calculate_trigger_addresses(fault_list, goldenrun_tb_exec, goldenrun_tb_info
     for list in lists:
         list = list.reverse()
     for faults in fault_list:
-        "Check each fault"
         for fault in faults["faultlist"]:
-            if fault.trigger.address < 0:
-                if fault.trigger.hitcounter != 0:
-                    found = False
-                    for tdict in cachelist:
-                        if tdict["faultaddress"] == fault.address:
-                            if tdict["triggerhitcounter"] == fault.trigger.hitcounter:
-                                if tdict["triggeraddress"] == fault.trigger.address:
-                                    fault.trigger.address = tdict["answer"]
-                                    found = True
-                                    break
-                    if found is False:
-                        tbs = search_for_fault_location(
-                            lists,
-                            fault.trigger.address,
-                            fault.address,
-                            fault.trigger.hitcounter,
-                            goldenrun_tb_exec,
-                            goldenrun_tb_info,
-                        )
-                        d = {}
-                        d["faultaddress"] = fault.address
-                        d["triggerhitcounter"] = fault.trigger.hitcounter
-                        d["triggeraddress"] = fault.trigger.address
-                        d["answer"] = tbs
-                        cachelist.insert(0, d)
-                        fault.trigger.address = tbs
+            if fault.trigger.address >= 0 or fault.trigger.hitcounter == 0:
+                continue
+
+            found = False
+            for tdict in cachelist:
+                if (
+                    tdict["faultaddress"] == fault.address
+                    and tdict["triggerhitcounter"] == fault.trigger.hitcounter
+                    and tdict["triggeraddress"] == fault.trigger.address
+                ):
+                    fault.trigger.address = tdict["answer"]
+                    found = True
+                    break
+            if found is True:
+                continue
+
+            tbs = search_for_fault_location(
+                lists,
+                fault.trigger.address,
+                fault.address,
+                fault.trigger.hitcounter,
+                goldenrun_tb_exec,
+                goldenrun_tb_info,
+            )
+            d = {}
+            d["faultaddress"] = fault.address
+            d["triggerhitcounter"] = fault.trigger.hitcounter
+            d["triggeraddress"] = fault.trigger.address
+            d["answer"] = tbs
+            cachelist.insert(0, d)
+            fault.trigger.address = tbs
