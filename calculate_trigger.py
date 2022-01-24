@@ -29,7 +29,7 @@ def search_for_fault_location(
     filter_lists,
     trigger_position,
     fault_address,
-    trigger_occurences,
+    trigger_occurrences,
     goldenrun_tb_exec,
     goldenrun_tb_info,
 ):
@@ -51,9 +51,9 @@ def search_for_fault_location(
         else:
             idx = idx.union(tmp)
     """Identify desired occurrence"""
-    if trigger_occurences >= len(idx):
+    if trigger_occurrences > len(idx):
         return -1
-    idx = idx[trigger_occurences]
+    idx = idx[trigger_occurrences - 1]
     idtbinfo = find_tb_info_row(goldenrun_tb_exec.at[idx, "tb"], goldenrun_tb_info)
     ins = allign_fault_to_instruction(
         fault_address,

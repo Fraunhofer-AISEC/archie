@@ -168,9 +168,9 @@ If the trigger_address is defined as "-1", the trigger address is set to one ins
 The trigger has to be at least one instruction ahead of the fault address. If the trigger and fault address are equal, no faults will be injected!
 
 ##### trigger_counter
-In case of a positive trigger_counter, this defines the number of times the trigger instruction is executed, before a fault is "injected".
+In case of a positive trigger_counter, this defines at which execution of the trigger instruction a fault is "injected".
 In case it is set to zero, the fault is typically ignored, except if the fault is of type instruction. Then it is injected as soon as the start criteria is met.
-In case of a negative trigger_address, trigger_counter represents the number of times the fault instruction should be executed before faulting it. 
+In case of a negative trigger_address, trigger_counter represents which execution of the fault instruction should be faulted.
 In the experiments, not all TBs are seen, but only the ones where a difference compared to the golden run can be observed.
 The trigger counter can also be defined as a range, e.g. [128, 160, 1]. In this example, after 128, 129, 130, ... until 160 instruction executions, a fault is injected.
 
