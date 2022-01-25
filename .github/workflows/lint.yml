@@ -18,4 +18,6 @@ jobs:
             --max-line-length=88
             --ignore=E203,E266,E501,W503
         continue-on-error: true
-      - run: black --check *.py
+      - run: |
+          black --version
+          black --check --diff *.py
