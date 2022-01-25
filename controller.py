@@ -478,6 +478,8 @@ def process_arguments(args):
         qemu_conf["gdb"] = True
         # hard set to 1 worker, because all qemus use the same port
         parguments["num_workers"] = 1
+    if "additional_qemu_args" not in qemu_conf:
+        qemu_conf["additional_qemu_args"] = ""
 
     faultlist = json.load(args.faults)
     if "start" in faultlist:

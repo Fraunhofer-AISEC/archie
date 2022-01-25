@@ -4,6 +4,7 @@ from multiprocessing import Process
 import time
 import pandas as pd
 import prctl
+import shlex
 
 
 import logging
@@ -95,6 +96,7 @@ def run_qemu(
     qemu_output,
     index,
     qemu_custom_paths=None,
+    additional_qemu_args="",
 ):
     """
     This function calls qemu with the required arguments.
@@ -112,7 +114,7 @@ def run_qemu(
         if qemu_custom_paths is None:
             qemu_custom_paths = " "
 
-        qemustring = '{3!s} -plugin {5!s},arg="{0!s}",arg="{1!s}",arg="{2!s}" {6!s} {7!s} -M {8!s} -monitor none  -kernel {4!s}'.format(
+        qemustring = '{3!s} -plugin {5!s},arg="{0!s}",arg="{1!s}",arg="{2!s}" {6!s} {7!s} -M {8!s} -monitor none  -kernel {4!s} {9!s}'.format(
             controll,
             config,
             data,
@@ -122,9 +124,13 @@ def run_qemu(
             output,
             qemu_custom_paths,
             machine,
+            additional_qemu_args,
         )
         ps = subprocess.Popen(
-            qemustring, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+            shlex.split(qemustring),
+            shell=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
         )
         while ps.poll() is None:
             tmp = ps.stdout.read()
@@ -737,6 +743,7 @@ def python_worker(
                 qemu_output,
                 index,
                 qemu_custom_paths,
+                config_qemu["additional_qemu_args"],
             ),
         )
         p_qemu.start()
