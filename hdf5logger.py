@@ -100,6 +100,7 @@ class riscv_registers_table(tables.IsDescription):
     x18 = tables.UInt64Col()
     x19 = tables.UInt64Col()
     x20 = tables.UInt64Col()
+    x21 = tables.UInt64Col()
     x22 = tables.UInt64Col()
     x23 = tables.UInt64Col()
     x24 = tables.UInt64Col()
