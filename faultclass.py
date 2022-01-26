@@ -115,6 +115,8 @@ def run_qemu(
             qemustring += ["-d", "plugin"]
         if qemu_custom_paths is not None:
             qemustring += shlex.split(qemu_custom_paths)
+        if config_qemu["bios"] != "":
+            qemustring += ["-bios", config_qemu["bios"]]
         if config_qemu["kernel"] != "":
             qemustring += ["-kernel", config_qemu["kernel"]]
         if config_qemu["additional_qemu_args"] != "":

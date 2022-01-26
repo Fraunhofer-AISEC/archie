@@ -480,6 +480,8 @@ def process_arguments(args):
         parguments["num_workers"] = 1
     if "additional_qemu_args" not in qemu_conf:
         qemu_conf["additional_qemu_args"] = ""
+    if "bios" not in qemu_conf:
+        qemu_conf["bios"] = ""
 
     faultlist = json.load(args.faults)
     if "start" in faultlist:
