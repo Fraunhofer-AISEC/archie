@@ -25,6 +25,7 @@ def run_goldenrun(
     goldenrun_config["plugin"] = config_qemu["plugin"]
     goldenrun_config["machine"] = config_qemu["machine"]
     goldenrun_config["additional_qemu_args"] = config_qemu["additional_qemu_args"]
+    goldenrun_config["bios"] = config_qemu["bios"]
     if "max_instruction_count" in config_qemu:
         goldenrun_config["max_instruction_count"] = config_qemu["max_instruction_count"]
     if "memorydump" in config_qemu:
