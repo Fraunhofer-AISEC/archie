@@ -1,6 +1,7 @@
 from faultclass import build_filters
 
 import logging
+import pandas
 
 logger = logging.getLogger(__name__)
 
@@ -33,23 +34,13 @@ def search_for_fault_location(
     goldenrun_tb_exec,
     goldenrun_tb_info,
 ):
-    """Automatically search for trigger instruction"""
-    found_tbs = []
-    logger.info(
-        "search trigger for faulting instruction address {}".format(fault_address)
-    )
+    logger.info(f"Search trigger to fault INSN at 0x{fault_address:08x}")
+    idx = pandas.Index([])
     for index, tb in goldenrun_tb_info.iterrows():
-        if fault_address >= tb["id"] and (fault_address < tb["id"] + tb["size"]):
-            found_tbs.append(tb["id"])
-    idx = None
-    first = 0
-    for tbs in found_tbs:
-        tmp = goldenrun_tb_exec.index[goldenrun_tb_exec["tb"] == tbs]
-        if first == 0:
-            first = 1
-            idx = tmp
-        else:
-            idx = idx.union(tmp)
+        if fault_address < tb["id"] or fault_address >= (tb["id"] + tb["size"]):
+            continue
+        tmp = goldenrun_tb_exec.index[goldenrun_tb_exec["tb"] == tb["id"]]
+        idx = idx.union(tmp)
     """Identify desired occurrence"""
     if trigger_occurrences > len(idx):
         return [-1, trigger_occurrences]
