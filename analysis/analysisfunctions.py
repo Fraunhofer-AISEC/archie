@@ -209,23 +209,29 @@ def get_experiment_table(faultgroup, faultname, tablename):
     table = node._f_get_child(tablename)
     return pd.DataFrame(table.read())
 
-def get_experiment_table_expanded(filehandle, faultname, tablename, keyword):
+def get_experiment_table_expanded(filehandle, faultname, tablename, keywords):
     """
     Get the experiment table and recombine it with the goldenrun data
     TODO: This data must be checked if not to much is included
     """
     golden_table = get_experiment_table(filehandle.root, "Goldenrun", tablename)
     exp_table = get_experiment_table(filehandle.root.fault, faultname, tablename)
-    tmp = exp_table[keyword]
-    idx = None
-    for t in tmp:
-        idt = golden_table.index[golden_table[keyword] == t]
-        if idx is None:
-            idx = idt
+    idxs = None
+    for keyword in keywords:
+        tmp = exp_table[keyword]
+        idx = None
+        for t in tmp:
+            idt = golden_table.index[golden_table[keyword] == t]
+            if idx is None:
+                idx = idt
+            else:
+                idx.append(idt)
+        if idxs is None:
+            idxs = idx
         else:
-            idx.append(idt)
-    if idx is not None:
-        golden_table.drop(idx, inplace=True)
+            idxs = idxs.intersection(idx)
+    if idxs is not None:
+        golden_table.drop(idxs, inplace=True)
     data = [exp_table, golden_table]
     return pd.concat(data).to_dict("records")
 
@@ -233,11 +239,17 @@ def get_experiment_tbinfo(faultgroup, faultname):
     return get_experiment_table(faultgroup, faultname, "tbinfo")
 
 def get_experiment_tbinfo_expanded(filehandle, faultname):
-    return get_experiment_table_expanded(filehandle, faultname, "tbinfo", "identity")
+    return get_experiment_table_expanded(filehandle, faultname, "tbinfo", ["identity"])
 
 def get_experiment_tbexec(faultgroup, faultname):
     return get_experiment_table(faultgroup, faultname, "tbexeclist")
 
 def get_experiment_tbexec_expanded(filehandle, faultname):
-    return get_experiment_table_expanded(filehandle, faultname, "tbexeclist", "pos")
+    return get_experiment_table_expanded(filehandle, faultname, "tbexeclist", ["pos"])
+
+def get_experiment_meminfo(faultgroup, faultname):
+    return get_experiment_table(faultgroup, faultname, "meminfo")
+
+def get_experiment_meminfo_expanded(filehandle, faultname):
+    return get_experiment_table_expanded(filehandle, faultname, "meminfo", ["insaddr", "address"])
 
