@@ -29,7 +29,12 @@ Furthermore it shows how to filter for specific experiments matching ones criter
 
 ### analysisfunctions.py
 
-Contains the functions needed for accessing and filtering the hdf5 file for fault data.
+Contains the some functions needed for accessing and filtering the hdf5 file for fault data. Currently supported:
+* Get complete fault configurations
+* Get tbinfo and tbexec compressed or deflated
+* query fault configuration inside the file without holding it in RAM
+
+All functions either take a function handle or the fault group handle for their operation
 
 ### tenthRound.py
 
