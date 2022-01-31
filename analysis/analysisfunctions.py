@@ -233,3 +233,11 @@ def get_experiment_table_expanded(filehandle, faultname, tablename, keywords):
     golden_table.drop(idxs, inplace=True)
     data = [exp_table, golden_table]
     return pd.concat(data).to_dict("records")
+
+
+def get_experiment_tbinfo(faultgroup, faultname):
+    return get_experiment_table(faultgroup, faultname, "tbinfo")
+
+
+def get_experiment_tbinfo_expanded(filehandle, faultname):
+    return get_experiment_table_expanded(filehandle, faultname, "tbinfo", ["identity"])
