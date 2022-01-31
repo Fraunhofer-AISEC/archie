@@ -249,3 +249,13 @@ def get_experiment_tbexec(faultgroup, faultname):
 
 def get_experiment_tbexec_expanded(filehandle, faultname):
     return get_experiment_table_expanded(filehandle, faultname, "tbexeclist", ["pos"])
+
+
+def get_experiment_meminfo(faultgroup, faultname):
+    return get_experiment_table(faultgroup, faultname, "meminfo")
+
+
+def get_experiment_meminfo_expanded(filehandle, faultname):
+    return get_experiment_table_expanded(
+        filehandle, faultname, "meminfo", ["insaddr", "address"]
+    )
