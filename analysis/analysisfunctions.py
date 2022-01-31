@@ -204,3 +204,32 @@ def get_complete_faultconfiguration(filehandle, interestlist=None):
     for faultname in interestlist:
         faultconfiguration.append(get_faultgroup_configuration(faultfolder, faultname))
     return faultconfiguration
+
+
+def get_experiment_table(faultgroup, faultname, tablename):
+    """
+    Get anny table from a faultgroup
+    """
+    node = faultgroup._f_get_child(faultname)
+    table = node._f_get_child(tablename)
+    return pd.DataFrame(table.read())
+
+
+def get_experiment_table_expanded(filehandle, faultname, tablename, keywords):
+    """
+    Get the experiment table and recombine it with the goldenrun data
+    TODO: This data must be checked if not to much is included
+    """
+    golden_table = get_experiment_table(filehandle.root, "Goldenrun", tablename)
+    exp_table = get_experiment_table(filehandle.root.fault, faultname, tablename)
+    idxs = pd.Index([])
+    for keyword in keywords:
+        tmp = exp_table[keyword]
+        idx = pd.Index([])
+        for t in tmp:
+            idt = golden_table.index[golden_table[keyword] == t]
+            idx.append(idt)
+        idxs.append(idx)
+    golden_table.drop(idxs, inplace=True)
+    data = [exp_table, golden_table]
+    return pd.concat(data).to_dict("records")
