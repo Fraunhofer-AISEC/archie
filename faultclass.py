@@ -494,6 +494,7 @@ def readout_data(
                         pdtbexeclist = pd.concat([pdtbexeclist, tmp], ignore_index=True)
                     else:
                         pdtbexeclist = pd.DataFrame(tbexeclist)
+                    pdtbexeclist.sort_values(by="pos", inplace=True)
 
                     gather_process_ram_usage(queue_ram_usage, 0)
 
