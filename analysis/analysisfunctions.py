@@ -241,3 +241,11 @@ def get_experiment_tbinfo(faultgroup, faultname):
 
 def get_experiment_tbinfo_expanded(filehandle, faultname):
     return get_experiment_table_expanded(filehandle, faultname, "tbinfo", ["identity"])
+
+
+def get_experiment_tbexec(faultgroup, faultname):
+    return get_experiment_table(faultgroup, faultname, "tbexeclist")
+
+
+def get_experiment_tbexec_expanded(filehandle, faultname):
+    return get_experiment_table_expanded(filehandle, faultname, "tbexeclist", ["pos"])
