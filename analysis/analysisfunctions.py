@@ -1,3 +1,6 @@
+import pandas as pd
+
+
 def generate_groupname_list(faultgroup):
     """
     Generator to get names of all childs in faultgroup
@@ -177,3 +180,27 @@ def filter_experiment_faults_num_bytes(
     return generic_filter_faults(
         faultgroup, "fault_num_bytes", lowbound, highbound, interestlist
     )
+
+
+def get_faultgroup_configuration(faultgroup, name):
+    """
+    Get the fault configuration of a specific fault group
+    """
+    fault = {}
+    node = faultgroup._f_get_child(name)
+    fault["faults"] = pd.DataFrame(node.faults.read()).to_dict()
+    fault["index"] = int(name[10:])
+    return fault
+
+
+def get_complete_faultconfiguration(filehandle, interestlist=None):
+    """
+    Build a list of all fault configurations inside the hdf5 file
+    """
+    faultfolder = filehandle.root.fault
+    faultconfiguration = []
+    if interestlist is None:
+        interestlist = generate_groupname_list(faultfolder)
+    for faultname in interestlist:
+        faultconfiguration.append(get_faultgroup_configuration(faultfolder, faultname))
+    return faultconfiguration
