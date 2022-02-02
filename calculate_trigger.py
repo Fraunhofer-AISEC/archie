@@ -26,6 +26,34 @@ def allign_fault_to_instruction(address, tbinfo_size, tbinfo_assembler, tbinfo_i
             return asm_addresses[i]
 
 
+def calculate_lifespan_from_start(
+    filter_lists,
+    fault_address,
+    goldenrun_tb_exec,
+    goldenrun_tb_info,
+    trigger_occurrences,
+):
+    [idx, instruction_address] = find_fault(
+        fault_address, goldenrun_tb_exec, goldenrun_tb_info, trigger_occurrences
+    )
+    tb_id = goldenrun_tb_exec.at[idx, "tb"]
+    lifespan = 0
+    for filt in filter_lists:
+        if filt[0] != tb_id:
+            continue
+        for ins in filt:
+            lifespan += 1
+            if ins == instruction_address:
+                break
+        break
+    for itter in range(0, idx):
+        idtbinfo = find_tb_info_row(
+            goldenrun_tb_exec.at[itter, "tb"], goldenrun_tb_info
+        )
+        lifespan += goldenrun_tb_info.at[idtbinfo, "ins_count"]
+    return lifespan
+
+
 def find_fault(
     fault_address, goldenrun_tb_exec, goldenrun_tb_info, trigger_occurrences
 ):
