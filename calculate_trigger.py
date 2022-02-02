@@ -26,6 +26,29 @@ def allign_fault_to_instruction(address, tbinfo_size, tbinfo_assembler, tbinfo_i
             return asm_addresses[i]
 
 
+def find_fault(
+    fault_address, goldenrun_tb_exec, goldenrun_tb_info, trigger_occurrences
+):
+    idx = pandas.Index([])
+    for index, tb in goldenrun_tb_info.iterrows():
+        if fault_address < tb["id"] or fault_address >= (tb["id"] + tb["size"]):
+            continue
+        tmp = goldenrun_tb_exec.index[goldenrun_tb_exec["tb"] == tb["id"]]
+        idx = idx.union(tmp)
+    """Identify desired occurrence"""
+    if trigger_occurrences > len(idx):
+        return [-1, 0]
+    idx = idx[trigger_occurrences - 1]
+    idtbinfo = find_tb_info_row(goldenrun_tb_exec.at[idx, "tb"], goldenrun_tb_info)
+    ins = allign_fault_to_instruction(
+        fault_address,
+        goldenrun_tb_info.at[idtbinfo, "size"],
+        goldenrun_tb_info.at[idtbinfo, "assembler"],
+        goldenrun_tb_info.at[idtbinfo, "id"],
+    )
+    return [idx, ins]
+
+
 def search_for_fault_location(
     filter_lists,
     trigger_position,
@@ -35,23 +58,11 @@ def search_for_fault_location(
     goldenrun_tb_info,
 ):
     logger.info(f"Search trigger to fault INSN at 0x{fault_address:08x}")
-    idx = pandas.Index([])
-    for index, tb in goldenrun_tb_info.iterrows():
-        if fault_address < tb["id"] or fault_address >= (tb["id"] + tb["size"]):
-            continue
-        tmp = goldenrun_tb_exec.index[goldenrun_tb_exec["tb"] == tb["id"]]
-        idx = idx.union(tmp)
-    """Identify desired occurrence"""
-    if trigger_occurrences > len(idx):
-        return [-1, trigger_occurrences]
-    idx = idx[trigger_occurrences - 1]
-    idtbinfo = find_tb_info_row(goldenrun_tb_exec.at[idx, "tb"], goldenrun_tb_info)
-    ins = allign_fault_to_instruction(
-        fault_address,
-        goldenrun_tb_info.at[idtbinfo, "size"],
-        goldenrun_tb_info.at[idtbinfo, "assembler"],
-        goldenrun_tb_info.at[idtbinfo, "id"],
+    [idx, ins] = find_fault(
+        fault_address, goldenrun_tb_exec, goldenrun_tb_info, trigger_occurrences
     )
+    if idx < 0:
+        return [-1, trigger_occurrences]
     trigger_not_in_same_tb = 0
     trigger_position = trigger_position * (-1)
     while trigger_position != 0:
