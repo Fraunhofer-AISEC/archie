@@ -82,6 +82,7 @@ def search_for_fault_location(
     trigger_position,
     fault_address,
     trigger_occurrences,
+    fault_lifespan,
     goldenrun_tb_exec,
     goldenrun_tb_info,
 ):
@@ -90,10 +91,22 @@ def search_for_fault_location(
         fault_address, goldenrun_tb_exec, goldenrun_tb_info, trigger_occurrences
     )
     if idx < 0:
-        return [-1, trigger_occurrences]
+        return [-1, trigger_occurrences, fault_lifespan]
     trigger_not_in_same_tb = 0
+    lifespan_diff = trigger_position + fault_lifespan
     trigger_position = trigger_position * (-1)
     while trigger_position != 0:
+        if idx < 0:
+            if fault_lifespan > 0:
+                fault_lifespan = calculate_lifespan_from_start(
+                    filter_lists,
+                    fault_address,
+                    goldenrun_tb_exec,
+                    goldenrun_tb_info,
+                    trigger_occurrences,
+                )
+                fault_lifespan += lifespan_diff
+            return [fault_address, 0, fault_lifespan]
         idtbinfo = find_tb_info_row(goldenrun_tb_exec.at[idx, "tb"], goldenrun_tb_info)
         if trigger_not_in_same_tb == 1:
             """Is current tb to short for trigger position"""
@@ -142,7 +155,7 @@ def search_for_fault_location(
         "Found trigger for faulting instruction address {} at {} with "
         "hitcounter {}".format(fault_address, ins, trigger_hitcounter)
     )
-    return [ins, trigger_hitcounter]
+    return [ins, trigger_hitcounter, fault_lifespan]
 
 
 def calculate_trigger_addresses(fault_list, goldenrun_tb_exec, goldenrun_tb_info):
@@ -161,11 +174,13 @@ def calculate_trigger_addresses(fault_list, goldenrun_tb_exec, goldenrun_tb_info
             for tdict in cachelist:
                 if (
                     tdict["faultaddress"] == fault.address
+                    and tdict["faultlifespan"] == fault.lifespan
                     and tdict["triggerhitcounter"] == fault.trigger.hitcounter
                     and tdict["triggeraddress"] == fault.trigger.address
                 ):
                     fault.trigger.address = tdict["answer"][0]
                     fault.trigger.hitcounter = tdict["answer"][1]
+                    fault.lifespan = tdict["answer"][2]
                     found = True
                     break
             if found is True:
@@ -176,6 +191,7 @@ def calculate_trigger_addresses(fault_list, goldenrun_tb_exec, goldenrun_tb_info
                 fault.trigger.address,
                 fault.address,
                 fault.trigger.hitcounter,
+                fault.lifespan,
                 goldenrun_tb_exec,
                 goldenrun_tb_info,
             )
@@ -183,7 +199,9 @@ def calculate_trigger_addresses(fault_list, goldenrun_tb_exec, goldenrun_tb_info
             d["faultaddress"] = fault.address
             d["triggerhitcounter"] = fault.trigger.hitcounter
             d["triggeraddress"] = fault.trigger.address
+            d["faultlifespan"] = fault.lifespan
             d["answer"] = tbs
             cachelist.insert(0, d)
             fault.trigger.address = tbs[0]
             fault.trigger.hitcounter = tbs[1]
+            fault.lifespan = tbs[2]
