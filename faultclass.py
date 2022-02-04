@@ -85,7 +85,7 @@ class Fault:
 
 
 def run_qemu(
-    controll,
+    control,
     config,
     data,
     qemu_monitor_fifo,
@@ -115,7 +115,7 @@ def run_qemu(
             qemu_custom_paths = " "
 
         qemustring = '{3!s} -plugin {5!s},arg="{0!s}",arg="{1!s}",arg="{2!s}" {6!s} {7!s} -M {8!s} -monitor none  -kernel {4!s} {9!s}'.format(
-            controll,
+            control,
             config,
             data,
             qemu_path,
@@ -615,12 +615,12 @@ def create_fifos():
     path = path + "{}/".format(os.getpid())
     if not os.path.exists(path):
         os.mkdir(path)
-    controll = path + "controll"
+    control = path + "control"
     config = path + "config"
     data = path + "data"
     qemu = path + "qemu"
-    if not os.path.exists(controll):
-        os.mkfifo(controll, mode)
+    if not os.path.exists(control):
+        os.mkfifo(control, mode)
     if not os.path.exists(config):
         os.mkfifo(config, mode)
     if not os.path.exists(data):
@@ -628,7 +628,7 @@ def create_fifos():
     if not os.path.exists(qemu):
         os.mkfifo(qemu, mode)
     paths = {}
-    paths["controll"] = controll
+    paths["control"] = control
     paths["config"] = config
     paths["data"] = data
     paths["qemu"] = qemu
@@ -638,7 +638,7 @@ def create_fifos():
 def delete_fifos():
     path = "/tmp/qemu_fault/{}/".format(os.getpid())
 
-    os.remove(path + "controll")
+    os.remove(path + "control")
     os.remove(path + "config")
     os.remove(path + "data")
     os.remove(path + "qemu")
@@ -646,7 +646,7 @@ def delete_fifos():
     os.rmdir(path)
 
 
-def configure_qemu(controll, config_qemu, num_faults, memorydump_list):
+def configure_qemu(control, config_qemu, num_faults, memorydump_list):
     """
     Function to write commands and configuration needed to start qemu plugin
     """
@@ -687,16 +687,16 @@ def configure_qemu(controll, config_qemu, num_faults, memorydump_list):
             out = out + "$$memoryregion: {} || {}\n".format(
                 memorydump["address"], memorydump["length"]
             )
-    controll.write(out)
-    controll.flush()
+    control.write(out)
+    control.flush()
 
 
-def enable_qemu(controll):
+def enable_qemu(control):
     """
     Starts qemu plugin. Until this point it actively reads from control pipe.
     """
-    controll.write("\n$$$[Start]\n")
-    controll.flush()
+    control.write("\n$$$[Start]\n")
+    control.flush()
 
 
 def python_worker(
@@ -739,7 +739,7 @@ def python_worker(
         p_qemu = Process(
             target=run_qemu,
             args=(
-                paths["controll"],
+                paths["control"],
                 paths["config"],
                 paths["data"],
                 paths["qemu"],
@@ -755,7 +755,7 @@ def python_worker(
         )
         p_qemu.start()
         logger.debug("Started QEMU process")
-        controll_fifo = open(paths["controll"], mode="w")
+        control_fifo = open(paths["control"], mode="w")
         config_fifo = open(paths["config"], mode="w")
         data_fifo = open(paths["data"], mode="r", buffering=1)
         logger.debug("opened fifos")
@@ -764,8 +764,8 @@ def python_worker(
         else:
             memorydump = None
         logger.debug("Start configuring")
-        configure_qemu(controll_fifo, config_qemu, len(fault_list), memorydump)
-        enable_qemu(controll_fifo)
+        configure_qemu(control_fifo, config_qemu, len(fault_list), memorydump)
+        enable_qemu(control_fifo)
         logger.debug("Started QEMU")
         """Write faults to config pipe"""
         for fault in fault_list:
