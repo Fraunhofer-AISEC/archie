@@ -88,7 +88,6 @@ def run_qemu(
     control,
     config,
     data,
-    qemu_monitor_fifo,
     qemu_path,
     kernel_path,
     plugin_path,
@@ -618,20 +617,16 @@ def create_fifos():
     control = path + "control"
     config = path + "config"
     data = path + "data"
-    qemu = path + "qemu"
     if not os.path.exists(control):
         os.mkfifo(control, mode)
     if not os.path.exists(config):
         os.mkfifo(config, mode)
     if not os.path.exists(data):
         os.mkfifo(data, mode)
-    if not os.path.exists(qemu):
-        os.mkfifo(qemu, mode)
     paths = {}
     paths["control"] = control
     paths["config"] = config
     paths["data"] = data
-    paths["qemu"] = qemu
     return paths
 
 
@@ -641,7 +636,6 @@ def delete_fifos():
     os.remove(path + "control")
     os.remove(path + "config")
     os.remove(path + "data")
-    os.remove(path + "qemu")
 
     os.rmdir(path)
 
@@ -742,7 +736,6 @@ def python_worker(
                 paths["control"],
                 paths["config"],
                 paths["data"],
-                paths["qemu"],
                 config_qemu["qemu"],
                 config_qemu["kernel"],
                 config_qemu["plugin"],
