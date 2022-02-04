@@ -1001,7 +1001,7 @@ void readout_config_pipe(GString *out)
 }
 
 
-void readout_controll_pipe(GString *out)
+void readout_control_pipe(GString *out)
 {
 	char c = ' ';
 	int ret = 0;
@@ -1020,7 +1020,7 @@ void readout_controll_pipe(GString *out)
 	}
 }
 
-int readout_controll_mode(GString *conf)
+int readout_control_mode(GString *conf)
 {
 	if(strstr(conf->str, "[Config]"))
 	{
@@ -1037,7 +1037,7 @@ int readout_controll_mode(GString *conf)
 	return -1;
 }
 
-int readout_controll_memory(GString *conf)
+int readout_control_memory(GString *conf)
 {
 	if(strstr(conf->str, "memoryregion: "))
 	{
@@ -1052,7 +1052,7 @@ int readout_controll_memory(GString *conf)
 	return -1;
 }
 
-int readout_controll_config(GString *conf)
+int readout_control_config(GString *conf)
 {
 	if(strstr(conf->str, "max_duration: "))
 	{
@@ -1134,7 +1134,7 @@ int readout_controll_config(GString *conf)
 
 }
 
-int readout_controll_qemu()
+int readout_control_qemu()
 {
 	g_autoptr(GString) conf = g_string_new("");
 	char c = ' ';
@@ -1143,10 +1143,10 @@ int readout_controll_qemu()
 	while(mode != 2)
 	{
 		g_string_printf(conf, " ");
-		readout_controll_pipe(conf);
+		readout_control_pipe(conf);
 		if(strstr(conf->str, "$$$"))
 		{
-			mode = readout_controll_mode(conf);
+			mode = readout_control_mode(conf);
 			if(mode == -1)
 			{
 				qemu_plugin_outs("[ERROR]: Unknown Command\n");
@@ -1159,7 +1159,7 @@ int readout_controll_qemu()
 			{
 				if(mode == 1)
 				{
-					if(readout_controll_config(conf) == -1)
+					if(readout_control_config(conf) == -1)
 					{
 						qemu_plugin_outs("[ERROR]: Unknown Parameter\n");
 						return -1;
@@ -1167,7 +1167,7 @@ int readout_controll_qemu()
 				}
 				if(mode == 3)
 				{
-					if(readout_controll_memory(conf) == -1)
+					if(readout_control_memory(conf) == -1)
 					{
 						qemu_plugin_outs("[ERROR]: Unknown Parameter\n");
 						return -1;
@@ -1302,7 +1302,7 @@ QEMU_PLUGIN_EXPORT int qemu_plugin_install(qemu_plugin_id_t id,
 	qemu_plugin_outs(out->str);
 	g_string_printf(out, " ");
 	//	if( qemu_setup_config() < 0)
-	if( readout_controll_qemu() < 0)
+	if( readout_control_qemu() < 0)
 	{
 		goto ABORT;
 	}
