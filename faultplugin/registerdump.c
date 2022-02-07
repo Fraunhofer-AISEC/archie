@@ -103,7 +103,7 @@ void readout_riscv_registers(registerdump_t * current)
 	for(int i = 0; i < 33; i++)
 	{
 		current->regs[i] = 0;
-		current->regs[i] = read_reg(i);
+		current->regs[i] = qemu_plugin_read_reg(i);
 	}
 }
 
@@ -113,10 +113,10 @@ void readout_arm_registers(registerdump_t * current)
 	for(int i = 0; i < 16; i++)
 	{
 		current->regs[i] = 0;
-		current->regs[i] = read_reg(i); 
+		current->regs[i] = qemu_plugin_read_reg(i);
 	}
 	// read XPSR
-	current->regs[16] = read_reg(25);
+	current->regs[16] = qemu_plugin_read_reg(25);
 }
 
 

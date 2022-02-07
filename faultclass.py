@@ -91,7 +91,7 @@ def run_qemu(
         # fmt: off
         qemustring = [
             config_qemu["qemu"],
-            "-plugin", f"{config_qemu['plugin']},arg={control},arg={config},arg={data}",
+            "-plugin", f"{config_qemu['plugin']},control={control},config={config},data={data}",
             "-M", config_qemu["machine"],
             "-monitor", "none",
         ]

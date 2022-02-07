@@ -44,7 +44,7 @@ void inject_fault(fault_list_t * current)
 			tb_faulted_register(current->fault.address);
 			qemu_plugin_outs("[Fault] Inject instruction fault\n");
 			inject_memory_fault( current);
-			plugin_flush_tb();
+			qemu_plugin_flush_tb();
 			read_specific_memoryregion(current->fault.address);
 			qemu_plugin_outs("Flushed tb\n");
 		}
@@ -54,7 +54,7 @@ void inject_fault(fault_list_t * current)
 			read_specific_memoryregion(current->fault.address);
 			qemu_plugin_outs("[Fault] Inject memory fault\n");
 			inject_memory_fault( current);
-			plugin_flush_tb();
+			qemu_plugin_flush_tb();
 			read_specific_memoryregion(current->fault.address);
 			qemu_plugin_outs("Flushed tb\n");
 		}
@@ -90,7 +90,7 @@ void reverse_fault(fault_list_t * current)
 		{
 			qemu_plugin_outs("[Fault] Reverse instruction fault\n");
 			process_reverse_fault(current->fault.address, current->fault.mask, current->fault.restoremask);
-			plugin_flush_tb();
+			qemu_plugin_flush_tb();
 			read_specific_memoryregion(current->fault.address);
 			qemu_plugin_outs("Flushed tb\n");
 		}
@@ -98,7 +98,7 @@ void reverse_fault(fault_list_t * current)
 		{
 			qemu_plugin_outs("[Fault] Reverse memory fault\n");
 			process_reverse_fault(current->fault.address, current->fault.mask, current->fault.restoremask);
-			plugin_flush_tb();
+			qemu_plugin_flush_tb();
 			read_specific_memoryregion(current->fault.address);
 			qemu_plugin_outs("Flushed tb\n");
 		}
@@ -126,7 +126,7 @@ void inject_register_fault(fault_list_t * current)
 		qemu_plugin_outs("[ERROR] Register not valid\n");
 		return;
 	}*/
-	uint64_t reg = read_reg(current->fault.address);
+	uint64_t reg = qemu_plugin_read_reg(current->fault.address);
 	uint64_t mask = 0;
 	for(int i = 0; i < 8; i++)
 	{
@@ -165,7 +165,7 @@ void inject_register_fault(fault_list_t * current)
 			g_string_append_printf(out, "Fault model is wrong %li", current->fault.model);
 			break;
 	}
-	write_reg(current->fault.address, reg);
+	qemu_plugin_write_reg(current->fault.address, reg);
 	g_string_append_printf(out, " to %08lx, with mask %08lx\n", reg, mask);
 	qemu_plugin_outs(out->str);
 }
@@ -173,7 +173,7 @@ void inject_register_fault(fault_list_t * current)
 void reverse_register_fault(fault_list_t * current)
 {
 	g_autoptr(GString) out = g_string_new("");
-	uint64_t reg = read_reg(current->fault.address);
+	uint64_t reg = qemu_plugin_read_reg(current->fault.address);
 
 	g_string_printf(out, " Change register %li back from %08lx", current->fault.address, reg);
 	for(int i = 0; i < 8; i++)
@@ -181,7 +181,7 @@ void reverse_register_fault(fault_list_t * current)
 		reg = reg & ~((uint64_t)current->fault.mask[i] << 8*i); // clear manipulated bits
 		reg = reg | ((uint64_t) current->fault.restoremask[i] << 8*i); // restore manipulated bits
 	}
-	write_reg(current->fault.address, reg);
+	qemu_plugin_write_reg(current->fault.address, reg);
 	g_string_printf(out, " to %08lx\n", reg);
 	qemu_plugin_outs(out->str);
 }
@@ -245,13 +245,13 @@ void process_overwrite_memory(uint64_t address, uint8_t num_bytes, uint8_t mask[
 	{
 		restoremask[i] = 0;
 	}
-	ret = plugin_rw_memory_cpu(address, value, num_bytes, 0);
+	ret = qemu_plugin_rw_memory_cpu(address, value, num_bytes, 0);
 	for( int i = 0; i < num_bytes; i++)
 	{
 		restoremask[i] = value[i];
 		value[i] = mask[i];
 	}
-	ret += plugin_rw_memory_cpu(address, value, num_bytes, 1);
+	ret += qemu_plugin_rw_memory_cpu(address, value, num_bytes, 1);
 	if(ret < 0)
 	{
 		qemu_plugin_outs("[ERROR]: Something went wrong in read/write to cpu in process_overwrite_memory\n");
@@ -270,13 +270,13 @@ void process_set1_memory(uint64_t address, uint8_t  mask[], uint8_t restoremask[
 {
 	uint8_t value[16];
 	int ret;
-	ret = plugin_rw_memory_cpu( address, value, 16, 0);
+	ret = qemu_plugin_rw_memory_cpu(address, value, 16, 0);
 	for(int i = 0; i < 16; i++)
 	{
 		restoremask[i] = value[i] & mask[i]; // generate restore mask
 		value[i] = value[i] | mask[i]; // inject fault
 	}
-	ret += plugin_rw_memory_cpu( address, value, 16, 1);
+	ret += qemu_plugin_rw_memory_cpu(address, value, 16, 1);
 	if (ret < 0)
 	{
 		qemu_plugin_outs("[ERROR]: Something went wrong in read/write to cpu in process_set1_memory\n");
@@ -295,13 +295,13 @@ void process_reverse_fault(uint64_t address, uint8_t mask[], uint8_t restoremask
 {
 	uint8_t value[16];
 	int ret;
-	ret = plugin_rw_memory_cpu( address, value, 16, 0);
+	ret = qemu_plugin_rw_memory_cpu(address, value, 16, 0);
 	for(int i = 0; i < 16; i++)
 	{
 		value[i] = value[i] & ~(mask[i]); // clear value in mask position
 		value[i] = value[i] | restoremask[i]; // insert restore mask to restore positions
 	}
-	ret += plugin_rw_memory_cpu( address, value, 16, 1);
+	ret += qemu_plugin_rw_memory_cpu(address, value, 16, 1);
 	qemu_plugin_outs("[Fault]: Reverse fault!");
 	if (ret < 0)
 	{
@@ -321,13 +321,13 @@ void process_set0_memory(uint64_t address, uint8_t  mask[], uint8_t restoremask[
 {
 	uint8_t value[16];
 	int ret;
-	ret = plugin_rw_memory_cpu( address, value, 16, 0);
+	ret = qemu_plugin_rw_memory_cpu(address, value, 16, 0);
 	for(int i = 0; i < 16; i++)
 	{
 		restoremask[i] = value[i] & mask[i]; // generate restore mask
 		value[i] = value[i] & ~(mask[i]); // inject fault
 	}
-	ret += plugin_rw_memory_cpu( address, value, 16, 1);
+	ret += qemu_plugin_rw_memory_cpu(address, value, 16, 1);
 	if (ret < 0)
 	{
 		qemu_plugin_outs("[ERROR]: Something went wrong in read/write to cpu in process_set0_memory\n");
@@ -348,13 +348,13 @@ void process_toggle_memory(uint64_t address, uint8_t  mask[], uint8_t restoremas
 {
 	uint8_t value[16];
 	int ret;
-	ret = plugin_rw_memory_cpu( address , value, 16, 0);
+	ret = qemu_plugin_rw_memory_cpu(address, value, 16, 0);
 	for(int i = 0; i < 16; i++)
 	{
 		restoremask[i] = value[i] & mask[i]; // generate restore mask
 		value[i] = value[i] ^ mask[i]; // inject fault
 	}
-	ret += plugin_rw_memory_cpu( address, value, 16, 1);
+	ret += qemu_plugin_rw_memory_cpu(address, value, 16, 1);
 	if (ret < 0)
 	{
 		qemu_plugin_outs("[ERROR]: Something went wrong in read/write to cpu in process_toggle_memory\n");

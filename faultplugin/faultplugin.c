@@ -266,12 +266,41 @@ int parse_args(int argc, char **argv, GString *out)
 		g_string_append_printf(out, "[ERROR]: Not the right amount of arguments! %i\n", argc);
 		return -1;
 	}
-	g_string_append_printf(out, "[Info]: Start readout of control fifo %s\n", *(argv+0));
-	pipes->control = open(*(argv+0), FIFO_READ);
-	g_string_append_printf(out, "[Info]: Start readout of config fifo %s\n", *(argv+1));
-	pipes->config = open(*(argv+1), FIFO_READ);
-	g_string_append_printf(out, "[Info]:Start readout of data fifo %s\n", *(argv+2));
-	pipes->data = open(*(argv+2), FIFO_WRITE);
+
+	for (int i = 0; i < argc; i++)
+	{
+		char *opt = argv[i];
+		if (g_str_has_prefix(opt, "control="))
+		{
+			char *p = opt + 8;
+			g_string_append_printf(out, "[Info]: Start readout of control fifo %s\n", p);
+			pipes->control = open(p, FIFO_READ);
+		}
+		else if (g_str_has_prefix(opt, "config="))
+		{
+			char *p = opt + 7;
+			g_string_append_printf(out, "[Info]: Start readout of config fifo %s\n", p);
+			pipes->config = open(p, FIFO_READ);
+		}
+		else if (g_str_has_prefix(opt, "data="))
+		{
+			char *p = opt + 5;
+			g_string_append_printf(out, "[Info]: Start readout of data fifo %s\n", p);
+			pipes->data = open(p, FIFO_WRITE);
+		}
+		else
+		{
+			g_string_append_printf(out, "[ERROR] Unknown option: %s\n", opt);
+			return -1;
+		}
+	}
+
+	if (pipes->control == -1 || pipes->config == -1 || pipes->data == -1)
+	{
+		g_string_append(out, "[ERROR]: Could not open all FIFOs!\n");
+		return -1;
+	}
+
 	return 0;
 }
 
@@ -682,7 +711,7 @@ void insn_exec_cb(unsigned int vcpu_index, void *userdata)
 {
 	g_autoptr(GString) out = g_string_new("");
 	g_string_append(out, "Next instruction\n");
-	g_string_append_printf(out, " reg[0]: %08x\n", (uint32_t) read_reg(0));
+	g_string_append_printf(out, " reg[0]: %08x\n", (uint32_t) qemu_plugin_read_reg(0));
 
 	qemu_plugin_outs(out->str);
 }
@@ -889,7 +918,7 @@ void tb_exec_start_cb(unsigned int vcpu_index, void *vcurrent)
 	{
 		qemu_plugin_outs("[Start]: Start point reached");
 		start_point.trignum = 0;
-		plugin_flush_tb();
+		qemu_plugin_flush_tb();
 	}
 	start_point.hitcounter--;
 }
