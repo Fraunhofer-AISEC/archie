@@ -106,27 +106,26 @@ def run_qemu(
         prctl.set_proctitle("qemu_for_{}".format(index))
         t0 = time.time()
         qlogger.debug("start qemu for exp {}".format(index))
-        if qemu_output is True:
-            output = "-d plugin"
-        else:
-            output = " "
-        if qemu_custom_paths is None:
-            qemu_custom_paths = " "
 
-        qemustring = '{3!s} -plugin {5!s},arg="{0!s}",arg="{1!s}",arg="{2!s}" {6!s} {7!s} -M {8!s} -monitor none  -kernel {4!s} {9!s}'.format(
-            control,
-            config,
-            data,
+        # fmt: off
+        qemustring = [
             qemu_path,
-            kernel_path,
-            plugin_path,
-            output,
-            qemu_custom_paths,
-            machine,
-            additional_qemu_args,
-        )
+            "-plugin", f"{plugin_path},arg={control},arg={config},arg={data}",
+            "-M", machine,
+            "-monitor", "none",
+        ]
+        # fmt: on
+        if qemu_output is True:
+            qemustring += ["-d", "plugin"]
+        if qemu_custom_paths is not None:
+            qemustring += shlex.split(qemu_custom_paths)
+        if kernel_path != "":
+            qemustring += ["-kernel", kernel_path]
+        if additional_qemu_args != "":
+            qemustring += shlex.split(additional_qemu_args)
+
         ps = subprocess.Popen(
-            shlex.split(qemustring),
+            qemustring,
             shell=False,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
