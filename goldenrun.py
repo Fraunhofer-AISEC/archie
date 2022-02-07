@@ -162,7 +162,7 @@ def checktriggers_in_tb(faultconfig, data):
     len_faultlist = len(faultconfig)
 
     tmp = pd.DataFrame(faultconfig)
-    tmp = tmp.query("delete == False")
+    tmp = tmp.query("delete == False").copy()
     tmp.reset_index(drop=True, inplace=True)
     tmp["index"] = tmp.index
     faultconfig = tmp.to_dict("records")
