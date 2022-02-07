@@ -105,7 +105,7 @@ int read_memoryregion(uint64_t memorydump_position);
  * @param memorydump_position: select which region should be read in vector element
  * @param dump_pos: select which data dump should be written to pipe. Multiple can be taken during the execution of the config.
  */
-int readout_memorydump_dump(uint64_t memorydump_position, uint64_t dump_pos);
+void readout_memorydump_dump(uint64_t memorydump_position, uint64_t dump_pos);
 
 /**
  * readout_memorydump
@@ -114,13 +114,13 @@ int readout_memorydump_dump(uint64_t memorydump_position, uint64_t dump_pos);
  * dumps are printed to data pipe. Also print config for this memorydump to data pipe
  *
  */
-int readout_memorydump(uint64_t memorydump_position);
+void readout_memorydump(uint64_t memorydump_position);
 
 /**
  * readout_all_memorydump
  *
  * This function will send all memorydumps through the data pipe 
  */
-int readout_all_memorydump(void);
+void readout_all_memorydump(void);
 
 #endif
