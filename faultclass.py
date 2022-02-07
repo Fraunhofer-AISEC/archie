@@ -516,7 +516,13 @@ def readout_data(
                 datasets.append((tbinfo, "tbinfo", tblist))
                 datasets.append((tbexec, "tbexec", pdtbexeclist))
                 datasets.append((meminfo, "meminfo", memlist))
-                datasets.append((regtype, f"{regtype}registers", registerlist))
+                datasets.append(
+                    (
+                        regtype,
+                        f"{regtype}registers",
+                        pd.DataFrame(registerlist, dtype="UInt64"),
+                    )
+                )
 
                 output = {}
                 for (flag, keyword, data) in datasets:
