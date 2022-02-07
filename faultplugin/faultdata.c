@@ -233,7 +233,7 @@ int read_memoryregion(uint64_t memorydump_position)
 	return ret;
 }
 
-int readout_memorydump_dump(uint64_t memorydump_position, uint64_t dump_pos)
+void readout_memorydump_dump(uint64_t memorydump_position, uint64_t dump_pos)
 {
 	g_autoptr(GString) out = g_string_new("");
 	memorydump_t *current = *(memdump + memorydump_position);
@@ -267,7 +267,7 @@ int readout_memorydump_dump(uint64_t memorydump_position, uint64_t dump_pos)
 	}
 }
 
-int readout_memorydump(uint64_t memorydump_position)
+void readout_memorydump(uint64_t memorydump_position)
 {
 	g_autoptr(GString) out = g_string_new("");
 	memorydump_t *current = *(memdump + memorydump_position);
@@ -284,7 +284,7 @@ int readout_memorydump(uint64_t memorydump_position)
 }
 
 
-int readout_all_memorydump(void)
+void readout_all_memorydump(void)
 {
 	g_autoptr(GString) out = g_string_new("");
 	g_string_printf(out, "$$$[Memdump] \n");
