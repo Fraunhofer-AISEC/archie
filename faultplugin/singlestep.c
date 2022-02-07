@@ -33,13 +33,13 @@ void check_singlestep()
 {
 	if(req_singlestep == 0)
 	{
-		plugin_single_step(0);
+		qemu_plugin_single_step(0);
 	}
 	else
 	{
-		plugin_single_step(1);
+		qemu_plugin_single_step(1);
 	}
-	plugin_flush_tb();
+	qemu_plugin_flush_tb();
 }
 
 void add_singlestep_req()

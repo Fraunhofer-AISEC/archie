@@ -227,7 +227,7 @@ int read_memoryregion(uint64_t memorydump_position)
 		qemu_plugin_outs("done\n");
 	}
 	qemu_plugin_outs("[DEBUG]: start reading memory memdump");
-	ret = plugin_rw_memory_cpu( current->address, *(current->buf + current->used_dumps), current->len, 0);
+	ret = qemu_plugin_rw_memory_cpu(current->address, *(current->buf + current->used_dumps), current->len, 0);
 	current->used_dumps++;
 	qemu_plugin_outs("..... done\n");
 	return ret;
