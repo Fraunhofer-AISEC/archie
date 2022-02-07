@@ -88,14 +88,10 @@ def run_qemu(
     control,
     config,
     data,
-    qemu_path,
-    kernel_path,
-    plugin_path,
-    machine,
+    config_qemu,
     qemu_output,
     index,
     qemu_custom_paths=None,
-    additional_qemu_args="",
 ):
     """
     This function calls qemu with the required arguments.
@@ -109,9 +105,9 @@ def run_qemu(
 
         # fmt: off
         qemustring = [
-            qemu_path,
-            "-plugin", f"{plugin_path},arg={control},arg={config},arg={data}",
-            "-M", machine,
+            config_qemu["qemu"],
+            "-plugin", f"{config_qemu['plugin']},arg={control},arg={config},arg={data}",
+            "-M", config_qemu["machine"],
             "-monitor", "none",
         ]
         # fmt: on
@@ -119,10 +115,12 @@ def run_qemu(
             qemustring += ["-d", "plugin"]
         if qemu_custom_paths is not None:
             qemustring += shlex.split(qemu_custom_paths)
-        if kernel_path != "":
-            qemustring += ["-kernel", kernel_path]
-        if additional_qemu_args != "":
-            qemustring += shlex.split(additional_qemu_args)
+        if config_qemu["kernel"] != "":
+            qemustring += ["-kernel", config_qemu["kernel"]]
+        if config_qemu["additional_qemu_args"] != "":
+            qemustring += shlex.split(config_qemu["additional_qemu_args"])
+        if "gdb" in config_qemu and config_qemu["gdb"] is True:
+            qemustring += ["-S", "-s"]
 
         ps = subprocess.Popen(
             qemustring,
@@ -724,25 +722,16 @@ def python_worker(
         else:
             qemu_pre_data = None
             qemu_custom_paths = None
-        if "gdb" in config_qemu:
-            if qemu_custom_paths is None:
-                qemu_custom_paths = " -S -s "
-            else:
-                qemu_custom_paths = qemu_custom_paths + " -S -s "
         p_qemu = Process(
             target=run_qemu,
             args=(
                 paths["control"],
                 paths["config"],
                 paths["data"],
-                config_qemu["qemu"],
-                config_qemu["kernel"],
-                config_qemu["plugin"],
-                config_qemu["machine"],
+                config_qemu,
                 qemu_output,
                 index,
                 qemu_custom_paths,
-                config_qemu["additional_qemu_args"],
             ),
         )
         p_qemu.start()
