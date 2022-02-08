@@ -142,7 +142,9 @@ Overwrite allows to set a location ( instruction, memory or register) to a speci
 num_bytes is used to determen how many bytes should be overwritten. Up to a maximum of 16 bytes can currently be overwritten with the help of this model.
 
 ##### fault_lifespan
-Defines the number of instructions a fault is valid. If fault_lifespan is [0] it means the fault is permanent. If it is a positive number, fault_lifespan defines how many instructions the fault remains in the system. After this number of instructions, the fault is reverted. This has the potential to behave in a strange way, if the system changed the content at the respective address while the temporary fault was still active. It will only revert flipped bits back to the original state. Temporary faults are, thus, only recommended for flash memory, since usually in case of flash, less write accesses are occurring. 
+Defines the number of instructions a fault is valid. If fault_lifespan is [0] it means the fault is permanent. If it is a positive number, fault_lifespan defines how many instructions the fault remains in the system. After this number of instructions, the fault is reverted. This has the potential to behave in a strange way, if the system changed the content at the respective address while the temporary fault was still active. It will only revert flipped bits back to the original state. Temporary faults are, thus, only recommended for flash memory, since usually in case of flash, less write accesses are occurring.
+
+If the trigger_address is set to a negative number, trigger_address + fault_lifespan must be larger or equal to 0. Otherwise ARCHIE will remove the fault configuration with a warning. In addition, the fault_lifespan is automatically reduced if the trigger address is calculated to be before the start point.
 
 ##### fault_mask
 Defines which bits to flip. It can be any number, however what matters is the bit representation. Each bit set will result in a fault in this location. The fault mask can also be defined as a range, e.g.
