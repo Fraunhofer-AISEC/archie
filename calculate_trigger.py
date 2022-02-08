@@ -186,16 +186,24 @@ def calculate_trigger_addresses(fault_list, goldenrun_tb_exec, goldenrun_tb_info
             if found is True:
                 continue
 
-            tbs = search_for_fault_location(
-                lists,
-                fault.trigger.address,
-                fault.address,
-                fault.trigger.hitcounter,
-                fault.lifespan,
-                goldenrun_tb_exec,
-                goldenrun_tb_info,
-            )
-            d = {}
+            if fault.lifespan != 0 and fault.trigger.address + fault.lifespan < 0:
+                logger.warning(
+                    f"Lifespan is too short to take effect for 0x{fault.address:0x}"
+                    f" with hitcounter {fault.trigger.hitcounter}, trigger address"
+                    f" {fault.trigger.address} and lifespan {fault.lifespan}"
+                )
+                tbs = [-1, fault.trigger.hitcounter, fault.lifespan]
+            else:
+                tbs = search_for_fault_location(
+                    lists,
+                    fault.trigger.address,
+                    fault.address,
+                    fault.trigger.hitcounter,
+                    fault.lifespan,
+                    goldenrun_tb_exec,
+                    goldenrun_tb_info,
+                )
+            d = dict()
             d["faultaddress"] = fault.address
             d["triggerhitcounter"] = fault.trigger.hitcounter
             d["triggeraddress"] = fault.trigger.address
