@@ -190,6 +190,7 @@ def get_faultgroup_configuration(faultgroup, name):
     node = faultgroup._f_get_child(name)
     fault["faults"] = pd.DataFrame(node.faults.read()).to_dict()
     fault["index"] = int(name[10:])
+    fault["endpoint"] = node.faults.attrs.endpoint
     return fault
 
 
@@ -259,3 +260,21 @@ def get_experiment_meminfo_expanded(filehandle, faultname):
     return get_experiment_table_expanded(
         filehandle, faultname, "meminfo", ["insaddr", "address"]
     )
+
+
+def get_analysis_data_from_group(faultgroup, name):
+    rdict = dict()
+    rdict["tbinfo"] = get_experiment_tbinfo(faultgroup, name).to_dict("records")
+    rdict["tbexec"] = get_experiment_tbexec(faultgroup, name).to_dict("records")
+    rdict["meminfo"] = get_experiment_meminfo(faultgroup, name).to_dict("records")
+    return rdict
+
+
+def get_goldenrun_data(filehandle):
+    return get_analysis_data_from_group(filehandle.root, "Goldenrun")
+
+
+def get_experiment_group(faultgroup, name):
+    rdict = get_analysis_data_from_group(faultgroup, name)
+    rdict["fault"] = get_faultgroup_configuration(faultgroup, name)
+    return rdict
