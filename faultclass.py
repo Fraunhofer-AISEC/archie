@@ -98,10 +98,10 @@ def run_qemu(
     """
     ps = None
     try:
-        prctl.set_name("qemu{}".format(index))
-        prctl.set_proctitle("qemu_for_{}".format(index))
+        prctl.set_name(f"qemu{index}")
+        prctl.set_proctitle(f"qemu_for_{index}")
         t0 = time.time()
-        qlogger.debug("start qemu for exp {}".format(index))
+        qlogger.debug(f"start qemu for exp {index}")
 
         # fmt: off
         qemustring = [
@@ -133,13 +133,13 @@ def run_qemu(
         while ps.poll() is None:
             tmp = ps.stdout.read()
             if qemu_output is True:
-                f = open("log_{}.txt".format(index), "wt", encoding="utf-8")
+                f = open(f"log_{index}.txt", "wt", encoding="utf-8")
                 f.write(tmp.decode("utf-8"))
                 qlogger.debug(tmp.decode("utf-8"))
-        qlogger.info("Ended qemu for exp {}! Took {}".format(index, time.time() - t0))
+        qlogger.info(f"Ended qemu for exp {index}! Took {time.time() - t0}")
     except KeyboardInterrupt:
         ps.kill()
-        logger.warning("Terminate QEMU {}".format(index))
+        logger.warning(f"Terminate QEMU {index}")
 
 
 def readout_tbinfo(line):
