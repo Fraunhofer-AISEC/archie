@@ -6,17 +6,21 @@ on:
   push:
 
 jobs:
-  lint:
+  flake8:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - run: pip3 install flake8
-      - run: pip3 install black
       - run: >
             flake8 --exclude .git,__pycache__
             --max-line-length=88
             --ignore=E203,E266,E501,W503
-        continue-on-error: true
+
+  black:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: pip3 install black
       - run: |
           black --version
           black --check --diff *.py analysis/*.py
