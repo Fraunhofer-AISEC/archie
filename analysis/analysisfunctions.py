@@ -17,7 +17,7 @@ def intersectlists(list1, list2):
 
 
 def differenclists(list1, list2):
-    """
+    r"""
     Returns list1 \ list2 (aka all elements in list 1 that are not in list 2)
     """
     return list(set(list1).difference(list2))
