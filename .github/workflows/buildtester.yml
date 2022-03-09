@@ -28,7 +28,7 @@ jobs:
       run: cd faultplugin; make -j; echo "done"
 
     - name: Run tests on ARCHIE
-      run: python3 -m pytest --cov=.
+      run: python3 -m pytest --cov=. --cov-branch
 
     - name: Run ARCHIE
       run: python3 controller.py --debug --qemu qemuconf.json --fault fault.json test.hdf5
