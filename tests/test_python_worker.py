@@ -56,6 +56,7 @@ def pythonworker_enviroment():
         ),
     ],
 )
+@pytest.mark.order(2)
 # fmt: on
 def test_python_worker(fault, comparedata):
     parguments = pythonworker_enviroment()
