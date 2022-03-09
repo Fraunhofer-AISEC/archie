@@ -1,4 +1,3 @@
-import json
 from multiprocessing import Queue, cpu_count
 import pytest
 import pickle
