@@ -46,7 +46,7 @@ def compare_hdf5_files():
     fdict = af.get_goldenrun_data(testfile)
     assert_experiment(gdict, fdict)
 
-
+@pytest.mark.order(3)
 def test_controller():
     parguments = pythonworker_enviroment()
     controller.controller(
