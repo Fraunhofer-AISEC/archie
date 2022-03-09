@@ -56,7 +56,7 @@ def assert_experiment_data_pd(golden_data, fault_data, faultkeys):
         print(data)
         assert data.empty
 
-
+@pytest.mark.order(1)
 def test_goldenrun_data_file_load(readtestdata, filename="tests/testdata/golden.hdf5"):
     with tables.open_file(filename, "r") as f:
         golden_data = af.get_goldenrun_data(f)
