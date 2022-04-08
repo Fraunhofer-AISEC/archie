@@ -44,6 +44,7 @@ class fault_table(tables.IsDescription):
     fault_type = tables.UInt8Col()
     fault_model = tables.UInt8Col()
     fault_lifespan = tables.UInt64Col()
+    fault_mask_upper = tables.UInt64Col()
     fault_mask = tables.UInt64Col()
     fault_num_bytes = tables.UInt8Col()
 
@@ -225,7 +226,8 @@ def process_faults(f, group, faultlist, endpoint, myfilter):
         faultrow["fault_type"] = fault.type
         faultrow["fault_model"] = fault.model
         faultrow["fault_lifespan"] = fault.lifespan
-        faultrow["fault_mask"] = fault.mask
+        faultrow["fault_mask_upper"] = (fault.mask >> 64) & (pow(2, 64) - 1)
+        faultrow["fault_mask"] = fault.mask & (pow(2, 64) - 1)
         faultrow["fault_num_bytes"] = fault.num_bytes
         faultrow.append()
     faulttable.flush()
