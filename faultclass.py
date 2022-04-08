@@ -73,10 +73,9 @@ class Fault:
             self.trigger.address,
             self.trigger.hitcounter,
         )
-        tmp = self.mask - pow(2, 64)
-        if tmp < 0:
-            tmp = 0
-        out = out + " {:d} {:d} ".format(tmp, self.mask - tmp)
+        mask_upper = (self.mask >> 64) & (pow(2, 64) - 1)
+        mask_lower = self.mask & (pow(2, 64) - 1)
+        out = out + " {:d} {:d} ".format(mask_upper, mask_lower)
         out = out + "| {:d} \n".format(self.num_bytes)
         out = out + "$$[Fault_Ende]\n"
         tmp = fifo.write(out)
