@@ -48,22 +48,6 @@ class Fault:
         self.num_bytes = num_bytes
 
     def write_to_fifo(self, fifo):
-        "Write data to the config fifo, which sends binary data"
-        numbytes = fifo.write(self.address.to_bytes(8, byteorder="big"))
-        numbytes = numbytes + fifo.write(self.type.to_bytes(8, byteorder="big"))
-        numbytes = numbytes + fifo.write(self.model.to_bytes(8, byteorder="big"))
-        numbytes = numbytes + fifo.write(self.lifespan.to_bytes(8, byteorder="big"))
-        numbytes = numbytes + fifo.write(self.mask.to_bytes(16, byteorder="big"))
-        numbytes = numbytes + fifo.write(
-            self.trigger.address.to_bytes(8, byteorder="big")
-        )
-        numbytes = numbytes + fifo.write(
-            self.trigger.hitcounter.to_bytes(8, byteorder="big")
-        )
-        fifo.flush()
-        return numbytes
-
-    def write_to_fifo_new(self, fifo):
         out = "\n$$[Fault]\n"
         out = out + "% {:d} | {:d} | {:d} | {:d} | {:d} | {:d} | ".format(
             self.address,
@@ -754,7 +738,7 @@ def python_worker(
         logger.debug("Started QEMU")
         """Write faults to config pipe"""
         for fault in fault_list:
-            fault.write_to_fifo_new(config_fifo)
+            fault.write_to_fifo(config_fifo)
         logger.debug("Wrote config to qemu")
         """
         From here Qemu has started execution. Now prepare for
