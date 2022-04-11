@@ -1,4 +1,4 @@
-pandas==0.25.3
-python-prctl==1.6.1
-tables==3.6.1
-json5==0.9.6
+pandas~=1.5
+python-prctl==1.8.1
+tables==3.7.0
+json5==0.9.10
