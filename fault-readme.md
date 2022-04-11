@@ -98,6 +98,10 @@ Fault address defines the fault location. It needs to be a valid system address.
 
 Currently, by setting [-1], the trigger and fault address are equal and, hence, fault injection is not possible.
 
+Wildcard faults can be used to fault all instructions recorded during the golden run. They are specified using an asterisk (*). An optional start and end point can be specified. Each endpoint is in the format `address/hitcounter`. The hitcounter is optional, just the address can be specified to use the default of 1. A complete example of a wildcard fault is the following.
+
+``"fault_address" : ["start/2", "*", "end/2"]``
+
 Example 1:
 ``"fault_address" : [address1]``
 

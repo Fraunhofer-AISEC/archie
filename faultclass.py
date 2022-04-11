@@ -35,6 +35,7 @@ class Fault:
         trigger_address: int,
         trigger_hitcounter: int,
         num_bytes: int,
+        wildcard: bool,
     ):
         """
         Define attributes for fault types
@@ -46,6 +47,7 @@ class Fault:
         self.lifespan = fault_lifespan
         self.mask = fault_mask
         self.num_bytes = num_bytes
+        self.wildcard = wildcard
 
     def write_to_fifo(self, fifo):
         out = "\n$$[Fault]\n"
