@@ -18,7 +18,7 @@ except ModuleNotFoundError:
 
     pass
 
-from faultclass import Fault
+from faultclass import Fault, Trigger
 from faultclass import python_worker
 from hdf5logger import hdf5collector
 from goldenrun import run_goldenrun
@@ -40,11 +40,47 @@ def build_ranges_dict(fault_dict):
     raise ValueError("No known type for this framework {}".format(fault_dict))
 
 
-def build_ranges(fault_range):
+def build_ranges(fault_range, wildcard=False):
     """
     build a range, if three elements are provided in a list. Otherwise build
     list with one element
     """
+    if wildcard:
+        # Default wildcard fault range
+        wildcard_range = {"start": Trigger(0, 0), "end": Trigger(0, 0)}
+
+        assert len(fault_range) <= 3, "Invalid wildcard fault range format"
+
+        if len(fault_range) > 1:
+            # Build wildcard range
+            range_element = "start"
+            for entry in fault_range:
+                if entry == "*":
+                    # Got wildcard element, parsing the range end element next
+                    range_element = "end"
+                    continue
+
+                if type(entry) == int:
+                    wildcard_range[range_element].address = entry
+                    # Default hitcounter if unspecified
+                    wildcard_range[range_element].hitcounter = 1
+                    continue
+
+                # Split "address/hitcounter" string
+                entry_expanded = entry.split("/")
+                assert len(entry_expanded) <= 2, "Invalid wildcard fault range element"
+
+                wildcard_range[range_element].address = int(entry_expanded[0], base=0)
+
+                if len(entry_expanded) == 2:
+                    wildcard_range[range_element].hitcounter = int(
+                        entry_expanded[1], base=0
+                    )
+                else:
+                    # Default hitcounter if unspecified
+                    wildcard_range[range_element].hitcounter = 1
+
+        return [wildcard_range]
     if isinstance(fault_range, dict):
         return build_ranges_dict(fault_range)
     if type(fault_range) == int:
@@ -118,15 +154,20 @@ def build_fault_list(conf_list, combined_faults, ret_faults):
     no fault in list is remaining. Then build unrolled fault list, that has
     lists inside of faults executed together
     """
+    wildcard_fault = False
     ret_int_faults = ret_faults
     faultdev = conf_list.pop()
     if "fault_livespan" in faultdev:
         faultdev["fault_lifespan"] = faultdev["fault_livespan"]
     if "num_bytes" not in faultdev:
         faultdev["num_bytes"] = [0]
+    if faultdev["fault_address"] == "*":
+        wildcard_fault = True
+    elif type(faultdev["fault_address"]) == list and "*" in faultdev["fault_address"]:
+        wildcard_fault = True
     ftype = detect_type(faultdev["fault_type"])
     fmodel = detect_model(faultdev["fault_model"])
-    for faddress in build_ranges(faultdev["fault_address"]):
+    for faddress in build_ranges(faultdev["fault_address"], wildcard_fault):
         for flifespan in build_ranges(faultdev["fault_lifespan"]):
             for fmask in build_ranges(faultdev["fault_mask"]):
                 for taddress in build_ranges(faultdev["trigger_address"]):
@@ -148,6 +189,7 @@ def build_fault_list(conf_list, combined_faults, ret_faults):
                                     taddress,
                                     tcounter,
                                     numbytes,
+                                    wildcard_fault,
                                 )
                             )
                             if len(conf_list) == 0:
