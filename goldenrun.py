@@ -41,7 +41,7 @@ def run_goldenrun(
 
     for experiment in experiments:
         if experiment["type"] == "pre_goldenrun":
-            goldenrun_config["end"] = config_qemu["start"]
+            goldenrun_config["end"] = [config_qemu["start"]]
             # Set max_insn_count to ridiculous high number to never reach it
             goldenrun_config["max_instruction_count"] = 10000000000000
 

@@ -82,7 +82,12 @@ int tb_counter_max;
 fault_trigger_t start_point;
 
 /* End point struct (using fault struct) */
-fault_trigger_t end_point;
+struct end_point_t
+{
+	fault_trigger_t location;
+	struct end_point_t *next;
+};
+struct end_point_t *end_point = NULL;
 
 
 int tb_info_enabled;
@@ -110,6 +115,41 @@ mem_info_t *mem_info_list;
 int mem_info_list_enabled;
 
 struct avl_table *mem_avl_root;
+
+static void free_end_point_list(struct end_point_t *list)
+{
+	struct end_point_t *cur = list, *tmp;
+
+	while (cur != NULL)
+	{
+		tmp = cur->next;
+		free(cur);
+		cur = tmp;
+	}
+}
+
+static struct end_point_t *get_end_point_tail(struct end_point_t *list,
+											  uint64_t type)
+{
+	struct end_point_t *cur = list;
+
+	/* Find entry which flag "type" not set */
+	while ((cur->location.trignum & type) && cur->next != NULL)
+	{
+		cur = cur->next;
+	}
+
+	/* We did not find an empty entry, create a new one */
+	if (cur->location.trignum & type)
+	{
+		cur->next = malloc(sizeof(struct end_point_t));
+		cur = cur->next;
+		cur->location.trignum = 0;
+		cur->next = NULL;
+	}
+
+	return cur;
+}
 
 /**
  * mem_info_free()
@@ -752,7 +792,7 @@ void plugin_dump_mem_information()
 void plugin_end_information_dump(GString *end_reason)
 {
 	int *error = NULL;
-	if(end_point.trignum == 4)
+	if(end_point->location.trignum == 4)
 	{
 		plugin_write_to_data_pipe("$$$[Endpoint]: 1\n", 17);
 	}
@@ -760,6 +800,7 @@ void plugin_end_information_dump(GString *end_reason)
 	{
 		plugin_write_to_data_pipe("$$$[Endpoint]: 0\n", 17);
 	}
+	free_end_point_list(end_point);
 	plugin_write_to_data_pipe("$$$[End Reason]:", 16);
 	plugin_write_to_data_pipe(end_reason->str, end_reason->len);
 	plugin_write_to_data_pipe("\n", 1);
@@ -822,13 +863,15 @@ void tb_exec_end_max_event(unsigned int vcpu_index, void *vcurrent)
 
 void tb_exec_end_cb(unsigned int vcpu_index, void *vcurrent)
 {
+	struct end_point_t *end_point = (struct end_point_t *)vcurrent;
+
 	if(start_point.trignum != 3)
 	{
 		qemu_plugin_outs("[End]: CB called\n");
-		if(end_point.hitcounter == 0)
+		if(end_point->location.hitcounter == 0)
 		{
 			qemu_plugin_outs("[End]: Reached end point\n");
-			end_point.trignum = 4;
+			end_point->location.trignum = 4;
 
 			g_autoptr(GString) reason = g_string_new(NULL);
 			g_string_printf(reason, "endpoint %" PRIu64 "/%" PRIu64,
@@ -837,7 +880,7 @@ void tb_exec_end_cb(unsigned int vcpu_index, void *vcurrent)
 
 			plugin_end_information_dump(reason);
 		}
-		end_point.hitcounter--;
+		end_point->location.hitcounter--;
 	}
 }
 
@@ -960,24 +1003,25 @@ static void vcpu_translateblock_translation_event(qemu_plugin_id_t id, struct qe
 		qemu_plugin_outs(out->str);
 		handle_tb_translate_data(tb);
 		check_tb_faulted(tb);
-		if(end_point.trignum == 3)
+		for (struct end_point_t *cur = end_point; cur != NULL; cur = cur->next)
 		{
-			size_t tb_size = calculate_bytesize_instructions(tb);
-			qemu_plugin_outs("[End]: Check endpoint\n");
-			if((tb->vaddr <= end_point.address)&&((tb->vaddr + tb_size) >= end_point.address))
-			{       
-				for(int i = 0; i < tb->n; i++)
+			if(cur->location.trignum == 3)
+			{
+				size_t tb_size = calculate_bytesize_instructions(tb);
+				qemu_plugin_outs("[End]: Check endpoint\n");
+				if((tb->vaddr <= cur->location.address)&&((tb->vaddr + tb_size) >= cur->location.address))
 				{
-					struct qemu_plugin_insn *insn = qemu_plugin_tb_get_insn(tb, i);
-					if((end_point.address >= qemu_plugin_insn_vaddr(insn))&&(end_point.address < qemu_plugin_insn_vaddr(insn) + qemu_plugin_insn_size(insn)))
+					for(int i = 0; i < tb->n; i++)
 					{
-						/* Trigger address met*/
-						qemu_plugin_outs("[End]: Inject cb\n");
-						qemu_plugin_register_vcpu_insn_exec_cb(insn, tb_exec_end_cb, QEMU_PLUGIN_CB_RW_REGS, NULL);
+						struct qemu_plugin_insn *insn = qemu_plugin_tb_get_insn(tb, i);
+						if((cur->location.address >= qemu_plugin_insn_vaddr(insn))&&(cur->location.address < qemu_plugin_insn_vaddr(insn) + qemu_plugin_insn_size(insn)))
+						{
+							/* Trigger address met*/
+							qemu_plugin_outs("[End]: Inject cb\n");
+							qemu_plugin_register_vcpu_insn_exec_cb(insn, tb_exec_end_cb, QEMU_PLUGIN_CB_RW_REGS, cur);
+						}
 					}
 				}
-				//qemu_plugin_outs("[End]: Inject cb\n");
-				//qemu_plugin_register_vcpu_tb_exec_cb(tb, tb_exec_end_cb, QEMU_PLUGIN_CB_RW_REGS, NULL);
 			}
 		}
 	}
@@ -1093,16 +1137,20 @@ int readout_control_config(GString *conf)
 	}
 	if(strstr(conf->str, "end_address: "))
 	{
+		struct end_point_t *end_point_p = get_end_point_tail(end_point, 2);
+
 		// convert number in string to number
-		end_point.address = strtoimax(strstr(conf->str, "end_address: ") + 12, NULL, 0);
-		end_point.trignum = end_point.trignum | 2;
+		end_point_p->location.address = strtoimax(strstr(conf->str, "end_address: ") + 12, NULL, 0);
+		end_point_p->location.trignum |= 2;
 		return 1;
 	}
 	if(strstr(conf->str, "end_counter: "))
 	{
+		struct end_point_t *end_point_p = get_end_point_tail(end_point, 1);
+
 		// convert number in string to number
-		end_point.hitcounter = strtoimax(strstr(conf->str, "end_counter: ") + 12, NULL, 0);
-		end_point.trignum = end_point.trignum | 1;
+		end_point_p->location.hitcounter = strtoimax(strstr(conf->str, "end_counter: ") + 12, NULL, 0);
+		end_point_p->location.trignum |= 1;
 		return 1;
 	}
 	if(strstr(conf->str, "num_memregions: "))
@@ -1235,9 +1283,9 @@ int initialise_plugin(GString * out, int argc, char **argv, int architecture)
 	start_point.hitcounter = 0;
 	start_point.trignum = 0;
 	// End point initialization
-	end_point.address = 0;
-	end_point.hitcounter = 0;
-	end_point.trignum = 0;
+	end_point = malloc(sizeof(struct end_point_t));
+	end_point->location.trignum = 0;
+	end_point->next = NULL;
 
 	// Init tb_info
 	tb_info_init();

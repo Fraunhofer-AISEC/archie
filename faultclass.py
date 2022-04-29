@@ -664,8 +664,9 @@ def configure_qemu(control, config_qemu, num_faults, memorydump_list):
         out = out + "$$ start_counter: {}\n".format((config_qemu["start"])["counter"])
 
     if "end" in config_qemu:
-        out = out + "$$ end_address: {}\n".format((config_qemu["end"])["address"])
-        out = out + "$$ end_counter: {}\n".format((config_qemu["end"])["counter"])
+        for end_loc in config_qemu["end"]:
+            out = out + "$$ end_address: {}\n".format(end_loc["address"])
+            out = out + "$$ end_counter: {}\n".format(end_loc["counter"])
 
     if memorydump_list is not None:
         out = out + "$$num_memregions: {}\n".format(len(memorydump_list))
