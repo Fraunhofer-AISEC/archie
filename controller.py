@@ -545,6 +545,8 @@ def process_arguments(args):
     if "start" in faultlist:
         qemu_conf["start"] = faultlist["start"]
     if "end" in faultlist:
+        if type(faultlist["end"]) == dict:
+            faultlist["end"] = [faultlist["end"]]
         qemu_conf["end"] = faultlist["end"]
 
     if "memorydump" in faultlist:
