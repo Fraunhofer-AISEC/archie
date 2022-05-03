@@ -253,6 +253,8 @@ def controller(
     compressionlevel,
     qemu_output,
     goldenrun_only,
+    istart,
+    iend,
     goldenrun=True,
     logger=hdf5collector,
     qemu_pre=None,
@@ -301,6 +303,12 @@ def controller(
             goldenrun_data,
             faultlist,
         ) = pickle.load(lzma.open("bkup_goldenrun_results.xz", "rb"))
+
+    if iend != -1:
+        faultlist = faultlist[: iend + 1]
+
+    if istart != -1:
+        faultlist = faultlist[istart:]
 
     p_logger = Process(
         target=logger,
@@ -525,6 +533,22 @@ def get_argument_parser():
         action="store_true",
         required=False,
     )
+    parser.add_argument(
+        "--istart",
+        "-s",
+        help="Index of fault in fault list to start with",
+        type=int,
+        required=False,
+        default=-1,
+    )
+    parser.add_argument(
+        "--iend",
+        "-e",
+        help="Index of fault in fault list to end with",
+        type=int,
+        required=False,
+        default=-1,
+    )
     return parser
 
 
@@ -564,6 +588,9 @@ def process_arguments(args):
     parguments["goldenrun_only"] = args.goldenrun_only
     if parguments["goldenrun_only"]:
         parguments["goldenrun"] = True
+
+    parguments["istart"] = args.istart
+    parguments["iend"] = args.iend
 
     qemu_conf = json.load(args.qemu)
     args.qemu.close()
@@ -674,6 +701,8 @@ if __name__ == "__main__":
         parguments["compressionlevel"],  # compressionlevel
         args.debug,  # qemu_output
         parguments["goldenrun_only"],
+        parguments["istart"],
+        parguments["iend"],
         parguments["goldenrun"],  # goldenrun
         hdf5collector,  # logger
         None,  # qemu_pre
