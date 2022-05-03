@@ -252,6 +252,7 @@ def controller(
     queuedepth,
     compressionlevel,
     qemu_output,
+    goldenrun_only,
     goldenrun=True,
     logger=hdf5collector,
     qemu_pre=None,
@@ -290,6 +291,10 @@ def controller(
             (config_qemu["max_instruction_count"], goldenrun_data, faultlist),
             lzma.open("bkup_goldenrun_results.xz", "wb"),
         )
+
+        clogger.info(f"Got {len(faultlist)} fault entries")
+        if goldenrun_only:
+            return config_qemu
     else:
         (
             config_qemu["max_instruction_count"],
@@ -514,6 +519,12 @@ def get_argument_parser():
         action="store_true",
         required=False,
     )
+    parser.add_argument(
+        "--goldenrun-only",
+        help="Only run goldenrun to create the goldenrun backup file",
+        action="store_true",
+        required=False,
+    )
     return parser
 
 
@@ -549,6 +560,10 @@ def process_arguments(args):
             f"{hdf5file.parent}"
         )
         exit(1)
+
+    parguments["goldenrun_only"] = args.goldenrun_only
+    if parguments["goldenrun_only"]:
+        parguments["goldenrun"] = True
 
     qemu_conf = json.load(args.qemu)
     args.qemu.close()
@@ -658,6 +673,7 @@ if __name__ == "__main__":
         parguments["queuedepth"],  # queuedepth
         parguments["compressionlevel"],  # compressionlevel
         args.debug,  # qemu_output
+        parguments["goldenrun_only"],
         parguments["goldenrun"],  # goldenrun
         hdf5collector,  # logger
         None,  # qemu_pre
