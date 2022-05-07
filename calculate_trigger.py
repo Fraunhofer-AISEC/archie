@@ -139,17 +139,53 @@ def search_for_fault_location(
                                 trigger_position -= i
                                 idx -= 1
                             break
-    # Got trigger address, now calculate the adjusted hitcounter. If the trigger
-    # address is in a different TB to the fault address, it may be executed more
-    # often than the TB with the fault address itself. To still trigger the
-    # correct fault, the hitcounter has to be adjusted.
-    if trigger_not_in_same_tb == 1:
-        trigger_tb = goldenrun_tb_exec.at[idx, "tb"]
-        trigger_hitcounter = goldenrun_tb_exec.iloc[0 : idx + 1].tb.value_counts()[
-            trigger_tb
-        ]
-    else:
-        trigger_hitcounter = trigger_occurrences
+    # Got trigger address, now calculate the trigger hitcounter
+    trigger_tb = goldenrun_tb_exec.at[idx, "tb"]
+    tb_hitcounters = goldenrun_tb_exec.iloc[0 : idx + 1].tb.value_counts()
+    trigger_hitcounter = tb_hitcounters[trigger_tb]
+
+    tb_start = goldenrun_tb_info["id"].copy()
+    tb_start.index = goldenrun_tb_info["id"]
+
+    tb_end = goldenrun_tb_info["id"] + goldenrun_tb_info["size"] - 1
+    tb_end.index = goldenrun_tb_info["id"]
+
+    tb_start_end = pandas.DataFrame(
+        {
+            "tb_start": tb_start,
+            "tb_end": tb_end,
+        }
+    )
+
+    # Is the trigger TB a sub-TB?
+    sub_tbs = tb_start_end[
+        (trigger_tb > tb_start_end["tb_start"]) & (trigger_tb <= tb_start_end["tb_end"])
+    ]
+
+    for sub_tb, _ in sub_tbs.iterrows():
+        # Filter out TBs we did not execute yet
+        if sub_tb not in tb_hitcounters:
+            continue
+
+        trigger_hitcounter += tb_hitcounters[sub_tb]
+
+    # Does the trigger TB contain a sub-TB?
+    last_instr = tb_start_end.loc[trigger_tb, "tb_end"]
+
+    sub_tbs = tb_start_end[
+        (trigger_tb < tb_start_end["tb_start"])
+        & (last_instr > tb_start_end["tb_start"])
+        & (last_instr <= tb_start_end["tb_end"])
+    ]
+
+    for sub_tb, sub_tb_data in sub_tbs.iterrows():
+        # Filter out TBs we did not execute yet
+        if sub_tb not in tb_hitcounters:
+            continue
+
+        # Is the trigger instruction part of the sub-TB?
+        if ins >= sub_tb_data["tb_start"]:
+            trigger_hitcounter += tb_hitcounters[sub_tb]
 
     logger.info(
         "Found trigger for faulting instruction address {} at {} with "
