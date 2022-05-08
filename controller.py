@@ -173,10 +173,8 @@ def get_system_ram():
     ps = subprocess.Popen(
         command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT
     )
-    tmp = " "
-    while ps.poll() is None:
-        tmp = tmp + ps.stdout.read().decode("utf-8")
-    sp = tmp.split("kB")
+    tmp, _ = ps.communicate()
+    sp = str(tmp).split("kB")
     t = sp[0]
     mem = int(t.split(":")[1], 0)
     clogger.info("system ram is {}kB".format(mem))
