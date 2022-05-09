@@ -410,6 +410,7 @@ def readout_data(
     queue_output,
     faultlist,
     goldenrun_data,
+    config_qemu,
     queue_ram_usage=None,
     qemu_post=None,
     qemu_pre_data=None,
@@ -487,13 +488,16 @@ def readout_data(
                     gather_process_ram_usage(queue_ram_usage, 0)
 
                     if goldenrun_data:
-                        [pdtbexeclist, tblist] = filter_tb(
-                            pdtbexeclist,
-                            tblist,
-                            goldenrun_data["tbexec"],
-                            goldenrun_data["tbinfo"],
-                            index,
-                        )
+                        if config_qemu["ring_buffer"]:
+                            pdtbexeclist = pdtbexeclist.iloc[::-1]
+                        else:
+                            [pdtbexeclist, tblist] = filter_tb(
+                                pdtbexeclist,
+                                tblist,
+                                goldenrun_data["tbexec"],
+                                goldenrun_data["tbinfo"],
+                                index,
+                            )
 
                 if tbinfo == 1 and meminfo == 1:
                     connect_meminfo_tb(memlist, tblist)
@@ -633,7 +637,7 @@ def delete_fifos():
     os.rmdir(path)
 
 
-def configure_qemu(control, config_qemu, num_faults, memorydump_list):
+def configure_qemu(control, config_qemu, num_faults, memorydump_list, goldenrun):
     """
     Function to write commands and configuration needed to start qemu plugin
     """
@@ -667,6 +671,10 @@ def configure_qemu(control, config_qemu, num_faults, memorydump_list):
         for end_loc in config_qemu["end"]:
             out = out + "$$ end_address: {}\n".format(end_loc["address"])
             out = out + "$$ end_counter: {}\n".format(end_loc["counter"])
+
+    # If enabled, use the ring buffer for all runs except for the goldenrun
+    if config_qemu["ring_buffer"] is True and goldenrun is False:
+        out = out + "$$tb_exec_list_ring_buffer\n"
 
     if memorydump_list is not None:
         out = out + "$$num_memregions: {}\n".format(len(memorydump_list))
@@ -742,7 +750,13 @@ def python_worker(
         else:
             memorydump = None
         logger.debug("Start configuring")
-        configure_qemu(control_fifo, config_qemu, len(fault_list), memorydump)
+        if goldenrun_data is None:
+            goldenrun = True
+        else:
+            goldenrun = False
+        configure_qemu(
+            control_fifo, config_qemu, len(fault_list), memorydump, goldenrun
+        )
         enable_qemu(control_fifo)
         logger.debug("Started QEMU")
         """Write faults to config pipe"""
@@ -759,6 +773,7 @@ def python_worker(
             queue_output,
             fault_list,
             goldenrun_data,
+            config_qemu,
             queue_ram_usage,
             qemu_post=qemu_post,
             qemu_pre_data=qemu_pre_data,

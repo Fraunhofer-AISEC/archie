@@ -39,7 +39,9 @@ In the Pregoldenrun no faults are injected. For an explanation of the tables in 
 
 For each "injected" fault an experiment is created that contains the data associated with the fault and the difference in translation blocks compared with the Goldenrun.
 The order of experiments in the json config file is reversed in the hdf5 output file.
-Each experiment has the same table structure as the Goldenrun. However, the tables of tbexeclist and tbinfo contain only the differences compared to the Goldenrun. All identical executions are not listed.
+Each experiment has the same table structure as the Goldenrun. However, the table tbinfo contains only the differences compared to the Goldenrun. All identical executions are not listed.
+
+By default, the list of executed translation blocks (`tbexeclist`) is stored in a ring buffer able to store the last 100 entries. This behavior is controlled with the fault configuration property `ring_buffer` and the `--disable-ring-buffer` command line argument, which takes precedence. For the goldenrun, the ring buffer is always disabled.
 
 ## Analysis
 

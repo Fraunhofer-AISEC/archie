@@ -498,6 +498,12 @@ def get_argument_parser():
         help="Enables connection to the target with gdb. Port 1234",
         required=False,
     )
+    parser.add_argument(
+        "--disable-ring-buffer",
+        help="Disable use of the ring buffer for storing TB execution order information",
+        action="store_true",
+        required=False,
+    )
     return parser
 
 
@@ -576,6 +582,14 @@ def process_arguments(args):
         qemu_conf["tb_info"] = faultlist["tb_info"]
     if "mem_info" in faultlist:
         qemu_conf["mem_info"] = faultlist["mem_info"]
+    if args.disable_ring_buffer:
+        # Command line argument takes precedence
+        qemu_conf["ring_buffer"] = False
+    elif "ring_buffer" in faultlist:
+        qemu_conf["ring_buffer"] = faultlist["ring_buffer"]
+    else:
+        # Enabled by default
+        qemu_conf["ring_buffer"] = True
 
     parguments["qemu_conf"] = qemu_conf
 
