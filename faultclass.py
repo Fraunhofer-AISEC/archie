@@ -657,11 +657,10 @@ def configure_qemu(control, config_qemu, num_faults, memorydump_list, goldenrun)
         else:
             out = out + "$$enable_tb_info\n"
 
-    if "mem_info" in config_qemu:
-        if config_qemu["mem_info"] is False:
-            out = out + "$$disable_mem_info\n"
-        else:
-            out = out + "$$enable_mem_info\n"
+    if "mem_info" in config_qemu and config_qemu["mem_info"]:
+        out = out + "$$enable_mem_info\n"
+    else:
+        out = out + "$$disable_mem_info\n"
 
     if "start" in config_qemu:
         out = out + "$$ start_address: {}\n".format((config_qemu["start"])["address"])
