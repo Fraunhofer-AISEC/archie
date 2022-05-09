@@ -31,7 +31,7 @@ typedef struct tb_exec_order_t
 }tb_exec_order_t;
 
 
-void tb_exec_order_init();
+int tb_exec_order_init();
 
 /**
  * tb_exec_order_free()

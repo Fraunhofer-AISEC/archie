@@ -93,6 +93,7 @@ int tb_info_enabled;
 
 
 int tb_exec_order_enabled;
+int tb_exec_order_ring_buffer;
 
 
 
@@ -841,8 +842,11 @@ void plugin_end_information_dump(GString *end_reason)
 	add_new_registerdump(tb_counter);
 	qemu_plugin_outs("[DEBUG]: Start printing to data pipe tb information\n");
 	plugin_dump_tb_information();
-	qemu_plugin_outs("[DEBUG]: Start printing to data pipe tb exec\n");
-	plugin_dump_tb_exec_order();
+	if(tb_exec_order_enabled == 1)
+	{
+		qemu_plugin_outs("[DEBUG]: Start printing to data pipe tb exec\n");
+		plugin_dump_tb_exec_order();
+	}
 	qemu_plugin_outs("[DEBUG]: Start printing to data pipe tb mem\n");
 	plugin_dump_mem_information();
 	if(memory_module_configured())
@@ -1217,6 +1221,11 @@ int readout_control_config(GString *conf)
 		tb_exec_order_enabled = 0;
 		return 1;
 	}
+	if(strstr(conf->str, "tb_exec_list_ring_buffer"))
+	{
+		tb_exec_order_ring_buffer = 1;
+		return 1;
+	}
 	return -1;
 
 }
@@ -1295,7 +1304,6 @@ int initialise_plugin(GString * out, int argc, char **argv, int architecture)
 	// It contains the pointer to fault structs whose lifetime is not zero
 	// If lifetime of fault reaches zero, it undoes the fault. If zero, it is permanent.
 	live_faults = NULL;
-	tb_exec_order_init();
 	//
 	mem_info_list = NULL;
 	//
@@ -1324,6 +1332,8 @@ int initialise_plugin(GString * out, int argc, char **argv, int architecture)
 	tb_info_enabled = 1;
 	// enable tb exec logging
 	tb_exec_order_enabled = 1;
+	// disable tb exec ring buffer
+	tb_exec_order_ring_buffer = 0;
 
 	/* Initialisation of pipe struct */
 	pipes = malloc(sizeof(fifos_t));
@@ -1420,6 +1430,13 @@ QEMU_PLUGIN_EXPORT int qemu_plugin_install(qemu_plugin_id_t id,
 		goto ABORT;
 	}
 	g_string_append(out, "Done\n");
+
+	if (tb_exec_order_init())
+	{
+		g_string_append_printf(out, "[ERROR]: Initialisation of executed translation blocks list failed!\n");
+		return -1;
+	}
+
 	g_string_append_printf(out, "[Start]: Reached end of initialisation, starting guest now\n");
 	qemu_plugin_outs(out->str);
 	return 0;
@@ -1432,6 +1449,7 @@ ABORT:
 	delete_fault_trigger_addresses();
 	delete_fault_queue();
 	tb_faulted_free();
+	tb_exec_order_free();
 	g_string_append(out, "[ERROR]: Something went wrong. Aborting now!\n");
 	qemu_plugin_outs(out->str);
 	return -1;
