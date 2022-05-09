@@ -635,21 +635,21 @@ def configure_qemu(control, config_qemu, num_faults, memorydump_list):
 
     if "tb_exec_list" in config_qemu:
         if config_qemu["tb_exec_list"] is False:
-            out = out + "$$disable_tb_exec_list"
+            out = out + "$$disable_tb_exec_list\n"
         else:
-            out = out + "$$enable_tb_exec_list"
+            out = out + "$$enable_tb_exec_list\n"
 
     if "tb_info" in config_qemu:
         if config_qemu["tb_info"] is False:
-            out = out + "$$disable_tb_info"
+            out = out + "$$disable_tb_info\n"
         else:
-            out = out + "$$enable_tb_info"
+            out = out + "$$enable_tb_info\n"
 
     if "mem_info" in config_qemu:
         if config_qemu["mem_info"] is False:
-            out = out + "$$disable_mem_info"
+            out = out + "$$disable_mem_info\n"
         else:
-            out = out + "$$enable_mem_info"
+            out = out + "$$enable_mem_info\n"
 
     if "start" in config_qemu:
         out = out + "$$ start_address: {}\n".format((config_qemu["start"])["address"])
