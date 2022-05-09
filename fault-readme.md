@@ -191,5 +191,5 @@ Num bytes is currently only used by the "overwrite" fault model. See section [fa
 
 **Attention!** If a range is specified despite it being not used it is stille unrolled. This leads to multiple faults with the same configuration!
 
-
- 
+### ring_buffer
+Use of the ring buffer implementation to store the list of executed translation blocks can be controlled with the `ring_buffer` configuration property. It expects to be passed a boolean value. If unspecified, it will default to `true`.
