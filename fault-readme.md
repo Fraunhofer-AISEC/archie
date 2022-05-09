@@ -193,3 +193,6 @@ Num bytes is currently only used by the "overwrite" fault model. See section [fa
 
 ### ring_buffer
 Use of the ring buffer implementation to store the list of executed translation blocks can be controlled with the `ring_buffer` configuration property. It expects to be passed a boolean value. If unspecified, it will default to `true`.
+
+### mem_info
+Enable collection of data on all memory accesses. The configuration property expects to be passed a boolean value. If unspecified, it will default to `false`.

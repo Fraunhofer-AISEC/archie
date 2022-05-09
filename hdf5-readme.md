@@ -12,7 +12,7 @@ The Goldenrun represents the program run (defined by "start" and "end", see faul
 	* **endpoint:** is 1 if endpoint was reached, 0 if not. Is an attribute of the fault table. Can be used to determine if the guest exited through endpoint or max instruction limit. (accessed through fault.attrs.endpoint)
 
 * a list of **memdumps**: containing the memory dumps starting at a certain location and of a certain length as defined in fault.json (future feature: multiple memdumps)
-* **meminfo**: contains information on the memory accesses  
+* **meminfo**: contains information on the memory accesses. It is not collected by default. It is enabled using the `mem_info` fault configuration property.
 
 	* **address:** address of the memory access (store or load)
 	* **counter:** number of times the memory access occurred 
