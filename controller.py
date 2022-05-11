@@ -165,7 +165,11 @@ def build_fault_list(conf_list, combined_faults, ret_faults):
     ret_int_faults = ret_faults
     faultdev = conf_list.pop()
     if "fault_livespan" in faultdev:
-        faultdev["fault_lifespan"] = faultdev["fault_livespan"]
+        print(
+            "Unknown fault configuration property 'fault_livespan'. Did you "
+            "mean 'fault_lifespan'?"
+        )
+        exit(1)
     if "num_bytes" not in faultdev:
         faultdev["num_bytes"] = [0]
     if faultdev["fault_address"] == "*":

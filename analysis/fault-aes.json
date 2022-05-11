@@ -15,7 +15,7 @@
 					"fault_address"		: [3],
 					"fault_type"		: "register",
 					"fault_model"		: "set1",
-					"fault_livespan"	: [0],
+					"fault_lifespan"	: [0],
 					"fault_mask"		: [1, 256, 1],
 					"trigger_address"	: [134219846],
 					"trigger_counter"	: [128, 160, 1]
@@ -27,7 +27,7 @@
 					"fault_address"		: [134219842, 134219855, 1],
 					"fault_type"		: "instruction",
 					"fault_model"		: "set1",
-					"fault_livespan"	: [2],
+					"fault_lifespan"	: [2],
 					"fault_mask"		: [1, 256, 1],
 					"trigger_address"	: [-1],
 					"trigger_counter"	: [141]
@@ -39,7 +39,7 @@
 					"fault_address"		: [134220088, 134220098, 1],
 					"fault_type"		: "instruction",
 					"fault_model"		: "set1",
-					"fault_livespan"	: [2],
+					"fault_lifespan"	: [2],
 					"fault_mask"		: { "type" : "shift" , "range" : [3, 7, 10]},
 					"trigger_address"	: [-1],
 					"trigger_counter"	: [8, 10, 1]
@@ -51,7 +51,7 @@
 					"fault_address"		: [134220088, 134220098, 1],
 					"fault_type"		: "instruction",
 					"fault_model"		: "set1",
-					"fault_livespan"	: [2],
+					"fault_lifespan"	: [2],
 					"fault_mask"		: [1, 256, 1],
 					"trigger_address"	: [-1],
 					"trigger_counter"	: [8, 10, 1]
