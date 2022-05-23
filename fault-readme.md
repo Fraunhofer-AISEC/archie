@@ -46,12 +46,12 @@ To remove the start or end point, delete the respective block in fault.json (e.g
 
 ### start
 The start point is also a dictionary containing two variables. Its address and counter.
-Address defines an instruction in the kernel whose execution determines when the tracking of the plugin should start. The counter is the amount of executions of the start instruction until the plugin tracking is enabled. So if it is set to 0 it will start the execution of plugin when the instruction is reached. If it is set to 1 it will start the plugin at the second execution of start. Keep in mind that the start point is inside a translation block and is only accurate to the translation block level. Only after the translation block that contains the start address is finished, an analysis of faults is possible. Hence, it has to be taken care of that the faults are defined in subsequent translation blocks. 
+Address defines an instruction in the kernel whose execution determines when the tracking of the plugin should start. The counter is the amount of executions of the start instruction until the plugin tracking is enabled. So if it is set to 1 it will start the execution of the plugin when the instruction is first reached. If it is set to 2 it will start the plugin at the second execution of start. Keep in mind that the start point is inside a translation block and is only accurate to the translation block level. Only after the translation block that contains the start address is finished, an analysis of faults is possible. Hence, it has to be taken care of that the faults are defined in subsequent translation blocks.
 
 ### end
 End is similar to start. It defines the end point of execution. It has two variables.
 Address is the address of the end instruction. It needs to be a valid instruction address!
-Counter is the amount of executions of the end point. 0 means at the first encounter of the "end" instruction, the program is terminated. If it is 1 it is terminated at the second execution etc. The behaviour is n-1, with n being the number of executions.
+Counter is the amount of executions of the end point. 1 means at the first encounter of the "end" instruction, the program is terminated. If it is 2 it is terminated at the second execution etc.
 
 Multiple end points can be specified by defining "end" as an array.
 

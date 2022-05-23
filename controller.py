@@ -547,10 +547,19 @@ def process_arguments(args):
 
     faultlist = json.load(args.faults)
     if "start" in faultlist:
+        if faultlist["start"]["counter"] == 0:
+            print("A start counter of 0 in the fault configuration is invalid")
+            exit(1)
+
         qemu_conf["start"] = faultlist["start"]
     if "end" in faultlist:
         if type(faultlist["end"]) == dict:
             faultlist["end"] = [faultlist["end"]]
+        for endpoint in faultlist["end"]:
+            if endpoint["counter"] == 0:
+                print("An end counter of 0 in the fault configuration is invalid")
+                exit(1)
+
         qemu_conf["end"] = faultlist["end"]
 
     if "memorydump" in faultlist:
