@@ -804,7 +804,7 @@ void plugin_end_information_dump()
 void tb_exec_end_max_event(unsigned int vcpu_index, void *vcurrent)
 {
 	size_t ins = (size_t) vcurrent;
-	if(start_point.hitcounter != 3)
+	if(start_point.trignum != 3)
 	{	
 		if(tb_counter >= tb_counter_max)
 		{
@@ -817,7 +817,7 @@ void tb_exec_end_max_event(unsigned int vcpu_index, void *vcurrent)
 
 void tb_exec_end_cb(unsigned int vcpu_index, void *vcurrent)
 {
-	if(start_point.hitcounter != 3)
+	if(start_point.trignum != 3)
 	{
 		qemu_plugin_outs("[End]: CB called\n");
 		if(end_point.hitcounter == 0)
