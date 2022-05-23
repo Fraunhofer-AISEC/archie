@@ -868,7 +868,7 @@ void tb_exec_end_cb(unsigned int vcpu_index, void *vcurrent)
 	if(start_point.trignum != 3)
 	{
 		qemu_plugin_outs("[End]: CB called\n");
-		if(end_point->location.hitcounter == 0)
+		if(end_point->location.hitcounter == 1)
 		{
 			qemu_plugin_outs("[End]: Reached end point\n");
 			end_point->location.trignum = 4;
@@ -886,7 +886,7 @@ void tb_exec_end_cb(unsigned int vcpu_index, void *vcurrent)
 
 void tb_exec_start_cb(unsigned int vcpu_index, void *vcurrent)
 {
-	if(start_point.hitcounter == 0)
+	if(start_point.hitcounter == 1)
 	{
 		qemu_plugin_outs("[Start]: Start point reached");
 		start_point.trignum = 0;
