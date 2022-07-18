@@ -46,6 +46,8 @@ def build_ranges(fault_range):
     """
     if isinstance(fault_range, dict):
         return build_ranges_dict(fault_range)
+    if type(fault_range) == int:
+        return range(fault_range, fault_range + 1, 1)
     if len(fault_range) == 3:
         return range(fault_range[0], fault_range[1], fault_range[2])
     elif len(fault_range) == 1:
