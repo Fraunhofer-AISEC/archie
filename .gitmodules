@@ -1,9 +1,3 @@
 [submodule "qemu"]
 	path = qemu
 	url = https://github.com/Fraunhofer-AISEC/archie-qemu.git
-[submodule "faultplugin/lib/avl"]
-	path = faultplugin/lib/avl
-	url = https://git.savannah.gnu.org/git/avl.git
-[submodule "miniblink/libopencm3-examples"]
-	path = miniblink/libopencm3-examples
-	url = https://github.com/libopencm3/libopencm3-examples.git
