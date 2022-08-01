@@ -3,6 +3,7 @@ import logging
 import lzma
 from multiprocessing import Manager, Process
 import pandas as pd
+from pathlib import Path
 import pickle
 import prctl
 import subprocess
@@ -470,6 +471,14 @@ def process_arguments(args):
     parguments["compressionlevel"] = args.compressionlevel
     if args.compressionlevel is None:
         parguments["compressionlevel"] = 1
+
+    hdf5file = Path(args.hdf5file)
+    if hdf5file.parent.exists() is False:
+        print(
+            f"Parent folder of specified HDF5 file does not exist: "
+            f"{hdf5file.parent}"
+        )
+        exit(1)
 
     qemu_conf = json.load(args.qemu)
     args.qemu.close()
