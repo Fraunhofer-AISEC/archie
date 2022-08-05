@@ -102,6 +102,10 @@ Wildcard faults can be used to fault all instructions recorded during the golden
 
 ``"fault_address" : ["start/2", "*", "end/2"]``
 
+In the local wildcard mode, all occurrences of a wildcard range will be selected. It is specified by setting the hitcounter of both the wildcard start and end points to zero. The following is an example of a wildcard fault type in the local mode.
+
+``"fault_address" : ["start/0", "*", "end/0"]``
+
 Example 1:
 ``"fault_address" : [address1]``
 
