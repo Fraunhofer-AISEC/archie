@@ -195,6 +195,7 @@ def generate_wildcard_faults(fault, tbexec, tbinfo):
     range_start_counter = fault.address["start"].hitcounter
     range_end_counter = 0
     wildcard_range_end_reached = False
+    wildcard_local_active = False
 
     for tb in tbexec["tb"]:
         tb_hitcounters_analyzed = False
@@ -212,7 +213,7 @@ def generate_wildcard_faults(fault, tbexec, tbinfo):
         for i in range(1, len(tb_info_asm)):
             instr = int(tb_info_asm[i].split("]")[0], 16)
 
-            # Evaluate start and stop conditions
+            # Evaluate start and stop conditions (global)
 
             # Detect range end address if specified (hitcounter != 0)
             if fault.address["end"].hitcounter != 0:
@@ -242,6 +243,21 @@ def generate_wildcard_faults(fault, tbexec, tbinfo):
                     # continue anyways in case the range end address is in the
                     # current TB to update the range_end_counter.
                     continue
+
+            # Evaluate start and stop conditions (local)
+
+            if fault.address["local"]:
+                # Start local wildcard range
+                if instr == fault.address["start"].address:
+                    wildcard_local_active = True
+
+                if wildcard_local_active is False:
+                    continue
+
+                # Stop local wildcard fault generation with this instruction
+                # until the next range start address is found
+                if instr == fault.address["end"].address:
+                    wildcard_local_active = False
 
             # Analyze TB to find TB and instruction specific adjustments to
             # the hitcounter of the expanded fault

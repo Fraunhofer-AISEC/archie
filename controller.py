@@ -47,7 +47,7 @@ def build_ranges(fault_range, wildcard=False):
     """
     if wildcard:
         # Default wildcard fault range
-        wildcard_range = {"start": Trigger(0, 0), "end": Trigger(0, 0)}
+        wildcard_range = {"start": Trigger(0, 0), "end": Trigger(0, 0), "local": False}
 
         assert len(fault_range) <= 3, "Invalid wildcard fault range format"
 
@@ -79,6 +79,13 @@ def build_ranges(fault_range, wildcard=False):
                 else:
                     # Default hitcounter if unspecified
                     wildcard_range[range_element].hitcounter = 1
+
+            # Check for local wildcard mode
+            if (
+                wildcard_range["start"].hitcounter == 0
+                and wildcard_range["end"].hitcounter == 0
+            ):
+                wildcard_range["local"] = True
 
         return [wildcard_range]
     if isinstance(fault_range, dict):
