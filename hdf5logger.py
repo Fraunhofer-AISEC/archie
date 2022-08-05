@@ -207,7 +207,7 @@ def process_dumps(f, group, memdumplist, myfilter):
     memdumpstable.close()
 
 
-def process_faults(f, group, faultlist, endpoint, myfilter):
+def process_faults(f, group, faultlist, endpoint, end_reason, myfilter):
     # create table
     faulttable = f.create_table(
         group,
@@ -218,6 +218,7 @@ def process_faults(f, group, faultlist, endpoint, myfilter):
         filters=myfilter,
     )
     faulttable.attrs.endpoint = endpoint
+    faulttable.attrs.end_reason = end_reason
     faultrow = faulttable.row
     for fault in faultlist:
         faultrow["trigger_address"] = fault.trigger.address
@@ -364,7 +365,9 @@ def hdf5collector(
             fn_ptr(f, exp_group, exp[keyword], myfilter)
 
         # safe fault config
-        process_faults(f, exp_group, exp["faultlist"], exp["endpoint"], myfilter)
+        process_faults(
+            f, exp_group, exp["faultlist"], exp["endpoint"], exp["end_reason"], myfilter
+        )
 
         if callable(logger_postprocess):
             logger_postprocess(f, exp_group, exp, myfilter)
