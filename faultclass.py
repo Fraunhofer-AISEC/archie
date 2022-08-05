@@ -434,6 +434,7 @@ def readout_data(
     meminfo = 0
     memdump = 0
     endpoint = 0
+    end_reason = ""
     max_ram_usage = 0
     regtype = None
     tbfaulted = 0
@@ -447,6 +448,10 @@ def readout_data(
             if "[Endpoint]" in line:
                 split = line.split("]:")
                 endpoint = int(split[1], 0)
+
+            elif "[End Reason]" in line:
+                split = line.split("]:")
+                end_reason = split[1].strip()
 
             elif "[TB Information]" in line:
                 state = "tbinfo"
@@ -524,6 +529,7 @@ def readout_data(
                 output["index"] = index
                 output["faultlist"] = faultlist
                 output["endpoint"] = endpoint
+                output["end_reason"] = end_reason
 
                 if memdump == 1:
                     output["memdumplist"] = memdumplist

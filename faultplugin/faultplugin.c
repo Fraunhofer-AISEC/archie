@@ -749,7 +749,7 @@ void plugin_dump_mem_information()
  * This function first writes all collected data to data pipe, then deletes all information structs
  * Then it will cause a segfault to crash qemu to end it for the moment
  */
-void plugin_end_information_dump()
+void plugin_end_information_dump(GString *end_reason)
 {
 	int *error = NULL;
 	if(end_point.trignum == 4)
@@ -760,6 +760,9 @@ void plugin_end_information_dump()
 	{
 		plugin_write_to_data_pipe("$$$[Endpoint]: 0\n", 17);
 	}
+	plugin_write_to_data_pipe("$$$[End Reason]:", 16);
+	plugin_write_to_data_pipe(end_reason->str, end_reason->len);
+	plugin_write_to_data_pipe("\n", 1);
 	if(memory_module_configured())
 	{
 		qemu_plugin_outs("[DEBUG]: Read memory regions configured\n");
@@ -809,7 +812,9 @@ void tb_exec_end_max_event(unsigned int vcpu_index, void *vcurrent)
 		if(tb_counter >= tb_counter_max)
 		{
 			qemu_plugin_outs("[Max tb]: max tb counter reached");
-			plugin_end_information_dump();
+
+			g_autoptr(GString) reason = g_string_new("max tb");
+			plugin_end_information_dump(reason);
 		}
 		tb_counter = tb_counter + ins;
 	}
@@ -824,7 +829,13 @@ void tb_exec_end_cb(unsigned int vcpu_index, void *vcurrent)
 		{
 			qemu_plugin_outs("[End]: Reached end point\n");
 			end_point.trignum = 4;
-			plugin_end_information_dump();
+
+			g_autoptr(GString) reason = g_string_new(NULL);
+			g_string_printf(reason, "endpoint %" PRIu64 "/%" PRIu64,
+							end_point->location.address,
+							end_point->location.hitcounter);
+
+			plugin_end_information_dump(reason);
 		}
 		end_point.hitcounter--;
 	}
