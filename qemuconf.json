@@ -3,6 +3,6 @@
 	"bios" : "",
 	"kernel" : "miniblink/miniblink.bin",
 	"plugin" : "faultplugin/libfaultplugin.so",
-	"machine" : "stm32f0discovery",
+	"machine" : "stm32vldiscovery",
 	"additional_qemu_args" : ""
 }
