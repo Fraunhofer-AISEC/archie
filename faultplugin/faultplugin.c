@@ -936,7 +936,7 @@ void handle_tb_translate_event(struct qemu_plugin_tb *tb)
 	/**Verify, that no trigger is called*/
 	for( int i = 0; i < fault_number; i++)
 	{
-		if((tb->vaddr <= *(fault_trigger_addresses + i))&&((tb->vaddr + tb_size) >= *(fault_trigger_addresses + i)))
+		if((tb->vaddr <= *(fault_trigger_addresses + i))&&((tb->vaddr + tb_size) > *(fault_trigger_addresses + i)))
 		{
 			g_autoptr(GString) out = g_string_new("");
 			g_string_printf(out, "Met trigger address: %lx\n", *(fault_trigger_addresses + i) );
@@ -1037,7 +1037,7 @@ static void vcpu_translateblock_translation_event(qemu_plugin_id_t id, struct qe
 			{
 				size_t tb_size = calculate_bytesize_instructions(tb);
 				qemu_plugin_outs("[End]: Check endpoint\n");
-				if((tb->vaddr <= cur->location.address)&&((tb->vaddr + tb_size) >= cur->location.address))
+				if((tb->vaddr <= cur->location.address)&&((tb->vaddr + tb_size) > cur->location.address))
 				{
 					for(int i = 0; i < tb->n; i++)
 					{
