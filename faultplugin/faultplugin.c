@@ -25,7 +25,6 @@
 #include <sys/types.h>
 
 #include "qemu/osdep.h"
-#include "qemu-common.h"
 #include <qemu/plugin.h>
 #include <qemu/qemu-plugin.h>
 
