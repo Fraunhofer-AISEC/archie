@@ -143,8 +143,8 @@ int insert_memorydump_config(uint64_t baseaddress, uint64_t len)
 		tmp->buf = NULL;
 		tmp->address = 0;
 		tmp->len = 0;
-                tmp->num_dumps = 0;
-                tmp->used_dumps = 0;
+		tmp->num_dumps = 0;
+		tmp->used_dumps = 0;
 		num_memdump++;
 		qemu_plugin_outs("done\n");
 	}

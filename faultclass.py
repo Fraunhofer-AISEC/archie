@@ -14,17 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import subprocess
+import logging
 from multiprocessing import Process
+import os
+import shlex
+import subprocess
 import time
+
 import pandas as pd
 import prctl
-import shlex
 
-
-import logging
-
+import fault_pb2
 from util import gather_process_ram_usage
 
 logger = logging.getLogger(__name__)
@@ -65,24 +65,31 @@ class Fault:
         self.num_bytes = num_bytes
         self.wildcard = wildcard
 
-    def write_to_fifo(self, fifo):
-        out = "\n$$[Fault]\n"
-        out = out + "% {:d} | {:d} | {:d} | {:d} | {:d} | {:d} | ".format(
-            self.address,
-            self.type,
-            self.model,
-            self.lifespan,
-            self.trigger.address,
-            self.trigger.hitcounter,
-        )
-        mask_upper = (self.mask >> 64) & (pow(2, 64) - 1)
-        mask_lower = self.mask & (pow(2, 64) - 1)
-        out = out + " {:d} {:d} ".format(mask_upper, mask_lower)
-        out = out + "| {:d} \n".format(self.num_bytes)
-        out = out + "$$[Fault_Ende]\n"
-        tmp = fifo.write(out)
-        fifo.flush()
-        return tmp
+def write_fault_list_to_pipe(fault_list, fifo):
+    fault_pack = fault_pb2.Fault_Pack()
+
+    for fault_instance in fault_list:
+        new_fault = fault_pack.faults.add()
+        new_fault.address = fault_instance.address
+        new_fault.type = fault_instance.type
+        new_fault.model = fault_instance.model
+        new_fault.lifespan = fault_instance.lifespan
+        new_fault.trigger_address = fault_instance.trigger.address
+        new_fault.trigger_hitcounter = fault_instance.trigger.hitcounter
+
+        mask_upper = (fault_instance.mask >> 64) & (pow(2, 64) - 1)
+        mask_lower = fault_instance.mask & (pow(2, 64) - 1)
+
+        new_fault.mask_upper = mask_upper
+        new_fault.mask_lower = mask_lower
+
+        new_fault.num_bytes = fault_instance.num_bytes
+
+    out = fault_pack.SerializeToString()
+
+    tmp = fifo.write(out)
+    fifo.flush()
+    return tmp
 
 
 def run_qemu(
@@ -757,7 +764,7 @@ def python_worker(
         p_qemu.start()
         logger.debug("Started QEMU process")
         control_fifo = open(paths["control"], mode="w")
-        config_fifo = open(paths["config"], mode="w")
+        config_fifo = open(paths["config"], mode="wb")
         data_fifo = open(paths["data"], mode="r", buffering=1)
         logger.debug("opened fifos")
         if "memorydump" in config_qemu:
@@ -775,8 +782,7 @@ def python_worker(
         enable_qemu(control_fifo)
         logger.debug("Started QEMU")
         """Write faults to config pipe"""
-        for fault in fault_list:
-            fault.write_to_fifo(config_fifo)
+        write_fault_list_to_pipe(fault_list, config_fifo)
         logger.debug("Wrote config to qemu")
         """
         From here Qemu has started execution. Now prepare for

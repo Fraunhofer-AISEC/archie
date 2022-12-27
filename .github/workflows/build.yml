@@ -18,7 +18,7 @@ jobs:
       uses: actions/checkout@v2
 
     - name: install packages
-      run: sudo apt update; sudo apt upgrade -y; sudo apt install -y build-essential ninja-build libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev python3-tables python3-pandas python3-prctl python3-json5
+      run: sudo apt update; sudo apt upgrade -y; sudo apt install -y build-essential ninja-build libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev python3-tables python3-pandas python3-prctl python3-json5 python3-protobuf libprotobuf-c-dev protobuf-compiler protobuf-c-compiler; pip install protobuf==4.21.12
 
     - name: Checkout submodules
       run: git submodule update --init
