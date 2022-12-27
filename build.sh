@@ -11,7 +11,7 @@ install_qemu_packages() {
 	if [ "${ID:-linux}" = "debian" ] || [ "${ID_LIKE#*debian*}" != "${ID_LIKE}" ]
 	then
 		echo "Looks like Debian!"
-		sudo apt-get install git build-essential ninja-build libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev
+		sudo apt-get install git build-essential ninja-build libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev libprotobuf-c-dev protobuf-compiler protobuf-c-compiler
 	else
 		echo "Distro Version not supported by script. Please install dependencies of QEMU by looking in the QEMU wiki"
 	fi
@@ -37,7 +37,12 @@ install_python3_distro() {
 	if [ "${ID:-linux}" = "debian" ] || [ "${ID_LIKE#*debian*}" != "${ID_LIKE}" ]
 	then
 		echo "Looks like Debian!"
-		sudo apt-get install python3-tables python3-pandas python3-prctl
+		sudo apt-get install python3-tables python3-pandas python3-prctl python3-protobuf
+
+		echo "Rebuild protobuf files to support the installed package versions"
+		cd protobuf
+		./generate_protobuf.sh
+		cd ..
 	else
 		echo "Distro package manager not yet supported"
 	fi
@@ -45,7 +50,7 @@ install_python3_distro() {
 
 install_python3_packages() {
 	echo "Install python3 packages"
-	echo "Schould this script use pip3 or the distro package manager?"
+	echo "Should this script use pip3 or the distro package manager?"
 	select answer in "pip3" "distro"; do
 		case $answer in
 			pip3 ) install_python3_pip3 ; break;;

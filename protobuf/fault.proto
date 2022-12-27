@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package archie;
+
+message Fault {
+  uint64 address = 1;
+  uint64 type = 2;
+  uint64 model = 3;
+  uint64 lifespan = 4;
+  uint64 trigger_address = 5;
+  uint64 trigger_hitcounter = 6;
+  uint64 mask_upper = 7;
+  uint64 mask_lower = 8;
+  uint32 num_bytes = 9;
+}
+
+message Fault_Pack {
+  repeated Fault faults = 1;
+}
+

@@ -46,11 +46,11 @@ jobs:
 
     - name: Install C Packages
       if: ${{ matrix.language == 'cpp'}}
-      run: sudo apt update; sudo apt upgrade -y; sudo apt install -y build-essential ninja-build libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev
+      run: sudo apt update; sudo apt upgrade -y; sudo apt install -y build-essential ninja-build libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev libprotobuf-c-dev protobuf-c-compiler
 
     - name: Install python Packages
       if: ${{matrix.language ==  'python'}}
-      run: sudo apt update; sudo apt upgrade -y; sudo apt install -y python3-tables python3-pandas python3-prctl libcap-dev
+      run: sudo apt update; sudo apt upgrade -y; sudo apt install -y python3-tables python3-pandas python3-prctl libcap-dev python3-protobuf; pip install protobuf==4.21.12
 
     - name: Build QEMU
       if: ${{ matrix.language == 'cpp'}}
