@@ -45,6 +45,7 @@
 #include "tb_faulted_collection.h"
 
 #include "fault.pb-c.h"
+#include "control.pb-c.h"
 
 //DEBUG
 #include <errno.h>
@@ -102,8 +103,6 @@ int tb_exec_order_enabled;
 int tb_exec_order_ring_buffer;
 
 
-
-
 /* data structures for memory access */
 /* avl tree is used for insn address */
 typedef struct mem_info_t mem_info_t;
@@ -132,29 +131,6 @@ static void free_end_point_list(struct end_point_t *list)
 		free(cur);
 		cur = tmp;
 	}
-}
-
-static struct end_point_t *get_end_point_tail(struct end_point_t *list,
-											  uint64_t type)
-{
-	struct end_point_t *cur = list;
-
-	/* Find entry which flag "type" not set */
-	while ((cur->location.trignum & type) && cur->next != NULL)
-	{
-		cur = cur->next;
-	}
-
-	/* We did not find an empty entry, create a new one */
-	if (cur->location.trignum & type)
-	{
-		cur->next = malloc(sizeof(struct end_point_t));
-		cur = cur->next;
-		cur->location.trignum = 0;
-		cur->next = NULL;
-	}
-
-	return cur;
 }
 
 /**
@@ -281,6 +257,7 @@ int parse_args(int argc, char **argv, GString *out)
 		{
 			char *p = opt + 8;
 			g_string_append_printf(out, "[Info]: Start readout of control fifo %s\n", p);
+			mkfifo(p, 0660);
 			pipes->control = open(p, FIFO_READ);
 		}
 		else if (g_str_has_prefix(opt, "config="))
@@ -389,20 +366,18 @@ int qemu_setup_config_contains_char(GString* out, char c)
 }
 
 
-int readout_config_pipe(size_t max, uint8_t *out);
+int readout_pipe(size_t max, uint8_t *out, enum Pipe_type type);
 
 /**
  *
  * qemu_setup_config
  *
- * This function reads the config from the config pipe. It will only read one fault configuration.
- * If multiple faults should be used, call this function multiple times
+ * This function reads the config from the config pipe. It will read all fault configurations.
+ *
  */
 
-
-int qemu_setup_config_protobuf()
+int qemu_setup_config()
 {
-	Archie__Fault *fault;
 	size_t message_buff_size = 1024;
 
 	uint8_t* conf = (uint8_t*) malloc(sizeof(char) * message_buff_size);
@@ -414,7 +389,7 @@ int qemu_setup_config_protobuf()
 	g_autoptr(GString) out = g_string_new("");
 	g_string_printf(out, "[Info]: Start readout of FIFO\n");
 	
-	int msg_size = readout_config_pipe(message_buff_size, conf);
+	int msg_size = readout_pipe(message_buff_size, conf, CONFIG_PIPE);
 	if(msg_size <= 0){
 		qemu_plugin_outs("[DEBUG]: No message on FIFO\n");
 		return -1;
@@ -426,7 +401,7 @@ int qemu_setup_config_protobuf()
 		qemu_plugin_outs("[DEBUG]: Error unpacking the message from pipe\n");
 		return -1;
 	}
-	
+
 	size_t num_faults = fault_pack->n_faults;
 	Archie__Fault* fault_array = *fault_pack->faults;
 
@@ -460,7 +435,7 @@ int qemu_setup_config_protobuf()
 		int res = add_fault(fault_array[i].address, fault_array[i].type, 
 							fault_array[i].model, fault_array[i].lifespan,
 							fault_mask, fault_array[i].trigger_address, 
-				  			fault_array[i].trigger_hitcounter, fault_array[i].num_bytes);
+				  			fault_array[i].trigger_hitcounter, (uint8_t) fault_array[i].num_bytes);
 
 		
 		if(res < 0){
@@ -469,6 +444,9 @@ int qemu_setup_config_protobuf()
 		}
 	}
 	
+	free(conf);
+	archie__fault__pack__free_unpacked(fault_pack, NULL);
+
 	g_string_append(out, "[Info]: Fault pipe read done\n");
 	qemu_plugin_outs(out->str);
 	
@@ -1062,205 +1040,134 @@ static void vcpu_translateblock_translation_event(qemu_plugin_id_t id, struct qe
 	}
 }
 
-int readout_config_pipe(size_t max, uint8_t *out)
+int readout_pipe(size_t max, uint8_t *out, enum Pipe_type type)
 {
-	int n_read = read(pipes->config, out, max);
+	int n_read = 0;
+
+	switch(type){
+		case CONFIG_PIPE:
+			n_read = read(pipes->config, out, max);
+			break;
+		case CONTROL_PIPE:
+			n_read = read(pipes->control, out, max);
+			break;
+		case DATA_PIPE:
+			n_read = read(pipes->data, out, max);
+			break;
+	}
+
+	if(n_read == -1)
+	{
+		qemu_plugin_outs("[DEBUG]: Readout pipe, no character found or too much read\n");
+		return -1;
+	}
 
 	return n_read;
 }
 
-
-void readout_control_pipe(GString *out)
-{
-	char c = ' ';
-	int ret = 0;
-	while(c != '\n')
-	{
-		ret = read(pipes->control, &c, 1);
-		if(ret != 1)
-		{
-			qemu_plugin_outs("[DEBUG]: Readout config, no character found or too much read\n");
-			c = ' ';
-		}
-		else
-		{
-			g_string_append_c(out, c);
-		}
-	}
-}
-
-int readout_control_mode(GString *conf)
-{
-	if(strstr(conf->str, "[Config]"))
-	{
-		return 1;
-	}
-	if(strstr(conf->str, "[Start]"))
-	{
-		return 2;
-	}
-	if(strstr(conf->str, "[Memory]"))
-	{
-		return 3;
-	}
-	return -1;
-}
-
-int readout_control_memory(GString *conf)
-{
-	if(strstr(conf->str, "memoryregion: "))
-	{
-		if(strstr(conf->str, "||"))
-		{
-			uint64_t baseaddress = strtoimax(strstr(conf->str, "memoryregion: ")+ 13, NULL, 0);
-			uint64_t len = strtoimax(strstr(conf->str, "||")+ 2, NULL, 0);
-			insert_memorydump_config(baseaddress, len);
-			return 1;
-		}
-	}
-	return -1;
-}
-
-int readout_control_config(GString *conf)
-{
-	if(strstr(conf->str, "max_duration: "))
-	{
-		// convert number in string to number
-		tb_counter_max = strtoimax(strstr(conf->str,"max_duration: ") + 13, NULL, 0 );
-		return 1;
-	}
-	if(strstr(conf->str, "num_faults: "))
-	{
-		// convert number in string to number
-		fault_number = strtoimax(strstr(conf->str,"num_faults: ") + 11, NULL, 0 );
-		return 1;
-	}
-	if(strstr(conf->str, "start_address: "))
-	{
-		// convert number in string to number
-		start_point.address = strtoimax(strstr(conf->str, "start_address: ") + 14, NULL, 0);
-		start_point.trignum = start_point.trignum | 2;
-		return 1;
-	}
-	if(strstr(conf->str, "start_counter: "))
-	{
-		// convert number in string to number
-		start_point.hitcounter = strtoimax(strstr(conf->str, "start_counter: ") + 14, NULL, 0);
-		start_point.trignum = start_point.trignum | 1;
-		return 1;
-	}
-	if(strstr(conf->str, "end_address: "))
-	{
-		struct end_point_t *end_point_p = get_end_point_tail(end_point, 2);
-
-		// convert number in string to number
-		end_point_p->location.address = strtoimax(strstr(conf->str, "end_address: ") + 12, NULL, 0);
-		end_point_p->location.trignum |= 2;
-		return 1;
-	}
-	if(strstr(conf->str, "end_counter: "))
-	{
-		struct end_point_t *end_point_p = get_end_point_tail(end_point, 1);
-
-		// convert number in string to number
-		end_point_p->location.hitcounter = strtoimax(strstr(conf->str, "end_counter: ") + 12, NULL, 0);
-		end_point_p->location.trignum |= 1;
-		return 1;
-	}
-	if(strstr(conf->str, "num_memregions: "))
-	{
-		int tmp = strtoimax(strstr(conf->str, "num_memregions: ") + 16, NULL, 0);
-		init_memory(tmp);
-		return 1;
-	}
-	if(strstr(conf->str, "enable_mem_info"))
-	{
-		mem_info_list_enabled = 1;
-		return 1;
-	}
-	if(strstr(conf->str, "disable_mem_info"))
-	{
-		mem_info_list_enabled = 0;
-		return 1;
-	}
-	if(strstr(conf->str, "enable_tb_info"))
-	{
-		tb_info_enabled = 1;
-		return 1;
-	}
-	if(strstr(conf->str, "disable_tb_info"))
-	{
-		tb_info_enabled = 0;
-		return 1;
-	}
-	if(strstr(conf->str, "enable_tb_exec_list"))
-	{
-		tb_exec_order_enabled = 1;
-		return 1;
-	}
-	if(strstr(conf->str, "disable_tb_exec_list"))
-	{
-		tb_exec_order_enabled = 0;
-		return 1;
-	}
-	if(strstr(conf->str, "tb_exec_list_ring_buffer"))
-	{
-		tb_exec_order_ring_buffer = 1;
-		return 1;
-	}
-	return -1;
-
-}
-
 int readout_control_qemu()
 {
-	g_autoptr(GString) conf = g_string_new("");
-	char c = ' ';
-	int ret = 0;
-	int mode = 0;
-	while(mode != 2)
+	size_t message_buff_size = 2048;
+	
+	uint8_t* control = (uint8_t*) malloc(sizeof(char) * message_buff_size);
+	if(control == NULL){
+		qemu_plugin_outs("[DEBUG]: Error allocating memory for incoming control message\n");
+		return -1;
+	}
+
+	int msg_size = readout_pipe(message_buff_size, control, CONTROL_PIPE);
+	if(msg_size <= 0){
+		qemu_plugin_outs("[DEBUG]: No message on FIFO\n");
+		return -1;
+	}
+
+	// Unpack message from protobuf binary format
+	Archie__Config* config;
+	config = archie__config__unpack(NULL, msg_size, control);
+	if (config == NULL)
 	{
-		g_string_printf(conf, " ");
-		readout_control_pipe(conf);
-		if(strstr(conf->str, "$$$"))
-		{
-			mode = readout_control_mode(conf);
-			if(mode == -1)
-			{
-				qemu_plugin_outs("[ERROR]: Unknown Command\n");
+		qemu_plugin_outs("[DEBUG]: Error unpacking the message from pipe\n");
+		return -1;
+	}
+
+	// Parse the control config
+	tb_counter_max = (int) config->max_duration;
+	fault_number = (int) config->num_faults;
+	
+	if(config->exists_start){
+		start_point.address = config->start_address;
+		start_point.trignum = start_point.trignum | 2;
+
+		start_point.hitcounter = config->start_counter;
+		start_point.trignum = start_point.trignum | 1;
+	}
+
+	size_t size_end_points = config->n_end_list;
+    struct end_point_t *cur = end_point;
+    if(size_end_points > 0)
+    {
+        /* Head of the end_point is already malloced */
+        cur->location.address = config->end_list[0]->address;
+        cur->location.hitcounter = config->end_list[0]->counter;
+        cur->location.trignum |= 3; 
+    }
+
+	for(size_t i = 1; i < size_end_points; ++i)
+	{
+		cur->next = malloc(sizeof(struct end_point_t));
+		cur = cur->next;
+
+		cur->location.address = config->end_list[i]->address;
+		cur->location.hitcounter = config->end_list[i]->counter;
+        /* location.trignum is not initialized as 0 thus |= can not be used */
+		cur->location.trignum = 3;
+        cur->next = NULL;
+	}
+
+	mem_info_list_enabled = config->mem_info;
+
+	if(config->exists_tb_info){
+		tb_info_enabled = config->tb_info;
+	}
+
+	if(config->exists_tb_exec_list){
+		tb_exec_order_enabled= config->tb_exec_list;
+	}
+
+	if(config->exists_ring_buffer){
+		tb_exec_order_ring_buffer = config->tb_exec_list_ring_buffer;
+	}
+	// End of control config
+
+	// Parse memory config
+	if(config->exists_memory_dump){
+        int status = init_memory(config->num_memregions);
+        if(status < 0){
+            qemu_plugin_outs("[DEBUG]: Error initializing memory\n");
+            return -1;
+        }
+
+		size_t n_memory_region = config->n_memorydump;
+		for(int i = 0; i < n_memory_region; ++i){
+			uint64_t baseaddress = (uint64_t) config->memorydump[i]->address;
+			uint64_t len = (uint64_t) config->memorydump[i]->length;
+
+			if(insert_memorydump_config(baseaddress, len) < 0){
+				qemu_plugin_outs("[DEBUG]: Error inserting memorydump\n");
 				return -1;
 			}
 		}
-		else
-		{
-			if(strstr(conf->str, "$$"))
-			{
-				if(mode == 1)
-				{
-					if(readout_control_config(conf) == -1)
-					{
-						qemu_plugin_outs("[ERROR]: Unknown Parameter\n");
-						return -1;
-					}
-				}
-				if(mode == 3)
-				{
-					if(readout_control_memory(conf) == -1)
-					{
-						qemu_plugin_outs("[ERROR]: Unknown Parameter\n");
-						return -1;
-					}
-				}
-			}
-		}
-
 	}
+	// End of memory config
+	free(control);
+	archie__config__free_unpacked(config, NULL);
+	
 	if(memory_module_configured() == 0)
 	{
 		init_memory(1);
 	}
 	qemu_plugin_outs("[DEBUG]: Finished readout control. Now start readout of config\n");
-	if(qemu_setup_config_protobuf() < 0)
+	if(qemu_setup_config() < 0)
 	{
 		qemu_plugin_outs("[ERROR]: Something went wrong in readout of config pipe\n");
 		return -1;

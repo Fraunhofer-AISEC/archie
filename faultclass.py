@@ -24,6 +24,7 @@ import time
 import pandas as pd
 import prctl
 
+import control_pb2
 import fault_pb2
 from util import gather_process_ram_usage
 
@@ -659,63 +660,60 @@ def delete_fifos():
 
     os.rmdir(path)
 
-
-def configure_qemu(control, config_qemu, num_faults, memorydump_list, goldenrun):
+def configure_qemu(control, config_qemu, num_faults, memorydump_list,
+                   goldenrun):
     """
     Function to write commands and configuration needed to start qemu plugin
     """
-    out = "\n$$$[Config]\n"
-    out = out + "$$ max_duration: {}\n".format(config_qemu["max_instruction_count"])
-    out = out + "$$ num_faults: {}\n".format(num_faults)
+    control_message = control_pb2.Config()
+
+    control_message.max_duration = config_qemu["max_instruction_count"]
+    control_message.num_faults = num_faults
 
     if "tb_exec_list" in config_qemu:
-        if config_qemu["tb_exec_list"] is False:
-            out = out + "$$disable_tb_exec_list\n"
-        else:
-            out = out + "$$enable_tb_exec_list\n"
+        control_message.has_tb_exec_list = True
+        control_message.tb_exec_list = config_qemu["tb_exec_list"]
 
     if "tb_info" in config_qemu:
-        if config_qemu["tb_info"] is False:
-            out = out + "$$disable_tb_info\n"
-        else:
-            out = out + "$$enable_tb_info\n"
+        control_message.has_tb_info = True
+        control_message.tb_info = config_qemu["tb_info"]
 
     if "mem_info" in config_qemu and config_qemu["mem_info"]:
-        out = out + "$$enable_mem_info\n"
+        control_message.mem_info = True
     else:
-        out = out + "$$disable_mem_info\n"
+        control_message.mem_info = False
 
     if "start" in config_qemu:
-        out = out + "$$ start_address: {}\n".format((config_qemu["start"])["address"])
-        out = out + "$$ start_counter: {}\n".format((config_qemu["start"])["counter"])
+        control_message.exists_start = True
+        control_message.start_address = (config_qemu["start"])["address"]
+        control_message.start_counter = (config_qemu["start"])["counter"]
 
     if "end" in config_qemu:
+        control_message.exists_end = True
         for end_loc in config_qemu["end"]:
-            out = out + "$$ end_address: {}\n".format(end_loc["address"])
-            out = out + "$$ end_counter: {}\n".format(end_loc["counter"])
+            end_instance = control_message.end_list.add()
+
+            end_instance.address = end_loc["address"]
+            end_instance.counter = end_loc["counter"]
 
     # If enabled, use the ring buffer for all runs except for the goldenrun
     if config_qemu["ring_buffer"] is True and goldenrun is False:
-        out = out + "$$tb_exec_list_ring_buffer\n"
+        control_message.exists_ring_buffer = True
+        control_message.tb_exec_list_ring_buffer = True
 
     if memorydump_list is not None:
-        out = out + "$$num_memregions: {}\n".format(len(memorydump_list))
-        out = out + "$$$[Memory]\n"
+        control_message.exists_memory_dump = True
+        control_message.num_memregions = len(memorydump_list)
+
         for memorydump in memorydump_list:
-            out = out + "$$memoryregion: {} || {}\n".format(
-                memorydump["address"], memorydump["length"]
-            )
+            memory_region = control_message.memorydump.add()
+
+            memory_region.address = memorydump["address"]
+            memory_region.length = memorydump["length"]
+
+    out = control_message.SerializeToString()
     control.write(out)
     control.flush()
-
-
-def enable_qemu(control):
-    """
-    Starts qemu plugin. Until this point it actively reads from control pipe.
-    """
-    control.write("\n$$$[Start]\n")
-    control.flush()
-
 
 def python_worker(
     fault_list,
@@ -763,7 +761,7 @@ def python_worker(
         )
         p_qemu.start()
         logger.debug("Started QEMU process")
-        control_fifo = open(paths["control"], mode="w")
+        control_fifo = open(paths["control"], mode="wb")
         config_fifo = open(paths["config"], mode="wb")
         data_fifo = open(paths["data"], mode="r", buffering=1)
         logger.debug("opened fifos")
@@ -776,10 +774,10 @@ def python_worker(
             goldenrun = True
         else:
             goldenrun = False
-        configure_qemu(
-            control_fifo, config_qemu, len(fault_list), memorydump, goldenrun
-        )
-        enable_qemu(control_fifo)
+
+        configure_qemu(control_fifo, config_qemu, len(fault_list), memorydump,
+                       goldenrun)
+
         logger.debug("Started QEMU")
         """Write faults to config pipe"""
         write_fault_list_to_pipe(fault_list, config_fifo)
