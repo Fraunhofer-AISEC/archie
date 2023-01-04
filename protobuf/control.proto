@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package archie;
+
+message Config {
+  int64 max_duration = 1;
+  int64 num_faults = 2;
+  bool tb_exec_list = 3;
+  bool tb_info = 4;
+  bool mem_info = 5;
+  uint64 start_address = 6;
+  uint64 start_counter = 7;
+  repeated End end_list = 8;
+  bool tb_exec_list_ring_buffer = 9;
+  int64 num_memregions = 10;
+  repeated Memory_Region memorydump = 11;
+  bool exists_tb_exec_list = 12;
+  bool exists_tb_info = 13;
+  bool exists_start = 14;
+  bool exists_end = 15;
+  bool exists_memory_dump = 16;
+  bool exists_ring_buffer = 17;
+}
+
+message End {
+  uint64 address = 1;
+  uint64 counter = 2;
+}
+
+message Memory_Region {
+  uint64 address = 1;
+  uint64 length = 2;
+}

@@ -28,6 +28,7 @@
 
 enum{ DATA, INSTRUCTION, REGISTER};
 enum{ SET0, SET1, TOGGLE, OVERWRITE};
+enum Pipe_type { CONFIG_PIPE, CONTROL_PIPE, DATA_PIPE};
 
 
 int register_live_faults_callback(fault_list_t *fault);
