@@ -98,13 +98,17 @@ make clean && make
 cd ..
 
 echo "Test ARCHIE"
-python3 controller.py --debug --qemu qemuconf.json --fault fault.json test.hdf5
+cd examples/stm32
+./run.sh
+cd - && cd examples/riscv64
+./run.sh
+cd -
 
-echo "Do you want to delete log files and HDF5 file?"
+echo "Do you want to delete log files and HDF5 file inside the example directory?"
 select yn in "YES" "NO"; do
 	case $yn in
-		YES ) rm log_* && rm test.hdf5 && echo "Deleted log and HDF5 files"; break;;
-		NO ) echo "cmd to delete: rm log_* && rm test.hdf5"; break;;
+		YES ) rm examples/stm32/log_* && rm examples/stm32/output.hdf5 && rm examples/riscv64/log_* && rm examples/riscv64/output.hdf5 && echo "Deleted log and HDF5 files"; break;;
+		NO ) echo "cmd to delete: rm log_* && rm output.hdf5"; break;;
 	esac
 	echo "Please type the number corresponding to Yes or No"
 done

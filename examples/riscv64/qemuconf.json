@@ -1,0 +1,8 @@
+{
+	"qemu" : "../../qemu/build/debug/riscv64-softmmu/qemu-system-riscv64",
+	"bios" : "none",
+	"kernel" : "minimal.elf",
+	"plugin" : "../../faultplugin/libfaultplugin.so",
+	"machine" : "virt",
+	"additional_qemu_args" : ""
+}
