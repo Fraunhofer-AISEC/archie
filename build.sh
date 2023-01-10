@@ -89,7 +89,7 @@ if [[ ! -e $build_dir ]]; then
 	mkdir -p $build_dir
 fi
 cd $build_dir
-./../../configure --target-list=arm-softmmu --enable-debug --enable-plugins --disable-sdl --disable-gtk --disable-curses --disable-vnc
+./../../configure --target-list=arm-softmmu,riscv64-softmmu --enable-debug --enable-plugins --disable-sdl --disable-gtk --disable-curses --disable-vnc
 make -j $(nproc --all)
 
 echo "Building faultplugin"
