@@ -86,9 +86,14 @@ def write_fault_list_to_pipe(fault_list, fifo):
 
         new_fault.num_bytes = fault_instance.num_bytes
 
-    out = fault_pack.SerializeToString()
+    message_size = fault_pack.ByteSize()
+    message_size_string = str(message_size)
+    fifo.write(message_size_string.encode())
+    fifo.write("\n".encode())
 
+    out = fault_pack.SerializeToString()
     tmp = fifo.write(out)
+
     fifo.flush()
     return tmp
 
@@ -711,9 +716,15 @@ def configure_qemu(control, config_qemu, num_faults, memorydump_list,
             memory_region.address = memorydump["address"]
             memory_region.length = memorydump["length"]
 
+    message_size = control_message.ByteSize()
+    message_size_string = str(message_size) + '\n'
+    control.write(message_size_string.encode())
+    
     out = control_message.SerializeToString()
     control.write(out)
+
     control.flush()
+
 
 def python_worker(
     fault_list,
