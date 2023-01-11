@@ -365,8 +365,8 @@ int qemu_setup_config_contains_char(GString* out, char c)
 	return i;
 }
 
-
-int readout_pipe(size_t max, uint8_t *out, enum Pipe_type type);
+size_t readout_pipe_size(enum Pipe_type type);
+int readout_pipe(size_t to_read, uint8_t *out, enum Pipe_type type);
 
 /**
  *
@@ -378,7 +378,11 @@ int readout_pipe(size_t max, uint8_t *out, enum Pipe_type type);
 
 int qemu_setup_config()
 {
-	size_t message_buff_size = 1024;
+    size_t message_buff_size = readout_pipe_size(CONFIG_PIPE);
+    if (message_buff_size <= 0) {
+        qemu_plugin_outs("[DEBUG]: Config pipe is empty\n");
+        return -1;
+    }
 
 	uint8_t* conf = (uint8_t*) malloc(sizeof(char) * message_buff_size);
 	if(conf == NULL){
@@ -1040,35 +1044,80 @@ static void vcpu_translateblock_translation_event(qemu_plugin_id_t id, struct qe
 	}
 }
 
-int readout_pipe(size_t max, uint8_t *out, enum Pipe_type type)
+size_t readout_pipe_size(enum Pipe_type type)
 {
-	int n_read = 0;
+	int pipe_fd;
 
-	switch(type){
+	switch (type) {
 		case CONFIG_PIPE:
-			n_read = read(pipes->config, out, max);
+			pipe_fd = pipes->config;
 			break;
 		case CONTROL_PIPE:
-			n_read = read(pipes->control, out, max);
+			pipe_fd = pipes->control;
 			break;
 		case DATA_PIPE:
-			n_read = read(pipes->data, out, max);
-			break;
+			pipe_fd = pipes->data;
 	}
 
-	if(n_read == -1)
-	{
-		qemu_plugin_outs("[DEBUG]: Readout pipe, no character found or too much read\n");
-		return -1;
+	g_autoptr(GString) size_str = g_string_new("");
+	char c = ' ';
+	while (c != '\n') {
+		int ret = read(pipe_fd, &c, 1);
+		if (ret != 1) {
+			qemu_plugin_outs("Size of the pipe could not be read!\n");
+			qemu_plugin_outs(strerror(errno));
+			return 0;
+		}
+
+		g_string_append_c(size_str, c);
 	}
 
-	return n_read;
+    return strtoumax(size_str->str, NULL, 0);
 }
+
+int readout_pipe(size_t to_read, uint8_t* out, enum Pipe_type type)
+{
+    int total_read = 0;
+    int pipe_fd;
+    uint8_t* p_out = out;
+
+    switch (type) {
+        case CONFIG_PIPE:
+            pipe_fd = pipes->config;
+            break;
+        case CONTROL_PIPE:
+            pipe_fd = pipes->control;
+            break;
+        case DATA_PIPE:
+            pipe_fd = pipes->data;
+    }
+
+    int n_chars_received = 0;
+    int left = to_read;
+    while(total_read < to_read){
+		n_chars_received = read(pipe_fd, p_out, left);
+		if (n_chars_received == -1) {
+			qemu_plugin_outs("[ERROR]: Readout pipe, no character found or too much read\n");
+			return -1;
+		}
+
+        left -= n_chars_received;
+        total_read += n_chars_received;
+		p_out += n_chars_received;
+    }
+
+    return total_read;
+}
+
 
 int readout_control_qemu()
 {
-	size_t message_buff_size = 2048;
-	
+	size_t message_buff_size = readout_pipe_size(CONTROL_PIPE);
+	if (message_buff_size == 0) {
+		qemu_plugin_outs("[DEBUG]: Control pipe is empty\n");
+		return -1;
+	}
+
 	uint8_t* control = (uint8_t*) malloc(sizeof(char) * message_buff_size);
 	if(control == NULL){
 		qemu_plugin_outs("[DEBUG]: Error allocating memory for incoming control message\n");
