@@ -21,7 +21,6 @@
 
 #include "faultdata.h"
 
-
 typedef struct
 {
 	uint64_t address;
@@ -235,64 +234,52 @@ int read_memoryregion(uint64_t memorydump_position)
 	return ret;
 }
 
-void readout_memorydump_dump(uint64_t memorydump_position, uint64_t dump_pos)
+void readout_memorydump(uint64_t memorydump_position, Archie__MemDumpObject* mem_dump_object)
 {
-	g_autoptr(GString) out = g_string_new("");
 	memorydump_t *current = *(memdump + memorydump_position);
-	uint8_t *dump = *(current->buf + dump_pos);
-	int i = 0;
-	while( i < current->len)
-	{
-		if(i + 8 < current->len)
-		{
-			g_string_printf(out, "$$ B: 0x%02hhx 0x%02hhx 0x%02hhx 0x%02hhx 0x%02hhx 0x%02hhx 0x%02hhx 0x%02hhx\n", *(dump + i + 0), *(dump + i + 1), *(dump + i + 2), *(dump + i + 3), *(dump + i + 4), *(dump + i + 5), *(dump + i + 6), *(dump + i + 7));
-			i = i+8;
-		}
-		else
-		{
-			if(i % 8 == 0)
-			{
-				g_string_printf(out, "$$ B: 0x%02hhx", *(dump + i));
-			}
-			else
-			{
-				g_string_printf(out, " 0x%02hhx", *(dump + i));
-			}
-			if((i % 8 == 7) || (i == current->len - 1))
-			{
-				g_string_append(out, "\n");
-			}
-			i++;
-		}
-		plugin_write_to_data_pipe(out->str, out->len);
+    mem_dump_object->address = current->address;
+    mem_dump_object->len = current-> len;
+    mem_dump_object->used_dumps = current->used_dumps;
 
-	}
-}
+    Archie__MemDump** mem_dump_list;
+    mem_dump_list = malloc(sizeof(Archie__MemDump*) * current->used_dumps);
+    mem_dump_object->n_dumps = current->used_dumps;
 
-void readout_memorydump(uint64_t memorydump_position)
-{
-	g_autoptr(GString) out = g_string_new("");
-	memorydump_t *current = *(memdump + memorydump_position);
-	g_string_printf(out, "$$[memorydump]: %li | %li | %li \n",current->address, current->len, current->used_dumps);
-	for(int i = 0; i < current->used_dumps; i++)
+    for(int i = 0; i < current->used_dumps; i++)
 	{
-		g_string_append_printf(out, "$$[Dump start]\n");
-		plugin_write_to_data_pipe(out->str, out->len);
-		readout_memorydump_dump(memorydump_position, i);
-		g_string_printf(out, "$$[Dump end]\n");
+        mem_dump_list[i] = malloc(sizeof(Archie__MemDump));
+        archie__mem_dump__init(mem_dump_list[i]);
+		
+		uint8_t *dump = *(current->buf + i);
+
+		mem_dump_list[i]->mem.len = current->len;
+		mem_dump_list[i]->mem.data = dump;
 	}
-	g_string_append(out, "$$[memorydump end]\n");
-	plugin_write_to_data_pipe(out->str,  out->len);
+
+    mem_dump_object->dumps = mem_dump_list;
 }
 
 
-void readout_all_memorydump(void)
+void readout_all_memorydump(Archie__Data * msg)
 {
-	g_autoptr(GString) out = g_string_new("");
-	g_string_printf(out, "$$$[Memdump] \n");
-	plugin_write_to_data_pipe(out->str, out->len);
+	// Allocate and init memory for list of memory dump infos on protobuf message
+	if(used_memdump == 0)
+	{
+		return;
+	}
+    
+    Archie__MemDumpObject** mem_dump_list;
+    mem_dump_list = malloc(sizeof(Archie__MemDumpObject*) * used_memdump);
+    msg->n_mem_dump_object_list = used_memdump;
+
 	for(int i = 0; i < used_memdump; i++)
 	{
-		readout_memorydump(i);
+        mem_dump_list[i] = malloc(sizeof(Archie__MemDumpObject));
+        archie__mem_dump_object__init(mem_dump_list[i]);
+
+		readout_memorydump(i, mem_dump_list[i]);
 	}
+
+    msg->mem_dump_object_list = mem_dump_list;
 }
+

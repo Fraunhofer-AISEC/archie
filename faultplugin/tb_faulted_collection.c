@@ -144,24 +144,50 @@ void check_tb_faulted(struct qemu_plugin_tb *tb)
 	}
 }
 
-void dump_tb_faulted_data(void)
+size_t get_tb_faulted_data_count(void){
+    size_t size = 0;
+    tb_faulted_t *item = tb_faulted_list;
+    while(item != NULL)
+    {
+        if(item->assembler != NULL)
+        {
+            size++;
+        }
+        item = item->next;
+    }
+
+    return size;
+}
+
+void dump_tb_faulted_data(Archie__Data* msg)
 {
 	if(tb_faulted_list == NULL)
 	{
 		qemu_plugin_outs("[TBFaulted]: Found no tb faulted list\n");
 		return;
 	}
-	g_autoptr(GString) out = g_string_new("");
-	g_string_printf(out, "$$$[TB Faulted]\n");
-	plugin_write_to_data_pipe(out->str, out->len);
+
+    size_t size = get_tb_faulted_data_count();
+    Archie__FaultedData** faulted_data_list;
+    faulted_data_list = malloc(sizeof(Archie__FaultedData*) * size);
+
+    int counter = 0;
 	tb_faulted_t *item = tb_faulted_list;
 	while(item != NULL)
 	{
 		if(item->assembler != NULL)
 		{
-			g_string_printf(out, "$$0x%lx | %s \n", item->trigger_address, item->assembler->str);
-			plugin_write_to_data_pipe(out->str, out->len);
+            faulted_data_list[counter] = malloc(sizeof(Archie__FaultedData));
+            archie__faulted_data__init(faulted_data_list[counter]);
+
+            faulted_data_list[counter]->trigger_address = item->trigger_address;
+            faulted_data_list[counter]->assembler = item->assembler->str;
+
+            counter++;
 		}
 		item = item->next;
 	}
+
+    msg->n_faulted_data_list = size;
+    msg->faulted_data_list = faulted_data_list;
 }

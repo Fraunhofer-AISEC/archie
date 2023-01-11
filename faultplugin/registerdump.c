@@ -54,13 +54,13 @@ void readout_arm_registers(registerdump_t * current);
 void readout_riscv_registers(registerdump_t * current);
 
 /**
- * read_arm_registers
+ * read_registers
  *
- * write registers to data pipe
+ * update protobuf message with register information
+ *
+ * returns 0 on success, -1 on fail
  */
-void read_arm_registers(void);
-
-void read_riscv_registers(void);
+void read_registers(Archie__ArchRegister* protobuf_reg);
 
 void init_register_module(int architecture)
 {
@@ -123,57 +123,76 @@ void readout_arm_registers(registerdump_t * current)
 }
 
 
-void read_register_module(void)
+void read_register_module(Archie__Data* msg)
 {
+    Archie__ArchRegister* reg = malloc(sizeof(Archie__ArchRegister));
+    archie__arch__register__init(reg);
+
 	if(arch == ARM)
 	{
 		qemu_plugin_outs("[DEBUG]: start reading arm registerdumps\n");
-		read_arm_registers();
-		return;
-	}
-	if(arch == RISCV)
+        reg->arch_type = ARM;
+	} else if(arch == RISCV)
 	{
 		qemu_plugin_outs("[DEBUG]: start reading riscv registerdump\n");
-		read_riscv_registers();
-		return;
-	}
-	qemu_plugin_outs("[ERROR]: [CRITICAL]: Unknown Architecture for register module");
+        reg->arch_type = RISCV;
+	} else {
+        qemu_plugin_outs("[ERROR]: [CRITICAL]: Unknown Architecture for register module");
+    }
+
+    read_registers(reg);
+    msg->arch_register = reg;
 }
 
-void read_riscv_registers(void)
-{
-	g_autoptr(GString) out = g_string_new("");
-	g_string_printf(out, "$$$[RiscV Registers]\n");
-	plugin_write_to_data_pipe(out->str, out->len);
-	registerdump_t* current = first_registerdump;
-	while(current != NULL)
-	{
-		g_string_printf(out, "$$ %lx | %lx ", current->pc, current->tbcount);
-		for(int i = 0; i < 33; i++)
-		{
-			g_string_append_printf(out, "| %lx ", current->regs[i]);
-		}
-		g_string_append(out, "\n");
-		plugin_write_to_data_pipe(out->str, out->len);
-		current = current->next;
-	}
+size_t get_register_dump_count(){
+    size_t size = 0;
+    registerdump_t* current = first_registerdump;
+    while(current != NULL)
+    {
+        size++;
+        current = current->next;
+    }
+
+    return size;
 }
 
-void read_arm_registers(void)
+void read_registers(Archie__ArchRegister* reg)
 {
-	g_autoptr(GString) out = g_string_new("");
-	g_string_printf(out, "$$$[Arm Registers]\n");
-	plugin_write_to_data_pipe(out->str, out->len);
-	registerdump_t* current = first_registerdump;
+    size_t n_register_dumps = get_register_dump_count();
+    Archie__RegisterDump** reg_dump_list;
+    reg_dump_list = malloc(sizeof(Archie__RegisterDump*) * n_register_dumps);
+
+    uint64_t register_size = 0;
+    switch(reg->arch_type){
+        case ARM:
+            register_size = 17;
+            break;
+        case RISCV:
+            register_size = 33;
+            break;
+    }
+
+    registerdump_t* current = first_registerdump;
+    int counter = 0;
 	while(current != NULL)
 	{
-		g_string_printf(out, "$$ %li | %li ", current->pc, current->tbcount);
-		for(int i = 0; i < 17; i++)
+        reg_dump_list[counter] = malloc(sizeof(Archie__RegisterDump));
+        archie__register_dump__init(reg_dump_list[counter]);
+
+        reg_dump_list[counter]->n_register_data = register_size;
+        reg_dump_list[counter]->register_data = malloc(sizeof(uint64_t) * register_size);
+		for(int i = 0; i < register_size; i++)
 		{
-			g_string_append_printf(out, "| %li ", current->regs[i]);
+            reg_dump_list[counter]->register_data[i] = current->regs[i];
 		}
-		g_string_append(out, "\n");
-		plugin_write_to_data_pipe(out->str, out->len);
+
+        reg_dump_list[counter]->pc = current->pc;
+        reg_dump_list[counter]->tb_count = current->tbcount;
+
+        counter++;
 		current = current->next;
 	}
+
+    reg->n_register_dumps = n_register_dumps;
+    reg->register_dumps = reg_dump_list;
 }

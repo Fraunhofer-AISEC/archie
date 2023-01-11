@@ -60,8 +60,8 @@ void check_tb_faulted(struct qemu_plugin_tb *tb);
 /**
  * dump_tb_faulted_data
  *
- * Write collected data to data pipe
+ * Write collected data protobuf message
  */
-void dump_tb_faulted_data(void);
+void dump_tb_faulted_data(Archie__Data* msg);
 
 #endif

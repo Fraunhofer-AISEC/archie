@@ -85,39 +85,43 @@ void tb_exec_order_free()
 /**
  * plugin_dump_tb_exec_order
  *
- * Print the order of translation blocks executed. Also provide a counter number, such that it can be later resorted in python
+ * Write the order of translation blocks executed. Also provide a counter number, such that it can be later resorted in python
  */
-void plugin_dump_tb_exec_order()
+void plugin_dump_tb_exec_order(Archie__Data* msg)
 {
 	uint64_t i = 0;
-	g_autoptr(GString) out = g_string_new("");
-	g_string_printf(out, "$$$[TB Exec]:\n");
-	plugin_write_to_data_pipe(out->str, out->len);
 
+    Archie__TbExecOrder** msg_tb_exec_order_list;
 	if (tb_exec_order_ring_buffer)
 	{
 		/*
 		 * If we logged less than TB_EXEC_RB_SIZE, the start of the buffer is
 		 * at index 0. Otherwise, it is stored in tb_exec_rb_list_index.
 		 */
-		if (num_exec_order >= TB_EXEC_RB_SIZE)
-		{
-			i = tb_exec_rb_list_index;
-		}
-
+		if (num_exec_order >= TB_EXEC_RB_SIZE) {
+            i = tb_exec_rb_list_index;
+            msg_tb_exec_order_list = malloc(sizeof(Archie__TbExecOrder *) * TB_EXEC_RB_SIZE);
+            msg->n_tb_exec_orders = TB_EXEC_RB_SIZE;
+        } else {
+            msg_tb_exec_order_list = malloc(sizeof(Archie__TbExecOrder*) * num_exec_order);
+            msg->n_tb_exec_orders = num_exec_order;
+        }
 		for (int j = 0; j < TB_EXEC_RB_SIZE && j < num_exec_order; j++)
 		{
+            msg_tb_exec_order_list[j] = malloc(sizeof(Archie__TbExecOrder));
+            archie__tb_exec_order__init(msg_tb_exec_order_list[j]);
+
 			if (tb_exec_rb_list[i].tb_info == NULL)
 			{
-				g_string_printf(out, "$$ 0x0000 | %li \n", tb_exec_rb_list[i].pos);
+                msg_tb_exec_order_list[j]->tb_info_exist = 0;
+                msg_tb_exec_order_list[j]->pos = tb_exec_rb_list[i].pos;
 			}
 			else
 			{
-				g_string_printf(out, "$$ 0x%lx | %li \n",
-								tb_exec_rb_list[i].tb_info->base_address,
-								tb_exec_rb_list[i].pos);
+                msg_tb_exec_order_list[j]->tb_info_exist = 1;
+                msg_tb_exec_order_list[j]->tb_base_address = tb_exec_rb_list[i].tb_info->base_address;
+                msg_tb_exec_order_list[j]->pos = tb_exec_rb_list[i].pos;
 			}
-			plugin_write_to_data_pipe(out->str, out->len);
 
 			i++;
 			if (i == TB_EXEC_RB_SIZE)
@@ -129,6 +133,12 @@ void plugin_dump_tb_exec_order()
 	else
 	{
 		tb_exec_order_t *item =  tb_exec_order_list;
+
+        msg_tb_exec_order_list = malloc(sizeof(Archie__TbExecOrder*) * num_exec_order);
+        if(msg_tb_exec_order_list == NULL){
+            qemu_plugin_outs("[DEBUG]: Tb_exec_order could not saved to protobuf message\n");
+        }
+        msg->n_tb_exec_orders = num_exec_order;
 
 		if(item == NULL)
 		{
@@ -148,19 +158,31 @@ void plugin_dump_tb_exec_order()
 		i = 0;
 		while(item != NULL)
 		{
+            msg_tb_exec_order_list[i] = malloc(sizeof(Archie__TbExecOrder));
+            if(msg_tb_exec_order_list[i] == NULL){
+                qemu_plugin_outs("[DEBUG]: Tb_exec_order could not saved to protobuf message\n");
+            }
+            archie__tb_exec_order__init(msg_tb_exec_order_list[i]);
+
 			if(item->tb_info == NULL)
 			{
-				g_string_printf(out, "$$ 0x0000 | %li \n", i);
+                msg_tb_exec_order_list[i]->tb_info_exist = 0;
+                msg_tb_exec_order_list[i]->pos = i;
 			}
 			else
 			{
-				g_string_printf(out, "$$ 0x%lx | %li \n", item->tb_info->base_address, i);
-			}
-			plugin_write_to_data_pipe(out->str, out->len);
+                msg_tb_exec_order_list[i]->tb_info_exist = 1;
+                msg_tb_exec_order_list[i]->tb_base_address = item->tb_info->base_address;
+                msg_tb_exec_order_list[i]->pos = i;
+            }
+
 			item = item->next;
 			i++;
 		}
+
 	}
+
+    msg->tb_exec_orders = msg_tb_exec_order_list;
 }
 
 /**

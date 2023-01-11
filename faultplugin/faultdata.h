@@ -24,6 +24,7 @@
 #include <inttypes.h>
 #include <stdlib.h>
 #include "faultplugin.h"
+#include "data.pb-c.h"
 
 #include <glib.h>
 
@@ -101,27 +102,28 @@ int read_memoryregion(uint64_t memorydump_position);
 /**
  * readout_memorydump_dump
  *
- * generate the string for data pipe for one memory region dump taken. It then writes each line directly to data pipe.
+ * parse the memory region to the protobuf message
  *
  * @param memorydump_position: select which region should be read in vector element
  * @param dump_pos: select which data dump should be written to pipe. Multiple can be taken during the execution of the config.
+ * @param protobuf_msg_memdump: protobuf mem_dump belonging to Mem_dump_object
  */
-void readout_memorydump_dump(uint64_t memorydump_position, uint64_t dump_pos);
+void readout_memorydump_dump(uint64_t memorydump_position, uint64_t dump_pos, Archie__MemDump* protobuf_msg_memdump);
 
 /**
  * readout_memorydump
  *
  * Call read_memorydump_dump for all available dumps inside the struct. All
- * dumps are printed to data pipe. Also print config for this memorydump to data pipe
+ * dumps are parsed to protobuf message. Also parse config for this memorydump
  *
  */
-void readout_memorydump(uint64_t memorydump_position);
+void readout_memorydump(uint64_t memorydump_position, Archie__MemDumpObject* mem_dump_object);
 
 /**
  * readout_all_memorydump
  *
  * This function will send all memorydumps through the data pipe 
  */
-void readout_all_memorydump(void);
+void readout_all_memorydump(Archie__Data* msg);
 
 #endif

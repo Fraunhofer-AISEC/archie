@@ -24,6 +24,8 @@
 #include "faultplugin.h"
 #include <qemu/qemu-plugin.h>
 
+#include "data.pb-c.h"
+
 /**
  * This enum is the internal value for all available architectures supported
  */
@@ -61,9 +63,9 @@ int add_new_registerdump(uint64_t tbcount);
 /**
  * read_register_module
  *
- * Readout structs and write them to data pipe
+ * Readout structs and write them to protobuf message
  */
-void read_register_module(void);
+void read_register_module(Archie__Data* protobuf_msg);
 
 
 #endif

@@ -25,6 +25,7 @@
 #include "qemu/osdep.h"
 #include <qemu/plugin.h>
 #include <qemu/qemu-plugin.h>
+#include "data.pb-c.h"
 
 /* Output TB data structures */
 typedef struct tb_info_t tb_info_t;
@@ -82,7 +83,7 @@ int tb_comparison_func(const void *tbl_a, const void *tbl_b, void * tbl_param);
  *
  *
  */
-void plugin_dump_tb_information();
+void plugin_dump_tb_information(Archie__Data*);
 
 tb_info_t * add_tb_info(struct qemu_plugin_tb *tb);
 

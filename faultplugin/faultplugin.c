@@ -46,6 +46,7 @@
 
 #include "fault.pb-c.h"
 #include "control.pb-c.h"
+#include "data.pb-c.h"
 
 //DEBUG
 #include <errno.h>
@@ -271,6 +272,7 @@ int parse_args(int argc, char **argv, GString *out)
 		{
 			char *p = opt + 5;
 			g_string_append_printf(out, "[Info]: Start readout of data fifo %s\n", p);
+			mkfifo(p, 0660);
 			pipes->data = open(p, FIFO_WRITE);
 		}
 		else
@@ -749,7 +751,6 @@ int plugin_write_to_data_pipe(char *str, size_t len)
 		ret = write( pipes->data, str, len);
 		if(ret == -1)
 		{
-			g_string_printf(out, "[DEBUG]: output string was: %s\n", str);
 			g_string_append_printf(out, "[DEBUG]: Value is negative. Something happened in write: %s\n", strerror(errno));
 			g_string_append_printf(out, "[DEBUG]: File descriptor is : %i\n", pipes->data);
 			qemu_plugin_outs(out->str);
@@ -762,30 +763,53 @@ int plugin_write_to_data_pipe(char *str, size_t len)
 }
 
 
+size_t get_mem_info_list_size(){
+    size_t size = 0;
+    mem_info_t *item = mem_info_list;
+    while(item != NULL)
+    {
+        size++;
+        item = item->next;
+    }
 
+    return size;
+}
 
 /**
  * plugin_dump_mem_information
  *
  * Write collected information about the memory accesses to data pipe
  */
-void plugin_dump_mem_information()
+void plugin_dump_mem_information(Archie__Data* msg)
 {
 	if(mem_info_list == NULL)
 	{
 		return;
 	}
-	g_autoptr(GString) out = g_string_new("");
-	g_string_printf(out, "$$$[Mem Information]:\n");
-	plugin_write_to_data_pipe(out->str, out->len);
+
+    size_t size = get_mem_info_list_size();
+    Archie__MemInfo** mem_info_arr;
+    mem_info_arr = malloc(sizeof(Archie__MemInfo*) * size);
+    msg->n_mem_info_list = size;
 
 	mem_info_t *item = mem_info_list;
+    int counter = 0;
 	while(item != NULL)
 	{
-		g_string_printf(out, "$$ 0x%lx | 0x%lx | 0x%lx | 0x%x | 0x%lx \n", item->ins_address, item->size, item->memmory_address, item->direction, item->counter);
-		plugin_write_to_data_pipe(out->str, out->len);
+        mem_info_arr[counter] = malloc(sizeof(Archie__MemInfo));
+        archie__mem_info__init(mem_info_arr[counter]);
+        mem_info_arr[counter]->ins_address = item->ins_address;
+        mem_info_arr[counter]->size = item->size;
+        mem_info_arr[counter]->memmory_address = item->memmory_address;
+        mem_info_arr[counter]->direction = item->direction;
+        mem_info_arr[counter]->counter = item->counter;
+
+        counter++;
+
 		item = item->next;
 	}
+
+    msg->mem_info_list = mem_info_arr;
 }
 
 /**
@@ -796,44 +820,71 @@ void plugin_dump_mem_information()
  */
 void plugin_end_information_dump(GString *end_reason)
 {
+    Archie__Data msg = ARCHIE__DATA__INIT;
+
 	int *error = NULL;
 	if(end_point->location.trignum == 4)
-	{
-		plugin_write_to_data_pipe("$$$[Endpoint]: 1\n", 17);
-	}
+        msg.endpoint = 1;
 	else
-	{
-		plugin_write_to_data_pipe("$$$[Endpoint]: 0\n", 17);
-	}
+        msg.endpoint = 0;
+
 	free_end_point_list(end_point);
-	plugin_write_to_data_pipe("$$$[End Reason]:", 16);
-	plugin_write_to_data_pipe(end_reason->str, end_reason->len);
-	plugin_write_to_data_pipe("\n", 1);
+
+    msg.end_reason = end_reason->str;
 	if(memory_module_configured())
 	{
 		qemu_plugin_outs("[DEBUG]: Read memory regions configured\n");
 		read_all_memory();
 	}
+
 	qemu_plugin_outs("[DEBUG]: Read registers\n");
 	add_new_registerdump(tb_counter);
-	qemu_plugin_outs("[DEBUG]: Start printing to data pipe tb information\n");
-	plugin_dump_tb_information();
+	qemu_plugin_outs("[DEBUG]: Start parsing tb information\n");
+	plugin_dump_tb_information(&msg);
 	if(tb_exec_order_enabled == 1)
 	{
-		qemu_plugin_outs("[DEBUG]: Start printing to data pipe tb exec\n");
-		plugin_dump_tb_exec_order();
+		qemu_plugin_outs("[DEBUG]: Start parsing tb exec\n");
+		plugin_dump_tb_exec_order(&msg);
 	}
-	qemu_plugin_outs("[DEBUG]: Start printing to data pipe tb mem\n");
-	plugin_dump_mem_information();
+	qemu_plugin_outs("[DEBUG]: Start parsing tb mem\n");
+	plugin_dump_mem_information(&msg);
 	if(memory_module_configured())
 	{
-		qemu_plugin_outs("[DEBUG]: Start printing to data pipe memorydump\n");
-		readout_all_memorydump();
+		qemu_plugin_outs("[DEBUG]: Start parsing memorydump\n");
+		readout_all_memorydump(&msg);
 	}
-	qemu_plugin_outs("[DEBUG]: Start printing to data pipe registerdumps\n");
-	read_register_module();
-	qemu_plugin_outs("[DEBUG]: Start printing to data pipe tb faulted\n");
-	dump_tb_faulted_data();
+
+	qemu_plugin_outs("[DEBUG]: Start parsing registerdumps\n");
+	read_register_module(&msg);
+	qemu_plugin_outs("[DEBUG]: Start parsing tb faulted\n");
+	dump_tb_faulted_data(&msg);
+
+    qemu_plugin_outs("[DEBUG]: Writing to the data pipe\n");
+    void *buf;                     // Buffer to store serialized data
+    size_t len;                  // Length of serialized data
+
+    len = archie__data__get_packed_size(&msg);
+
+    g_autoptr(GString) db = g_string_new("");
+    g_string_append_printf(db, "Size: %d\n", len);
+
+    g_string_append_printf(db, "Endpoint: %d\n", msg.endpoint);
+    g_string_append_printf(db, "End reason : %s\n", msg.end_reason);
+    g_string_append_printf(db, "Tb_information: %s\n", msg.tb_information[0]->assembler);
+    qemu_plugin_outs(db->str);
+
+    buf = malloc(len);
+    if(buf == NULL){
+        qemu_plugin_outs("[DEBUG]: Malloc for message failed!\n");
+    }
+
+    archie__data__pack(&msg, buf);
+    int status = plugin_write_to_data_pipe(buf, len);
+    if(status < 0){
+        qemu_plugin_outs("[DEBUG]: Write failed!!!\n");
+    }
+    free(buf);
+
 	qemu_plugin_outs("[DEBUG]: Information now in pipe, start deleting information in memory\n");
 	qemu_plugin_outs("[DEBUG]: Delete tb_info\n");
 	tb_info_free();
@@ -846,7 +897,7 @@ void plugin_end_information_dump(GString *end_reason)
 	qemu_plugin_outs("[DEBUG]: Delete tb_faulted\n");
 	tb_faulted_free();
 	qemu_plugin_outs("[DEBUG]: Finished\n");
-	plugin_write_to_data_pipe("$$$[END]\n", 9);
+
 	//Stop Qemu executing
 	exit(0);
 	*error = 0;
@@ -1165,12 +1216,13 @@ int readout_control_qemu()
 	{
 		cur->next = malloc(sizeof(struct end_point_t));
 		cur = cur->next;
-
+		
 		cur->location.address = config->end_list[i]->address;
 		cur->location.hitcounter = config->end_list[i]->counter;
         /* location.trignum is not initialized as 0 thus |= can not be used */
+
 		cur->location.trignum = 3;
-        cur->next = NULL;
+		cur->next = NULL;
 	}
 
 	mem_info_list_enabled = config->mem_info;
