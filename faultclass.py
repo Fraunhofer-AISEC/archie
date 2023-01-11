@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from enum import IntEnum
 import logging
 from multiprocessing import Process
 import os
@@ -25,11 +26,19 @@ import pandas as pd
 import prctl
 
 import control_pb2
+import data_pb2
 import fault_pb2
 from util import gather_process_ram_usage
 
+TB_EXEC_LIST_CHUNK_SIZE = 10000
+
 logger = logging.getLogger(__name__)
 qlogger = logging.getLogger("QEMU-" + __name__)
+
+
+class Register(IntEnum):
+    ARM = 0
+    RISCV = 1
 
 
 class Trigger:
@@ -156,18 +165,21 @@ def run_qemu(
         logger.warning(f"Terminate QEMU {index}")
 
 
-def readout_tbinfo(line):
+def readout_tbinfo(data_protobuf):
     """
     Builds the dict for tb info from line provided by qemu
     """
-    split = line.split("|")
-    tb = {}
-    tb["id"] = int(split[0], 0)
-    tb["size"] = int(split[1], 0)
-    tb["ins_count"] = int(split[2], 0)
-    tb["num_exec"] = int(split[3], 0)
-    tb["assembler"] = split[4].replace("!!", "\n")
-    return tb
+    tb_list = []
+    for tb_info in data_protobuf.tb_information:
+        tb = {}
+        tb["id"] = tb_info.base_address
+        tb["size"] = tb_info.size
+        tb["ins_count"] = tb_info.instruction_count
+        tb["num_exec"] = tb_info.num_of_exec
+        tb["assembler"] = tb_info.assembler.replace("!!", "\n")
+
+        tb_list.append(tb)
+    return tb_list
 
 
 def write_output_wrt_goldenrun(keyword, data, goldenrun_data):
@@ -189,16 +201,29 @@ def write_output_wrt_goldenrun(keyword, data, goldenrun_data):
     return data.to_dict("records")
 
 
-def readout_tbexec(line, tbexeclist, tbinfo, goldenrun):
+def readout_tbexec(data_protobuf):
     """
     Builds the dict for tb exec from line provided by qemu
     """
-    split = line.split("|")
-    # generate list element
-    execdic = {}
-    execdic["tb"] = int(split[0], 0)
-    execdic["pos"] = int(split[1], 0)
-    return execdic
+    pdtbexeclist = pd.DataFrame()
+    tbexeclist = []
+    for tb_exec_order in data_protobuf.tb_exec_orders:
+        # generate list element
+        execdic = {"tb": tb_exec_order.tb_base_address, "pos": tb_exec_order.pos}
+        tbexeclist.append(execdic)
+
+        if len(tbexeclist) <= TB_EXEC_LIST_CHUNK_SIZE:
+            continue
+
+        tmp = pd.DataFrame(tbexeclist)
+        pdtbexeclist = pd.concat([pdtbexeclist, tmp], ignore_index=True)
+        tbexeclist = []
+
+    if tbexeclist:
+        tmp = pd.DataFrame(tbexeclist)
+        pdtbexeclist = pd.concat([pdtbexeclist, tmp], ignore_index=True)
+
+    return pdtbexeclist
 
 
 def build_filters(tbinfogolden):
@@ -345,19 +370,23 @@ def filter_tb(tbexeclist, tbinfo, tbexecgolden, tbinfogolden, id_num):
     return [tbexecpd, tbinfopd.to_dict("records")]
 
 
-def readout_meminfo(line):
+def readout_meminfo(data_protobuf):
     """
-    Builds the dict for memory info from line provided by qemu
+    Builds the dict for memory info from protobuf message provided by qemu
     """
-    split = line.split("|")
-    mem = {}
-    mem["ins"] = int(split[0], 0)
-    mem["size"] = int(split[1], 0)
-    mem["address"] = int(split[2], 0)
-    mem["direction"] = int(split[3], 0)
-    mem["counter"] = int(split[4], 0)
-    mem["tbid"] = 0
-    return mem
+    memlist = []
+    for meminfo in data_protobuf.mem_info_list:
+        mem = {}
+        mem["ins"] = meminfo.ins_address
+        mem["size"] = meminfo.size
+        mem["address"] = meminfo.memmory_address
+        mem["direction"] = meminfo.direction
+        mem["counter"] = meminfo.counter
+        mem["tbid"] = 0
+
+        memlist.append(mem)
+
+    return memlist
 
 
 def connect_meminfo_tb(meminfolist, tblist):
@@ -371,7 +400,7 @@ def connect_meminfo_tb(meminfolist, tblist):
                 break
 
 
-def readout_memdump(line, memdumplist, memdumpdict, memdumptmp):
+def readout_memdump(protobuf_msg):
     """
     This function will readout the lines. If it receives memorydump, it
     means a new configured dump will be transmitted. Therefore the
@@ -381,56 +410,65 @@ def readout_memdump(line, memdumplist, memdumpdict, memdumptmp):
     memorydump end is received, the current memorydump is finished and
     is added to the memdumplist
     """
+    memdumplist = []
 
-    if "[memorydump]" in line:
-        split = line.split("]:")
-        info = split[1]
-        split = info.split("|")
-        memdumpdict["address"] = int(split[0], 0)
-        memdumpdict["len"] = int(split[1], 0)
-        memdumpdict["numdumps"] = int(split[2], 0)
-        memdumpdict["dumps"] = []
-    if "B:" in line:
-        split = line.split("B: ")
-        binary = split[1].split(" ")
-        for b in binary:
-            memdumptmp.append(int(b, 0))
-    if "[Dump end]" in line:
-        memdumpdict["dumps"].append(memdumptmp)
-        memdumptmp = []
-    if "[memorydump end]" in line:
-        memdumplist.append(memdumpdict)
+    for mem_dump_info in protobuf_msg.Mem_dump_object_list:
         memdumpdict = {}
-    return [memdumplist, memdumpdict, memdumptmp]
+        memdumpdict["address"] = mem_dump_info.address
+        memdumpdict["len"] = mem_dump_info.len
+        memdumpdict["dumps"] = []
+
+        memdumpdict["dumps"] = [list(dump.mem) for dump in mem_dump_info.dumps]
+        n_dumps = len(memdumpdict["dumps"])
+
+        memdumpdict["numdumps"] = n_dumps
+        memdumplist.append(memdumpdict)
+
+    return memdumplist
 
 
-def readout_arm_registers(line):
-    split = line.split("|")
-    armregisters = {}
-    armregisters["pc"] = int(split[0])
-    armregisters["tbcounter"] = int(split[1])
-    for i in range(0, 16):
-        armregisters[f"r{i}"] = int(split[i + 2])
-    armregisters["xpsr"] = int(split[18])
-    return armregisters
+def readout_registers(data_protobuf):
+    register_list = []
+    reg_type = data_protobuf.arch_register.arch_type
+    reg_size = 0
+    reg_name = ''
+
+    if reg_type == Register.ARM:
+        reg_size = 16
+        reg_name = "r"
+    elif reg_type == Register.RISCV:
+        reg_size = 32
+        reg_name = "x"
+
+    for reg_dump in data_protobuf.arch_register.register_dumps:
+        register = {}
+        register["pc"] = reg_dump.pc
+        register["tbcounter"] = reg_dump.tb_count
+        for i in range(0, reg_size):
+            register[f"{reg_name}{i}"] = reg_dump.register_data[i]
+
+        # Last element of register_data is XPSR for Arm, PC for RISCV
+        if reg_type == Register.ARM:
+            register["xpsr"] = reg_dump.register_data[reg_size]
+        elif reg_type == Register.RISCV:
+            register[f"{reg_name}{reg_size}"] = reg_dump.register_data[reg_size]
+
+        register_list.append(register)
+
+    return register_list
 
 
-def readout_riscv_registers(line):
-    split = line.split("|")
-    riscvregisters = {}
-    riscvregisters["pc"] = int(split[0], 16)
-    riscvregisters["tbcounter"] = int(split[1], 16)
-    for i in range(0, 33):
-        riscvregisters[f"x{i}"] = int(split[i + 2], 16)
-    return riscvregisters
+def readout_tb_faulted(data_protobuf):
+    tb_faulted_list = []
 
+    for tb_fault in data_protobuf.faulted_data_list:
+        tbfaulted = {}
+        tbfaulted["faultaddress"] = tb_fault.trigger_address
+        tbfaulted["assembly"] = tb_fault.assembler.replace("!!", "\n")
 
-def readout_tb_faulted(line):
-    split = line.split("|")
-    tbfaulted = {}
-    tbfaulted["faultaddress"] = int(split[0], 0)
-    tbfaulted["assembly"] = split[1].replace("!!", "\n")
-    return tbfaulted
+        tb_faulted_list.append(tbfaulted)
+
+    return tb_faulted_list
 
 
 def readout_data(
@@ -449,178 +487,113 @@ def readout_data(
     Furthermore it then builds the internal representation, which is collected
     by the process writing to hdf 5 file
     """
-    state = "None"
     tblist = []
-    tbexeclist = []
     pdtbexeclist = None
     memlist = []
-    memdumpdict = {}
     memdumplist = []
-    memdumptmp = []
     registerlist = []
     tbfaultedlist = []
     tbinfo = 0
     tbexec = 0
     meminfo = 0
-    memdump = 0
     endpoint = 0
     end_reason = ""
     max_ram_usage = 0
     regtype = None
-    tbfaulted = 0
 
-    while 1:
-        line = pipe.readline()
+    # Load data from the pipe
+    data_protobuf = data_pb2.Data()
+    data_protobuf.ParseFromString(pipe.read())
 
-        if "$$$" in line:
-            line = line[3:]
+    # Process loaded information
+    output = {}
 
-            if "[Endpoint]" in line:
-                split = line.split("]:")
-                endpoint = int(split[1], 0)
+    endpoint = data_protobuf.endpoint
+    end_reason = data_protobuf.end_reason
 
-            elif "[End Reason]" in line:
-                split = line.split("]:")
-                end_reason = split[1].strip()
+    if len(data_protobuf.tb_information) != 0:
+        tbinfo = 1
+        tblist = readout_tbinfo(data_protobuf)
 
-            elif "[TB Information]" in line:
-                state = "tbinfo"
-                tbinfo = 1
+    if len(data_protobuf.mem_info_list) != 0:
+        meminfo = 1
+        memlist = readout_meminfo(data_protobuf)
 
-            elif "[TB Exec]" in line:
-                state = "tbexec"
-                tbexec = 1
+    if tbinfo == 1 and meminfo == 1:
+        connect_meminfo_tb(memlist, tblist)
 
-            elif "[Mem Information]" in line:
-                tbexeclist.reverse()
-                state = "meminfo"
-                meminfo = 1
+    # Process tb exec order
+    if len(data_protobuf.tb_exec_orders) != 0:
+        tbexec = 1
+        pdtbexeclist = readout_tbexec(data_protobuf)
+        pdtbexeclist.sort_values(by="pos", inplace=True)
 
-            elif "[Memdump]" in line:
-                state = "memdump"
-                memdump = 1
+        gather_process_ram_usage(queue_ram_usage, 0)
 
-            elif "[END]" in line:
-                state = "none"
-                logger.info(
-                    f"Data received now on post processing for Experiment {index}"
-                )
-
-                if tbexec == 1:
-                    if pdtbexeclist is not None:
-                        tmp = pd.DataFrame(tbexeclist)
-                        pdtbexeclist = pd.concat([pdtbexeclist, tmp], ignore_index=True)
-                    else:
-                        pdtbexeclist = pd.DataFrame(tbexeclist)
-                    pdtbexeclist.sort_values(by="pos", inplace=True)
-
-                    gather_process_ram_usage(queue_ram_usage, 0)
-
-                    if goldenrun_data:
-                        if config_qemu["ring_buffer"]:
-                            pdtbexeclist = pdtbexeclist.iloc[::-1]
-                        else:
-                            [pdtbexeclist, tblist] = filter_tb(
-                                pdtbexeclist,
-                                tblist,
-                                goldenrun_data["tbexec"],
-                                goldenrun_data["tbinfo"],
-                                index,
-                            )
-
-                if tbinfo == 1 and meminfo == 1:
-                    connect_meminfo_tb(memlist, tblist)
-
-                max_ram_usage = gather_process_ram_usage(queue_ram_usage, max_ram_usage)
-
-                datasets = []
-                datasets.append((tbinfo, "tbinfo", tblist))
-                datasets.append((tbexec, "tbexec", pdtbexeclist))
-                datasets.append((meminfo, "meminfo", memlist))
-                datasets.append(
-                    (
-                        regtype,
-                        f"{regtype}registers",
-                        pd.DataFrame(registerlist, dtype="UInt64"),
-                    )
-                )
-
-                output = {}
-                for flag, keyword, data in datasets:
-                    if not flag:
-                        continue
-                    if keyword.endswith("registers"):
-                        output[keyword] = data.to_dict("records")
-                    else:
-                        output[keyword] = write_output_wrt_goldenrun(
-                            keyword, data, goldenrun_data
-                        )
-
-                if tbfaulted == 1:
-                    output["tbfaulted"] = tbfaultedlist
-
-                output["index"] = index
-                output["faultlist"] = faultlist
-                output["endpoint"] = endpoint
-                output["end_reason"] = end_reason
-
-                if memdump == 1:
-                    output["memdumplist"] = memdumplist
-
-                max_ram_usage = gather_process_ram_usage(queue_ram_usage, max_ram_usage)
-
-                if callable(qemu_post):
-                    output = qemu_post(qemu_pre_data, output)
-                queue_output.put(output)
-
-                max_ram_usage = gather_process_ram_usage(queue_ram_usage, max_ram_usage)
-
-                break
-
-            elif "[Arm Registers]" in line:
-                state = "armregisters"
-                regtype = "arm"
-            elif "[RiscV Registers]" in line:
-                state = "riscvregisters"
-                regtype = "riscv"
-            elif "[TB Faulted]" in line:
-                state = "tbfaulted"
-                tbfaulted = 1
+        if goldenrun_data:
+            if config_qemu["ring_buffer"]:
+                pdtbexeclist = pdtbexeclist.iloc[::-1]
             else:
-                logger.warning(
-                    "Command in exp {} not understood {}".format(index, line)
+                [pdtbexeclist, tblist] = filter_tb(
+                    pdtbexeclist,
+                    tblist,
+                    goldenrun_data["tbexec"],
+                    goldenrun_data["tbinfo"],
+                    index,
                 )
-                state = "None"
 
-        elif "$$" in line:
-            line = line[2:]
-            if "tbinfo" in state:
-                tblist.append(readout_tbinfo(line))
-            elif "tbexec" in state:
-                tbexeclist.append(
-                    readout_tbexec(line, tbexeclist, tblist, goldenrun_data)
-                )
-                if len(tbexeclist) > 10000:
-                    if pdtbexeclist is None:
-                        pdtbexeclist = pd.DataFrame(tbexeclist)
-                    else:
-                        tmp = pd.DataFrame(tbexeclist)
-                        pdtbexeclist = pd.concat([pdtbexeclist, tmp], ignore_index=True)
-                    tbexeclist = []
-            elif "meminfo" in state:
-                memlist.append(readout_meminfo(line))
-            elif "memdump" in state:
-                [memdumplist, memdumpdict, memdumptmp] = readout_memdump(
-                    line, memdumplist, memdumpdict, memdumptmp
-                )
-            elif "armregisters" in state:
-                registerlist.append(readout_arm_registers(line))
-            elif "riscvregisters" in state:
-                registerlist.append(readout_riscv_registers(line))
-            elif "tbfaulted" in state:
-                tbfaultedlist.append(readout_tb_faulted(line))
-            else:
-                logger.warning("In exp {} unknown state {}".format(index, line))
+    if len(data_protobuf.Mem_dump_object_list) != 0:
+        memdumplist = readout_memdump(data_protobuf)
+        output["memdumplist"] = memdumplist
+
+    if data_protobuf.arch_register.arch_type == Register.ARM:
+        regtype = "arm"
+        registerlist = readout_registers(data_protobuf)
+    elif data_protobuf.arch_register.arch_type == Register.RISCV:
+        regtype = "riscv"
+        registerlist = readout_registers(data_protobuf)
+
+    if len(data_protobuf.faulted_data_list) != 0:
+        tbfaultedlist = readout_tb_faulted(data_protobuf)
+        output["tbfaulted"] = tbfaultedlist
+
+    logger.info(f"Data received now on post processing for Experiment {index}")
+
+    max_ram_usage = gather_process_ram_usage(queue_ram_usage, max_ram_usage)
+
+    datasets = []
+    datasets.append((tbinfo, "tbinfo", tblist))
+    datasets.append((tbexec, "tbexec", pdtbexeclist))
+    datasets.append((meminfo, "meminfo", memlist))
+    datasets.append(
+        (
+            regtype,
+            f"{regtype}registers",
+            pd.DataFrame(registerlist, dtype="UInt64"),
+        )
+    )
+
+    for flag, keyword, data in datasets:
+        if not flag:
+            continue
+        if keyword.endswith("registers"):
+            output[keyword] = data.to_dict("records")
+        else:
+            output[keyword] = write_output_wrt_goldenrun(keyword, data, goldenrun_data)
+
+    output["index"] = index
+    output["faultlist"] = faultlist
+    output["endpoint"] = endpoint
+    output["end_reason"] = end_reason
+
+    max_ram_usage = gather_process_ram_usage(queue_ram_usage, max_ram_usage)
+
+    if callable(qemu_post):
+        output = qemu_post(qemu_pre_data, output)
+    queue_output.put(output)
+
+    max_ram_usage = gather_process_ram_usage(queue_ram_usage, max_ram_usage)
+
     return max_ram_usage
 
 
@@ -774,7 +747,7 @@ def python_worker(
         logger.debug("Started QEMU process")
         control_fifo = open(paths["control"], mode="wb")
         config_fifo = open(paths["config"], mode="wb")
-        data_fifo = open(paths["data"], mode="r", buffering=1)
+        data_fifo = open(paths["data"], mode="rb")
         logger.debug("opened fifos")
         if "memorydump" in config_qemu:
             memorydump = config_qemu["memorydump"]

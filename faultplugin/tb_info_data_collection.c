@@ -95,6 +95,18 @@ int tb_comparison_func(const void *tbl_a, const void *tbl_b, void * tbl_param)
 	else return 0;
 }
 
+size_t get_tb_info_list_size(){
+    tb_info_t *item = tb_info_list;
+    size_t size = 0;
+    while(item != NULL)
+    {
+        size++;
+        item = item->next;
+    }
+
+    return size;
+}
+
 /**
  * plugin_dump_tb_information()
  *
@@ -102,22 +114,38 @@ int tb_comparison_func(const void *tbl_a, const void *tbl_b, void * tbl_param)
  *
  *
  */
-void plugin_dump_tb_information()
+void plugin_dump_tb_information(Archie__Data* msg)
 {
 	if(tb_info_list == NULL)
 	{
 		return;
 	}
-	g_autoptr(GString) out = g_string_new("");
-	g_string_printf(out, "$$$[TB Information]:\n");
-	plugin_write_to_data_pipe(out->str, out->len);
+
+    size_t size = get_tb_info_list_size();
+    Archie__TbInformation** tb_information;
+    tb_information = malloc(sizeof(Archie__TbInformation*) * size);
+    msg->n_tb_information = size;
+
+
 	tb_info_t *item = tb_info_list;
+    int counter = 0;
 	while(item != NULL)
 	{
-		g_string_printf(out, "$$0x%lx | 0x%lx | 0x%lx | 0x%lx | %s \n", item->base_address, item->size, item->instruction_count, item->num_of_exec, item->assembler->str );
-		plugin_write_to_data_pipe(out->str, out->len);
+        tb_information[counter] = malloc(sizeof(Archie__TbInformation));
+        archie__tb_information__init(tb_information[counter]);
+
+        tb_information[counter]->base_address = item->base_address;
+        tb_information[counter]->size = item->size;
+        tb_information[counter]->instruction_count = item->instruction_count;
+        tb_information[counter]->num_of_exec = item->num_of_exec;
+        tb_information[counter]->assembler = item->assembler->str;
+
+        counter++;
+
 		item = item->next;
 	}
+
+    msg->tb_information = tb_information;
 }
 
 tb_info_t * add_tb_info(struct qemu_plugin_tb *tb)

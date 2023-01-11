@@ -49,7 +49,7 @@ void tb_exec_order_free();
  *
  * Print the order of translation blocks executed. Also provide a counter number, such that it can be later resorted in python
  */
-void plugin_dump_tb_exec_order();
+void plugin_dump_tb_exec_order(Archie__Data* msg);
 
 /**
  * tb_exec_data_event

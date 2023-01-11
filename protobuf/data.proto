@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package archie;
+
+message Data {
+  int32 endpoint = 1;
+  string end_reason = 2;
+  repeated Tb_information tb_information = 3;
+  repeated Tb_exec_order tb_exec_orders = 4;
+  repeated Mem_info mem_info_list = 5;
+  Arch_Register arch_register = 6;
+  repeated Faulted_data faulted_data_list = 7;
+  repeated Mem_dump_object Mem_dump_object_list = 8;
+}
+
+message Tb_information {
+  uint64 base_address = 1;
+  uint64 size = 2;
+  uint64 instruction_count = 3;
+  uint64 num_of_exec = 4;
+  string assembler = 5;
+}
+
+message Tb_exec_order {
+  bool tb_info_exist = 1;
+  uint64 tb_base_address = 2;
+  uint64 pos = 3;
+}
+
+message Mem_info {
+  uint64 ins_address = 1;
+  uint64 size = 2;
+  uint64 memmory_address = 3;
+  uint32 direction = 4;
+  uint64 counter = 5;
+}
+
+message Mem_dump_object {
+  uint64 address = 1;
+  uint64 len = 2;
+  uint64 used_dumps = 3;
+  repeated Mem_dump dumps = 4;
+}
+
+message Mem_dump {
+  bytes mem = 1;
+}
+
+// Type 0 = ARM
+// Type 1 = RISCV
+message Arch_Register {
+  repeated Register_dump register_dumps = 1;
+  uint32 arch_type = 2;
+}
+
+message Register_dump {
+  repeated uint64 register_data = 1;
+  uint64 pc = 2;
+  uint64 tb_count = 3;
+}
+
+message Faulted_data {
+  uint64 trigger_address = 1;
+  string assembler = 2;
+}
