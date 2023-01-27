@@ -43,7 +43,7 @@ except ModuleNotFoundError:
     pass
 
 from faultclass import detect_type, detect_model, Fault, Trigger
-from faultclass import python_worker
+from faultclass import python_worker, python_worker_unicorn
 from faultclass import Register
 from hdf5logger import hdf5collector
 from goldenrun import run_goldenrun
@@ -563,6 +563,7 @@ def controller(
     qemu_pre=None,
     qemu_post=None,
     logger_postprocess=None,
+    unicorn_emulation=False
 ):
     """
     This function builds the unrolled fault structure, performs golden run and
@@ -588,6 +589,7 @@ def controller(
     log_goldenrun = True
     overwrite_faults = False
 
+    pregoldenrun_data = {}
     goldenrun_data = {}
 
     hdf5_file = Path(hdf5path)
@@ -633,6 +635,7 @@ def controller(
     if goldenrun:
         [
             config_qemu["max_instruction_count"],
+            pregoldenrun_data,
             goldenrun_data,
             faultlist,
         ] = run_goldenrun(
@@ -737,22 +740,38 @@ def controller(
             faults = faultlist[itter]
             itter += 1
 
-            p = Process(
-                name=f"worker_{faults['index']}",
-                target=python_worker,
-                args=(
-                    faults["faultlist"],
-                    config_qemu,
-                    faults["index"],
-                    queue_output,
-                    qemu_output,
-                    goldenrun_data,
-                    True,
-                    queue_ram_usage,
-                    qemu_pre,
-                    qemu_post,
-                ),
-            )
+            if unicorn_emulation:
+                p = Process(
+                    name=f"worker_{faults['index']}",
+                    target=python_worker_unicorn,
+                    args=(
+                        faults["faultlist"],
+                        config_qemu,
+                        faults["index"],
+                        queue_output,
+                        pregoldenrun_data,
+                        goldenrun_data,
+                        True,
+                    ),
+                )
+            else:
+                p = Process(
+                    name=f"worker_{faults['index']}",
+                    target=python_worker,
+                    args=(
+                        faults["faultlist"],
+                        config_qemu,
+                        faults["index"],
+                        queue_output,
+                        qemu_output,
+                        goldenrun_data,
+                        True,
+                        queue_ram_usage,
+                        qemu_pre,
+                        qemu_post,
+                    ),
+                )
+
             p.start()
             p_list.append({"process": p, "start_time": time.time(), "faults": faults})
             clogger.debug(f"Started worker {faults['index']}. Running: {len(p_list)}.")
@@ -924,6 +943,11 @@ def get_argument_parser():
         "--enable-ram-mgmt",
         help="Use with caution, may lead to drastic performance decrease",
         action="store_true",
+    )
+    parser.add_argument(
+        "--unicorn",
+        action="store_true",
+        help="Enables emulation through unicorn engine instead of QEMU",
         required=False,
     )
     return parser
@@ -953,6 +977,8 @@ def process_arguments(args):
     parguments["compressionlevel"] = args.compressionlevel
     if args.compressionlevel is None:
         parguments["compressionlevel"] = 1
+
+    parguments["unicorn_emulation"] = args.unicorn
 
     hdf5file = Path(args.hdf5file)
     if hdf5file.parent.exists() is False:
@@ -1090,4 +1116,5 @@ if __name__ == "__main__":
         None,  # qemu_pre
         None,  # qemu_post
         None,  # logger_postprocess
+        parguments["unicorn_emulation"],  # enable unicorn emulation
     )

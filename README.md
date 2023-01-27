@@ -49,9 +49,12 @@ cd qemu/build/debug
 make -j $(nproc)
 cd ../../../faultplugin/
 make
+cd emulation_worker
+cargo build --release
+cp target/release/libemulation_worker.so ../emulation_worker.so
 ```
 
-With this, *archie-qemu* is build in qemu/build/debug/ and the plugin is build in *faultplugin/*
+With this, *archie-qemu* is built in qemu/build/debug/, the plugin is built in *faultplugin/* and the unicorn emulation worker is built and moved to the project's root directory.
 If you change the build directory for *archie-qemu*, please change the path in the [Makefile](faultplugin/Makefile) in the *faultplugin/* folder for building the plugin.
 
 ## In [archie](https://github.com/Fraunhofer-AISEC/archie)
@@ -111,3 +114,14 @@ To connect from GDB to the QEMU session use
 targ rem:localhost:1234
 ```
 QEMU will wait unil the GDB session is attached. The debugging mode is only suitable for the analysis of a low number of faults. Stepping through a large amount of faults is cumbersome. This should be considered when adjusting the JSON files.
+
+#### Unicorn Engine
+
+Instead of QEMU, the unicorn engine can be used for emulating the experiments.
+This feature can be used interchangeably with the QEMU emulation without the need to adjust any of the configuration files.
+One exception for this are register faults, which have different target addresses between the two versions.
+The mapping for the registers can be looked up in the source code of unicorn's [Rust bindings](https://github.com/unicorn-engine/unicorn/tree/master/bindings/rust/src).
+To enable this feature the *--unicorn* flag can be set.
+
+Using the unicorn engine can result in a substantial increase in performance.
+However, this mode is not capable of emulating any features related to the hardware of the target platform such as interrupts or communication with devices.

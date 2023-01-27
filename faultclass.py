@@ -26,6 +26,8 @@ import time
 import pandas as pd
 import prctl
 
+from emulation_worker import run_unicorn
+
 import protobuf.control_pb2 as control_pb2
 import protobuf.data_pb2 as data_pb2
 import protobuf.fault_pb2 as fault_pb2
@@ -746,7 +748,7 @@ def configure_qemu(control, config_qemu, num_faults, memorydump_list, index):
 
     control_message.full_mem_dump = index == -2
 
-    if memorydump_list is not None:
+    if index != -2 and memorydump_list is not None:
         for memorydump in memorydump_list:
             memory_region = control_message.memorydumps.add()
 
@@ -863,3 +865,16 @@ def python_worker(
         p_qemu.terminate()
         p_qemu.join()
         logger.warning("Terminate Worker {}".format(index))
+
+
+def python_worker_unicorn(
+    fault_list,
+    config_qemu,
+    index,
+    queue_output,
+    pregoldenrun_data,
+    goldenrun_data,
+    change_nice=False,
+):
+    run_unicorn(pregoldenrun_data, config_qemu)
+    return
