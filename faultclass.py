@@ -715,7 +715,7 @@ def delete_fifos():
     os.rmdir(path)
 
 
-def configure_qemu(control, config_qemu, num_faults, memorydump_list, goldenrun):
+def configure_qemu(control, config_qemu, num_faults, memorydump_list, index):
     """
     Creates a protobuf message instance and writes it to the control pipe
     """
@@ -742,10 +742,9 @@ def configure_qemu(control, config_qemu, num_faults, memorydump_list, goldenrun)
             new_end_point.counter = end_loc["counter"]
 
     # If enabled, use the ring buffer for all runs except for the goldenrun
-    if config_qemu["ring_buffer"] is True and goldenrun is False:
-        control_message.tb_exec_list_ring_buffer = True
-    else:
-        control_message.tb_exec_list_ring_buffer = False
+    control_message.tb_exec_list_ring_buffer = config_qemu["ring_buffer"] and index >= 0
+
+    control_message.full_mem_dump = index == -2
 
     if memorydump_list is not None:
         for memorydump in memorydump_list:
@@ -822,14 +821,8 @@ def python_worker(
         else:
             memorydump = None
         logger.debug("Start configuring")
-        if goldenrun_data is None:
-            goldenrun = True
-        else:
-            goldenrun = False
 
-        configure_qemu(
-            control_fifo, config_qemu, len(fault_list), memorydump, goldenrun
-        )
+        configure_qemu(control_fifo, config_qemu, len(fault_list), memorydump, index)
 
         logger.debug("Started QEMU")
         # Write faults to config pipe

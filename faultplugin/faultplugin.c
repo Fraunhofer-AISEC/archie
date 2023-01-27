@@ -43,10 +43,12 @@
 #include "tb_info_data_collection.h"
 #include "tb_exec_data_collection.h"
 #include "tb_faulted_collection.h"
+#include "memmap_collection.h"
 
 #include "protobuf/fault.pb-c.h"
 #include "protobuf/control.pb-c.h"
 #include "protobuf/data.pb-c.h"
+
 
 //DEBUG
 #include <errno.h>
@@ -102,6 +104,11 @@ int tb_info_enabled;
 
 int tb_exec_order_enabled;
 int tb_exec_order_ring_buffer;
+
+int full_mem_dump_enabled;
+int memmap_dump_enabled;
+
+char* architecture;
 
 
 /* data structures for memory access */
@@ -833,6 +840,14 @@ void free_protobuf_message(Archie__Data* msg)
 	free(msg);
 }
 
+void memmap_dump_register_page(void *key, void *value, void *user_data) {
+	g_autoptr(GString) out = g_string_new("");
+	g_string_printf(out, "Dumping page at %p\n", *(uint64_t*)key);
+	qemu_plugin_outs(out->str);
+	insert_memorydump_config(*(uint64_t*)key, 0x1000);
+	free(key);
+}
+
 /**
  * plugin_end_information_dump
  *
@@ -851,6 +866,36 @@ void plugin_end_information_dump(GString *end_reason)
 	}
 	archie__data__init(msg);
 
+	msg->architecture = architecture;
+
+	if (memmap_dump_enabled) {
+		qemu_plugin_outs("[DEBUG]: Start creating memory map\n");
+		status = plugin_dump_memmap_information(msg);
+		if(status != 0)
+		{
+			qemu_plugin_outs("[ERROR]: plugin_dump_memmap_information() failed\n");
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	if (full_mem_dump_enabled) {
+	    g_autoptr(GHashTable) accessed_pages = g_hash_table_new(g_int64_hash, g_int64_equal);
+
+	    struct mem_info_t *item = mem_info_list;
+	    while(item != NULL)
+	    {
+		if (item->direction == 1) {
+		    uint64_t *page_address = malloc(sizeof(uint64_t));
+		    *page_address = item->memmory_address & 0xfffffffffffff000;
+		    g_hash_table_add(accessed_pages, page_address);
+		}
+		item = item->next;
+	    }
+
+	    g_hash_table_foreach(accessed_pages, memmap_dump_register_page, NULL);
+	}
+
+	int *error = NULL;
 	if(end_point->location.trignum == 4)
 	{
 		msg->end_point = 1;
@@ -953,6 +998,8 @@ void plugin_end_information_dump(GString *end_reason)
 	}
 
 	qemu_plugin_outs("[DEBUG]: Information now in pipe, start deleting information in memory\n");
+	qemu_plugin_outs("[DEBUG]: Delete memmap_info\n");
+	free_memmap_info();
 	qemu_plugin_outs("[DEBUG]: Delete tb_info\n");
 	tb_info_free();
 	qemu_plugin_outs("[DEBUG]: Delete tb_exec\n");
@@ -963,6 +1010,7 @@ void plugin_end_information_dump(GString *end_reason)
 	delete_memory_dump();
 	qemu_plugin_outs("[DEBUG]: Delete tb_faulted\n");
 	tb_faulted_free();
+	free(architecture);
 	free(buf);
 	free_protobuf_message(msg);
 	qemu_plugin_outs("[DEBUG]: Finished\n");
@@ -1297,6 +1345,8 @@ int readout_control_qemu(void)
 	tb_info_enabled = control_message->tb_info;
 	tb_exec_order_enabled = control_message->tb_exec_list;
 	tb_exec_order_ring_buffer = control_message->tb_exec_list_ring_buffer;
+	memmap_dump_enabled = control_message->memmap_dump;
+	full_mem_dump_enabled = control_message->full_mem_dump;
 	// End of control config
 
 	// Parse memory config
@@ -1464,12 +1514,16 @@ QEMU_PLUGIN_EXPORT int qemu_plugin_install(qemu_plugin_id_t id,
 	g_autoptr(GString) out = g_string_new("");
 	g_string_printf(out, "QEMU Injection Plugin\n Current Target is %s\n", info->target_name);
 	g_string_append_printf(out, "Current Version of QEMU Plugin is %i, Min Version is %i\n", info->version.cur, info->version.min);
+	architecture = malloc(strlen(info->target_name)+1);
+	if (!architecture) return -1;
+	strcpy(architecture, info->target_name);
+
 	int valid_architecture = -1;
-	if(strcmp(info->target_name, "arm") == 0)
+	if(strcmp(architecture, "arm") == 0)
 	{
 		valid_architecture = ARM;
 	}
-	if(strcmp(info->target_name, "riscv32") == 0 || strcmp(info->target_name, "riscv64") == 0)
+	if(strcmp(architecture, "riscv32") == 0 || strcmp(architecture, "riscv64") == 0)
 	{
 		valid_architecture = RISCV;
 	}
@@ -1535,6 +1589,9 @@ QEMU_PLUGIN_EXPORT int qemu_plugin_install(qemu_plugin_id_t id,
 
 	g_string_append_printf(out, "[Start]: Reached end of initialisation, starting guest now\n");
 	qemu_plugin_outs(out->str);
+
+	//g_string_printf(out, "$$$[Architecture]:%s\n", info->target_name);
+	//plugin_write_to_data_pipe(out->str, out->len);
 	return 0;
 ABORT:
 	if(mem_avl_root != NULL)

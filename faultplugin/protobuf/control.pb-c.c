@@ -142,7 +142,7 @@ void   archie__memory_dump__free_unpacked
   assert(message->base.descriptor == &archie__memory_dump__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
-static const ProtobufCFieldDescriptor archie__control__field_descriptors[11] =
+static const ProtobufCFieldDescriptor archie__control__field_descriptors[13] =
 {
   {
     "max_duration",
@@ -276,12 +276,38 @@ static const ProtobufCFieldDescriptor archie__control__field_descriptors[11] =
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
+  {
+    "memmap_dump",
+    14,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_BOOL,
+    0,   /* quantifier_offset */
+    offsetof(Archie__Control, memmap_dump),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
+  {
+    "full_mem_dump",
+    15,
+    PROTOBUF_C_LABEL_NONE,
+    PROTOBUF_C_TYPE_BOOL,
+    0,   /* quantifier_offset */
+    offsetof(Archie__Control, full_mem_dump),
+    NULL,
+    NULL,
+    0,             /* flags */
+    0,NULL,NULL    /* reserved1,reserved2, etc */
+  },
 };
 static const unsigned archie__control__field_indices_by_name[] = {
   7,   /* field[7] = end_points */
+  12,   /* field[12] = full_mem_dump */
   10,   /* field[10] = has_start */
   0,   /* field[0] = max_duration */
   4,   /* field[4] = mem_info */
+  11,   /* field[11] = memmap_dump */
   9,   /* field[9] = memorydumps */
   1,   /* field[1] = num_faults */
   5,   /* field[5] = start_address */
@@ -294,7 +320,7 @@ static const ProtobufCIntRange archie__control__number_ranges[2 + 1] =
 {
   { 1, 0 },
   { 13, 10 },
-  { 0, 11 }
+  { 0, 13 }
 };
 const ProtobufCMessageDescriptor archie__control__descriptor =
 {
@@ -304,7 +330,7 @@ const ProtobufCMessageDescriptor archie__control__descriptor =
   "Archie__Control",
   "archie",
   sizeof(Archie__Control),
-  11,
+  13,
   archie__control__field_descriptors,
   archie__control__field_indices_by_name,
   2,  archie__control__number_ranges,
