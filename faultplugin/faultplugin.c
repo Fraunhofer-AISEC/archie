@@ -27,6 +27,9 @@
 #include "qemu/osdep.h"
 #include <qemu/plugin.h>
 #include <qemu/qemu-plugin.h>
+#include <qemu/int128.h>
+
+#include "exec/memory.h"
 
 #include "hw/core/cpu.h"
 
@@ -94,6 +97,24 @@ int tb_info_enabled;
 
 int tb_exec_order_enabled;
 
+
+int full_mem_dump_enabled;
+
+typedef struct AddrRange AddrRange;
+struct AddrRange {
+    Int128 start;
+    Int128 size;
+};
+
+struct FlatRange {
+    MemoryRegion *mr;
+    hwaddr offset_in_region;
+    AddrRange addr;
+    uint8_t dirty_log_mask;
+    bool romd_mode;
+    bool readonly;
+    bool nonvolatile;
+};
 
 
 
@@ -811,6 +832,30 @@ void plugin_dump_mem_information()
 	}
 }
 
+bool memory_dump_register_cb (Int128 start, Int128 len, const MemoryRegion *mr, hwaddr offset_in_region, void *opaque) {
+	g_autoptr(GString) out = g_string_new("");
+	g_string_printf(out, "[DUMP]: start: 0x%lx\tlen: 0x%lx\toffset: 0x%lx\n", int128_get64(start), int128_get64(len), offset_in_region);
+	qemu_plugin_outs(out->str);
+	insert_memorydump_config(int128_get64(start), int128_get64(len));
+	return false;
+}
+
+void flatview_for_each_range(FlatView *fv, flatview_cb cb , void *opaque)
+{
+    FlatRange *fr;
+
+    assert(fv);
+    assert(cb);
+
+    for (fr = fv->ranges; fr < fv->ranges + fv->nr; ++fr) {
+        if (cb(fr->addr.start, fr->addr.size, fr->mr,
+               fr->offset_in_region, opaque)) {
+            break;
+        }
+    }
+}
+
+
 /**
  * plugin_end_information_dump
  *
@@ -819,6 +864,11 @@ void plugin_dump_mem_information()
  */
 void plugin_end_information_dump(GString *end_reason)
 {
+	if (full_mem_dump_enabled) {
+	    AddressSpace *addr_space = qemu_plugin_get_address_space();
+	    flatview_for_each_range(address_space_to_flatview(addr_space), memory_dump_register_cb, NULL);
+	}
+
 	int *error = NULL;
 	if(end_point->location.trignum == 4)
 	{
@@ -1205,6 +1255,16 @@ int readout_control_config(GString *conf)
 	if(strstr(conf->str, "disable_tb_info"))
 	{
 		tb_info_enabled = 0;
+		return 1;
+	}
+	if(strstr(conf->str, "enable_full_mem_dump"))
+	{
+		full_mem_dump_enabled = 1;
+		return 1;
+	}
+	if(strstr(conf->str, "disable_full_mem_dump"))
+	{
+		full_mem_dump_enabled = 0;
 		return 1;
 	}
 	if(strstr(conf->str, "enable_tb_exec_list"))
