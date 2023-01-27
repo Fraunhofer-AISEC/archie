@@ -99,7 +99,8 @@ def run_goldenrun(
                 )
             )
 
-    return [config_qemu["max_instruction_count"], experiment["data"], faultconfig]
+
+    return [config_qemu["max_instruction_count"], experiments[0]["data"], experiment["data"], faultconfig]
 
 
 def find_insn_addresses_in_tb(insn_address, data):

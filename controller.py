@@ -21,7 +21,7 @@ except ModuleNotFoundError:
     pass
 
 from faultclass import Fault, Trigger
-from faultclass import python_worker
+from faultclass import python_worker, python_worker_unicorn
 from hdf5logger import hdf5collector
 from goldenrun import run_goldenrun
 
@@ -271,22 +271,25 @@ def controller(
 
     # Storing and restoring goldenrun_data with pickle is a temporary fix
     # A better solution is to parse the goldenrun_data from the existing hdf5 file
+    pregoldenrun_data = {}
     goldenrun_data = {}
     if goldenrun:
         [
             config_qemu["max_instruction_count"],
+            pregoldenrun_data,
             goldenrun_data,
             faultlist,
         ] = run_goldenrun(
             config_qemu, qemu_output, queue_output, faultlist, qemu_pre, qemu_post
         )
         pickle.dump(
-            (config_qemu["max_instruction_count"], goldenrun_data, faultlist),
+            (config_qemu["max_instruction_count"], pregoldenrun_data, goldenrun_data, faultlist),
             lzma.open("bkup_goldenrun_results.xz", "wb"),
         )
     else:
         (
             config_qemu["max_instruction_count"],
+            pregoldenrun_data,
             goldenrun_data,
             faultlist,
         ) = pickle.load(lzma.open("bkup_goldenrun_results.xz", "rb"))
@@ -343,13 +346,14 @@ def controller(
 
             p = Process(
                 name=f"worker_{faults['index']}",
-                target=python_worker,
+                target=python_worker_unicorn,
                 args=(
                     faults["faultlist"],
                     config_qemu,
                     faults["index"],
                     queue_output,
                     qemu_output,
+                    pregoldenrun_data,
                     goldenrun_data,
                     True,
                     queue_ram_usage,

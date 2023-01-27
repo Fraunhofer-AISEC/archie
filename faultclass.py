@@ -5,6 +5,7 @@ import time
 import pandas as pd
 import prctl
 import shlex
+from emulation_worker import run_unicorn
 
 
 import logging
@@ -633,13 +634,18 @@ def delete_fifos():
     os.rmdir(path)
 
 
-def configure_qemu(control, config_qemu, num_faults, memorydump_list):
+def configure_qemu(control, config_qemu, num_faults, memorydump_list, index):
     """
     Function to write commands and configuration needed to start qemu plugin
     """
     out = "\n$$$[Config]\n"
     out = out + "$$ max_duration: {}\n".format(config_qemu["max_instruction_count"])
     out = out + "$$ num_faults: {}\n".format(num_faults)
+
+    if index is -2:
+        out = out + "$$enable_full_mem_dump\n"
+    else:
+        out = out + "$$disable_full_mem_dump\n"
 
     if "tb_exec_list" in config_qemu:
         if config_qemu["tb_exec_list"] is False:
@@ -668,7 +674,7 @@ def configure_qemu(control, config_qemu, num_faults, memorydump_list):
             out = out + "$$ end_address: {}\n".format(end_loc["address"])
             out = out + "$$ end_counter: {}\n".format(end_loc["counter"])
 
-    if memorydump_list is not None:
+    if index != -2 and memorydump_list is not None:
         out = out + "$$num_memregions: {}\n".format(len(memorydump_list))
         out = out + "$$$[Memory]\n"
         for memorydump in memorydump_list:
@@ -742,7 +748,7 @@ def python_worker(
         else:
             memorydump = None
         logger.debug("Start configuring")
-        configure_qemu(control_fifo, config_qemu, len(fault_list), memorydump)
+        configure_qemu(control_fifo, config_qemu, len(fault_list), memorydump, index)
         enable_qemu(control_fifo)
         logger.debug("Started QEMU")
         """Write faults to config pipe"""
@@ -776,3 +782,19 @@ def python_worker(
         p_qemu.terminate()
         p_qemu.join()
         logger.warning("Terminate Worker {}".format(index))
+
+def python_worker_unicorn(
+    fault_list,
+    config_qemu,
+    index,
+    queue_output,
+    qemu_output,
+    pregoldenrun_data,
+    goldenrun_data,
+    change_nice=False,
+    queue_ram_usage=None,
+    qemu_pre=None,
+    qemu_post=None,
+):
+    run_unicorn(pregoldenrun_data, config_qemu)
+    return
