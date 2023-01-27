@@ -876,5 +876,21 @@ def python_worker_unicorn(
     goldenrun_data,
     change_nice=False,
 ):
-    run_unicorn(pregoldenrun_data, config_qemu)
+    t0 = time.time()
+    if change_nice:
+        os.nice(19)
+
+    logs = run_unicorn(pregoldenrun_data, config_qemu)
+    logger.info(f"Ended qemu for exp {index}! Took {time.time() - t0}")
+
+    logs["index"] = index
+
+    queue_output.put(logs)
+
+    logger.info(
+        "Python worker for experiment {} done. Took {}s".format(
+            index, time.time() - t0
+        )
+    )
+
     return

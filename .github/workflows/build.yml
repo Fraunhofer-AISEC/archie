@@ -20,6 +20,11 @@ jobs:
         sudo apt install -y build-essential ninja-build libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev libprotobuf-c-dev protobuf-compiler protobuf-c-compiler libcap-dev
         pip install -r requirements.txt
 
+    - name: Install latest stable Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+          toolchain: stable
+
     - name: Checkout submodules
       run: git submodule update --init
 
@@ -28,6 +33,9 @@ jobs:
 
     - name: Build Faultplugin
       run: cd faultplugin; make -j; echo "done"
+
+    - name: Build Emulation Worker
+      run: cd emulation_worker; cargo build --release; mv target/release/libemulation_worker.so ../emulation_worker.so; echo "done"
 
     - name: Run ARCHIE
       run: cd examples/stm32; ./run.sh; cd ../riscv64; ./run.sh; cd ../stm32-timeout-wfi; ./run.sh
