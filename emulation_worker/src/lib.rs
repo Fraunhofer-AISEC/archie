@@ -35,8 +35,10 @@ struct Logs {
 impl ToPyObject for Logs {
     fn to_object(&self, py: Python<'_>) -> PyObject {
         let dict = PyDict::new(py);
+
         let map = self.meminfo.read().expect("RwLock poisoned");
-        dict.set_item("meminfo", map.to_object(py)).unwrap();
+        let meminfo_list = PyList::new(py, map.values());
+        dict.set_item("meminfo", meminfo_list.to_object(py)).unwrap();
         drop(map);
 
         dict.to_object(py)
