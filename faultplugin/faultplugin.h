@@ -28,14 +28,15 @@
 
 enum{ DATA, INSTRUCTION, REGISTER};
 enum{ SET0, SET1, TOGGLE, OVERWRITE};
-enum Pipe_type { CONFIG_PIPE, CONTROL_PIPE, DATA_PIPE};
-
 
 int register_live_faults_callback(fault_list_t *fault);
 
 void invalidate_fault_trigger_address(int fault_trigger_number);
 
 int plugin_write_to_data_pipe(char *str, size_t len);
- 
+
+size_t readout_pipe_size(int pipe_fd);
+
+int readout_pipe(uint8_t **out, int pipe_fd);
 
 #endif

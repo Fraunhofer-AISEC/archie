@@ -27,7 +27,7 @@ class Fault(_message.Message):
     type: int
     def __init__(self, address: _Optional[int] = ..., type: _Optional[int] = ..., model: _Optional[int] = ..., lifespan: _Optional[int] = ..., trigger_address: _Optional[int] = ..., trigger_hitcounter: _Optional[int] = ..., mask_upper: _Optional[int] = ..., mask_lower: _Optional[int] = ..., num_bytes: _Optional[int] = ...) -> None: ...
 
-class Fault_Pack(_message.Message):
+class FaultPack(_message.Message):
     __slots__ = ["faults"]
     FAULTS_FIELD_NUMBER: _ClassVar[int]
     faults: _containers.RepeatedCompositeFieldContainer[Fault]

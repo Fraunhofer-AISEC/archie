@@ -234,16 +234,16 @@ int read_memoryregion(uint64_t memorydump_position)
 	return ret;
 }
 
-void readout_memorydump(uint64_t memorydump_position, Archie__MemDumpObject* mem_dump_object)
+void readout_memorydump(uint64_t memorydump_position, Archie__MemDumpInfo* protobuf_mem_dump_info)
 {
 	memorydump_t *current = *(memdump + memorydump_position);
-    mem_dump_object->address = current->address;
-    mem_dump_object->len = current-> len;
-    mem_dump_object->used_dumps = current->used_dumps;
+    protobuf_mem_dump_info->address = current->address;
+    protobuf_mem_dump_info->len = current-> len;
 
+    // Allocate and init memory for memory dumps for a protobuf memdump object
     Archie__MemDump** mem_dump_list;
     mem_dump_list = malloc(sizeof(Archie__MemDump*) * current->used_dumps);
-    mem_dump_object->n_dumps = current->used_dumps;
+    protobuf_mem_dump_info->n_dumps = current->used_dumps;
 
     for(int i = 0; i < current->used_dumps; i++)
 	{
@@ -256,11 +256,11 @@ void readout_memorydump(uint64_t memorydump_position, Archie__MemDumpObject* mem
 		mem_dump_list[i]->mem.data = dump;
 	}
 
-    mem_dump_object->dumps = mem_dump_list;
+    protobuf_mem_dump_info->dumps = mem_dump_list;
 }
 
 
-void readout_all_memorydump(Archie__Data * msg)
+void readout_all_memorydump(Archie__Data* protobuf_msg)
 {
 	// Allocate and init memory for list of memory dump infos on protobuf message
 	if(used_memdump == 0)
@@ -268,18 +268,18 @@ void readout_all_memorydump(Archie__Data * msg)
 		return;
 	}
     
-    Archie__MemDumpObject** mem_dump_list;
-    mem_dump_list = malloc(sizeof(Archie__MemDumpObject*) * used_memdump);
-    msg->n_mem_dump_object_list = used_memdump;
+    Archie__MemDumpInfo** mem_dump_info_list;
+    mem_dump_info_list = malloc(sizeof(Archie__MemDumpInfo*) * used_memdump);
+    protobuf_msg->n_mem_dump_infos = used_memdump;
 
 	for(int i = 0; i < used_memdump; i++)
 	{
-        mem_dump_list[i] = malloc(sizeof(Archie__MemDumpObject));
-        archie__mem_dump_object__init(mem_dump_list[i]);
+        mem_dump_info_list[i] = malloc(sizeof(Archie__MemDumpInfo));
+        archie__mem_dump_info__init(mem_dump_info_list[i]);
 
-		readout_memorydump(i, mem_dump_list[i]);
+		readout_memorydump(i, mem_dump_info_list[i]);
 	}
 
-    msg->mem_dump_object_list = mem_dump_list;
+    protobuf_msg->mem_dump_infos = mem_dump_info_list;
 }
 

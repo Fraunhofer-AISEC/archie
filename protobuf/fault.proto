@@ -14,7 +14,7 @@ message Fault {
   uint32 num_bytes = 9;
 }
 
-message Fault_Pack {
+message FaultPack {
   repeated Fault faults = 1;
 }
 

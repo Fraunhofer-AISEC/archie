@@ -159,7 +159,7 @@ size_t get_tb_faulted_data_count(void){
     return size;
 }
 
-void dump_tb_faulted_data(Archie__Data* msg)
+void dump_tb_faulted_data(Archie__Data* protobuf_msg)
 {
 	if(tb_faulted_list == NULL)
 	{
@@ -167,6 +167,7 @@ void dump_tb_faulted_data(Archie__Data* msg)
 		return;
 	}
 
+    // Allocate and init a list of tb_faulted_data on protobuf
     size_t size = get_tb_faulted_data_count();
     Archie__FaultedData** faulted_data_list;
     faulted_data_list = malloc(sizeof(Archie__FaultedData*) * size);
@@ -188,6 +189,6 @@ void dump_tb_faulted_data(Archie__Data* msg)
 		item = item->next;
 	}
 
-    msg->n_faulted_data_list = size;
-    msg->faulted_data_list = faulted_data_list;
+    protobuf_msg->n_faulted_datas = size;
+    protobuf_msg->faulted_datas = faulted_data_list;
 }
