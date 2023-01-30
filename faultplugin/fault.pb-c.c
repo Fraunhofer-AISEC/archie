@@ -52,49 +52,49 @@ void   archie__fault__free_unpacked
   assert(message->base.descriptor == &archie__fault__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
-void   archie__fault__pack__init
+void   archie__fault_pack__init
                      (Archie__FaultPack         *message)
 {
-  static const Archie__FaultPack init_value = ARCHIE__FAULT__PACK__INIT;
+  static const Archie__FaultPack init_value = ARCHIE__FAULT_PACK__INIT;
   *message = init_value;
 }
-size_t archie__fault__pack__get_packed_size
+size_t archie__fault_pack__get_packed_size
                      (const Archie__FaultPack *message)
 {
-  assert(message->base.descriptor == &archie__fault__pack__descriptor);
+  assert(message->base.descriptor == &archie__fault_pack__descriptor);
   return protobuf_c_message_get_packed_size ((const ProtobufCMessage*)(message));
 }
-size_t archie__fault__pack__pack
+size_t archie__fault_pack__pack
                      (const Archie__FaultPack *message,
                       uint8_t       *out)
 {
-  assert(message->base.descriptor == &archie__fault__pack__descriptor);
+  assert(message->base.descriptor == &archie__fault_pack__descriptor);
   return protobuf_c_message_pack ((const ProtobufCMessage*)message, out);
 }
-size_t archie__fault__pack__pack_to_buffer
+size_t archie__fault_pack__pack_to_buffer
                      (const Archie__FaultPack *message,
                       ProtobufCBuffer *buffer)
 {
-  assert(message->base.descriptor == &archie__fault__pack__descriptor);
+  assert(message->base.descriptor == &archie__fault_pack__descriptor);
   return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage*)message, buffer);
 }
 Archie__FaultPack *
-       archie__fault__pack__unpack
+       archie__fault_pack__unpack
                      (ProtobufCAllocator  *allocator,
                       size_t               len,
                       const uint8_t       *data)
 {
   return (Archie__FaultPack *)
-     protobuf_c_message_unpack (&archie__fault__pack__descriptor,
+     protobuf_c_message_unpack (&archie__fault_pack__descriptor,
                                 allocator, len, data);
 }
-void   archie__fault__pack__free_unpacked
+void   archie__fault_pack__free_unpacked
                      (Archie__FaultPack *message,
                       ProtobufCAllocator *allocator)
 {
   if(!message)
     return;
-  assert(message->base.descriptor == &archie__fault__pack__descriptor);
+  assert(message->base.descriptor == &archie__fault_pack__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
 static const ProtobufCFieldDescriptor archie__fault__field_descriptors[9] =
@@ -239,7 +239,7 @@ const ProtobufCMessageDescriptor archie__fault__descriptor =
   (ProtobufCMessageInit) archie__fault__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor archie__fault__pack__field_descriptors[1] =
+static const ProtobufCFieldDescriptor archie__fault_pack__field_descriptors[1] =
 {
   {
     "faults",
@@ -254,26 +254,26 @@ static const ProtobufCFieldDescriptor archie__fault__pack__field_descriptors[1] 
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
 };
-static const unsigned archie__fault__pack__field_indices_by_name[] = {
+static const unsigned archie__fault_pack__field_indices_by_name[] = {
   0,   /* field[0] = faults */
 };
-static const ProtobufCIntRange archie__fault__pack__number_ranges[1 + 1] =
+static const ProtobufCIntRange archie__fault_pack__number_ranges[1 + 1] =
 {
   { 1, 0 },
   { 0, 1 }
 };
-const ProtobufCMessageDescriptor archie__fault__pack__descriptor =
+const ProtobufCMessageDescriptor archie__fault_pack__descriptor =
 {
   PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
-  "archie.Fault_Pack",
+  "archie.FaultPack",
   "FaultPack",
   "Archie__FaultPack",
   "archie",
   sizeof(Archie__FaultPack),
   1,
-  archie__fault__pack__field_descriptors,
-  archie__fault__pack__field_indices_by_name,
-  1,  archie__fault__pack__number_ranges,
-  (ProtobufCMessageInit) archie__fault__pack__init,
+  archie__fault_pack__field_descriptors,
+  archie__fault_pack__field_indices_by_name,
+  1,  archie__fault_pack__number_ranges,
+  (ProtobufCMessageInit) archie__fault_pack__init,
   NULL,NULL,NULL    /* reserved[123] */
 };

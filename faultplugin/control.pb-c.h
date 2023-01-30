@@ -15,9 +15,9 @@ PROTOBUF_C__BEGIN_DECLS
 #endif
 
 
-typedef struct Archie__Config Archie__Config;
-typedef struct Archie__End Archie__End;
-typedef struct Archie__MemoryRegion Archie__MemoryRegion;
+typedef struct Archie__Control Archie__Control;
+typedef struct Archie__EndPoint Archie__EndPoint;
+typedef struct Archie__MemoryDump Archie__MemoryDump;
 
 
 /* --- enums --- */
@@ -25,7 +25,7 @@ typedef struct Archie__MemoryRegion Archie__MemoryRegion;
 
 /* --- messages --- */
 
-struct  Archie__Config
+struct  Archie__Control
 {
   ProtobufCMessage base;
   int64_t max_duration;
@@ -35,113 +35,110 @@ struct  Archie__Config
   protobuf_c_boolean mem_info;
   uint64_t start_address;
   uint64_t start_counter;
-  size_t n_end_list;
-  Archie__End **end_list;
+  size_t n_end_points;
+  Archie__EndPoint **end_points;
   protobuf_c_boolean tb_exec_list_ring_buffer;
-  int64_t num_memregions;
-  size_t n_memorydump;
-  Archie__MemoryRegion **memorydump;
-  protobuf_c_boolean exists_tb_exec_list;
-  protobuf_c_boolean exists_tb_info;
-  protobuf_c_boolean exists_start;
-  protobuf_c_boolean exists_end;
-  protobuf_c_boolean exists_memory_dump;
-  protobuf_c_boolean exists_ring_buffer;
+  size_t n_memorydumps;
+  Archie__MemoryDump **memorydumps;
+  protobuf_c_boolean has_tb_exec_list;
+  protobuf_c_boolean has_tb_info;
+  protobuf_c_boolean has_start;
+  protobuf_c_boolean has_ring_buffer;
 };
-#define ARCHIE__CONFIG__INIT \
- { PROTOBUF_C_MESSAGE_INIT (&archie__config__descriptor) \
-    , 0, 0, 0, 0, 0, 0, 0, 0,NULL, 0, 0, 0,NULL, 0, 0, 0, 0, 0, 0 }
+#define ARCHIE__CONTROL__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&archie__control__descriptor) \
+    , 0, 0, 0, 0, 0, 0, 0, 0,NULL, 0, 0,NULL, 0, 0, 0, 0 }
 
 
-struct  Archie__End
+struct  Archie__EndPoint
 {
   ProtobufCMessage base;
   uint64_t address;
   uint64_t counter;
 };
-#define ARCHIE__END__INIT \
- { PROTOBUF_C_MESSAGE_INIT (&archie__end__descriptor) \
+#define ARCHIE__END_POINT__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&archie__end_point__descriptor) \
     , 0, 0 }
 
 
-struct  Archie__MemoryRegion
+struct  Archie__MemoryDump
 {
   ProtobufCMessage base;
   uint64_t address;
   uint64_t length;
 };
-#define ARCHIE__MEMORY__REGION__INIT \
- { PROTOBUF_C_MESSAGE_INIT (&archie__memory__region__descriptor) \
+#define ARCHIE__MEMORY_DUMP__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&archie__memory_dump__descriptor) \
     , 0, 0 }
 
 
-/* Archie__Config methods */
-void   archie__config__init
-                     (Archie__Config         *message);
-size_t archie__config__get_packed_size
-                     (const Archie__Config   *message);
-size_t archie__config__pack
-                     (const Archie__Config   *message,
+/* Archie__Control methods */
+void   archie__control__init
+                     (Archie__Control         *message);
+size_t archie__control__get_packed_size
+                     (const Archie__Control   *message);
+size_t archie__control__pack
+                     (const Archie__Control   *message,
                       uint8_t             *out);
-size_t archie__config__pack_to_buffer
-                     (const Archie__Config   *message,
+size_t archie__control__pack_to_buffer
+                     (const Archie__Control   *message,
                       ProtobufCBuffer     *buffer);
-Archie__Config *
-       archie__config__unpack
+Archie__Control *
+       archie__control__unpack
                      (ProtobufCAllocator  *allocator,
                       size_t               len,
                       const uint8_t       *data);
-void   archie__config__free_unpacked
-                     (Archie__Config *message,
+void   archie__control__free_unpacked
+                     (Archie__Control *message,
                       ProtobufCAllocator *allocator);
-/* Archie__End methods */
-void   archie__end__init
-                     (Archie__End         *message);
-size_t archie__end__get_packed_size
-                     (const Archie__End   *message);
-size_t archie__end__pack
-                     (const Archie__End   *message,
+/* Archie__EndPoint methods */
+void   archie__end_point__init
+                     (Archie__EndPoint         *message);
+size_t archie__end_point__get_packed_size
+                     (const Archie__EndPoint   *message);
+size_t archie__end_point__pack
+                     (const Archie__EndPoint   *message,
                       uint8_t             *out);
-size_t archie__end__pack_to_buffer
-                     (const Archie__End   *message,
+size_t archie__end_point__pack_to_buffer
+                     (const Archie__EndPoint   *message,
                       ProtobufCBuffer     *buffer);
-Archie__End *
-       archie__end__unpack
+Archie__EndPoint *
+       archie__end_point__unpack
                      (ProtobufCAllocator  *allocator,
                       size_t               len,
                       const uint8_t       *data);
-void   archie__end__free_unpacked
-                     (Archie__End *message,
+void   archie__end_point__free_unpacked
+                     (Archie__EndPoint *message,
                       ProtobufCAllocator *allocator);
-/* Archie__MemoryRegion methods */
-void   archie__memory__region__init
-                     (Archie__MemoryRegion         *message);
-size_t archie__memory__region__get_packed_size
-                     (const Archie__MemoryRegion   *message);
-size_t archie__memory__region__pack
-                     (const Archie__MemoryRegion   *message,
+/* Archie__MemoryDump methods */
+void   archie__memory_dump__init
+                     (Archie__MemoryDump         *message);
+size_t archie__memory_dump__get_packed_size
+                     (const Archie__MemoryDump   *message);
+size_t archie__memory_dump__pack
+                     (const Archie__MemoryDump   *message,
                       uint8_t             *out);
-size_t archie__memory__region__pack_to_buffer
-                     (const Archie__MemoryRegion   *message,
+size_t archie__memory_dump__pack_to_buffer
+                     (const Archie__MemoryDump   *message,
                       ProtobufCBuffer     *buffer);
-Archie__MemoryRegion *
-       archie__memory__region__unpack
+Archie__MemoryDump *
+       archie__memory_dump__unpack
                      (ProtobufCAllocator  *allocator,
                       size_t               len,
                       const uint8_t       *data);
-void   archie__memory__region__free_unpacked
-                     (Archie__MemoryRegion *message,
+void   archie__memory_dump__free_unpacked
+                     (Archie__MemoryDump *message,
                       ProtobufCAllocator *allocator);
 /* --- per-message closures --- */
 
-typedef void (*Archie__Config_Closure)
-                 (const Archie__Config *message,
+typedef void (*Archie__Control_Closure)
+                 (const Archie__Control *message,
                   void *closure_data);
-typedef void (*Archie__End_Closure)
-                 (const Archie__End *message,
+typedef void (*Archie__EndPoint_Closure)
+                 (const Archie__EndPoint *message,
                   void *closure_data);
-typedef void (*Archie__MemoryRegion_Closure)
-                 (const Archie__MemoryRegion *message,
+typedef void (*Archie__MemoryDump_Closure)
+                 (const Archie__MemoryDump *message,
                   void *closure_data);
 
 /* --- services --- */
@@ -149,9 +146,9 @@ typedef void (*Archie__MemoryRegion_Closure)
 
 /* --- descriptors --- */
 
-extern const ProtobufCMessageDescriptor archie__config__descriptor;
-extern const ProtobufCMessageDescriptor archie__end__descriptor;
-extern const ProtobufCMessageDescriptor archie__memory__region__descriptor;
+extern const ProtobufCMessageDescriptor archie__control__descriptor;
+extern const ProtobufCMessageDescriptor archie__end_point__descriptor;
+extern const ProtobufCMessageDescriptor archie__memory_dump__descriptor;
 
 PROTOBUF_C__END_DECLS
 

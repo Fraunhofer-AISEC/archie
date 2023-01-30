@@ -87,7 +87,7 @@ void tb_exec_order_free()
  *
  * Write the order of translation blocks executed. Also provide a counter number, such that it can be later resorted in python
  */
-void plugin_dump_tb_exec_order(Archie__Data* msg)
+void plugin_dump_tb_exec_order(Archie__Data* protobuf_msg)
 {
 	uint64_t i = 0;
 
@@ -101,10 +101,10 @@ void plugin_dump_tb_exec_order(Archie__Data* msg)
 		if (num_exec_order >= TB_EXEC_RB_SIZE) {
             i = tb_exec_rb_list_index;
             msg_tb_exec_order_list = malloc(sizeof(Archie__TbExecOrder *) * TB_EXEC_RB_SIZE);
-            msg->n_tb_exec_orders = TB_EXEC_RB_SIZE;
+			protobuf_msg->n_tb_exec_orders = TB_EXEC_RB_SIZE;
         } else {
             msg_tb_exec_order_list = malloc(sizeof(Archie__TbExecOrder*) * num_exec_order);
-            msg->n_tb_exec_orders = num_exec_order;
+            protobuf_msg->n_tb_exec_orders = num_exec_order;
         }
 		for (int j = 0; j < TB_EXEC_RB_SIZE && j < num_exec_order; j++)
 		{
@@ -113,12 +113,11 @@ void plugin_dump_tb_exec_order(Archie__Data* msg)
 
 			if (tb_exec_rb_list[i].tb_info == NULL)
 			{
-                msg_tb_exec_order_list[j]->tb_info_exist = 0;
+                msg_tb_exec_order_list[j]->tb_base_address = 0;
                 msg_tb_exec_order_list[j]->pos = tb_exec_rb_list[i].pos;
 			}
 			else
 			{
-                msg_tb_exec_order_list[j]->tb_info_exist = 1;
                 msg_tb_exec_order_list[j]->tb_base_address = tb_exec_rb_list[i].tb_info->base_address;
                 msg_tb_exec_order_list[j]->pos = tb_exec_rb_list[i].pos;
 			}
@@ -138,7 +137,7 @@ void plugin_dump_tb_exec_order(Archie__Data* msg)
         if(msg_tb_exec_order_list == NULL){
             qemu_plugin_outs("[DEBUG]: Tb_exec_order could not saved to protobuf message\n");
         }
-        msg->n_tb_exec_orders = num_exec_order;
+        protobuf_msg->n_tb_exec_orders = num_exec_order;
 
 		if(item == NULL)
 		{
@@ -166,12 +165,11 @@ void plugin_dump_tb_exec_order(Archie__Data* msg)
 
 			if(item->tb_info == NULL)
 			{
-                msg_tb_exec_order_list[i]->tb_info_exist = 0;
+                msg_tb_exec_order_list[i]->tb_base_address = 0;
                 msg_tb_exec_order_list[i]->pos = i;
 			}
 			else
 			{
-                msg_tb_exec_order_list[i]->tb_info_exist = 1;
                 msg_tb_exec_order_list[i]->tb_base_address = item->tb_info->base_address;
                 msg_tb_exec_order_list[i]->pos = i;
             }
@@ -182,7 +180,7 @@ void plugin_dump_tb_exec_order(Archie__Data* msg)
 
 	}
 
-    msg->tb_exec_orders = msg_tb_exec_order_list;
+    protobuf_msg->tb_exec_orders = msg_tb_exec_order_list;
 }
 
 /**

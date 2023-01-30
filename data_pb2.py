@@ -13,7 +13,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\ndata.proto\x12\x06\x61rchie\"\xca\x02\n\x04\x44\x61ta\x12\x10\n\x08\x65ndpoint\x18\x01 \x01(\x05\x12\x12\n\nend_reason\x18\x02 \x01(\t\x12.\n\x0etb_information\x18\x03 \x03(\x0b\x32\x16.archie.Tb_information\x12-\n\x0etb_exec_orders\x18\x04 \x03(\x0b\x32\x15.archie.Tb_exec_order\x12\'\n\rmem_info_list\x18\x05 \x03(\x0b\x32\x10.archie.Mem_info\x12,\n\rarch_register\x18\x06 \x01(\x0b\x32\x15.archie.Arch_Register\x12/\n\x11\x66\x61ulted_data_list\x18\x07 \x03(\x0b\x32\x14.archie.Faulted_data\x12\x35\n\x14Mem_dump_object_list\x18\x08 \x03(\x0b\x32\x17.archie.Mem_dump_object\"w\n\x0eTb_information\x12\x14\n\x0c\x62\x61se_address\x18\x01 \x01(\x04\x12\x0c\n\x04size\x18\x02 \x01(\x04\x12\x19\n\x11instruction_count\x18\x03 \x01(\x04\x12\x13\n\x0bnum_of_exec\x18\x04 \x01(\x04\x12\x11\n\tassembler\x18\x05 \x01(\t\"L\n\rTb_exec_order\x12\x15\n\rtb_info_exist\x18\x01 \x01(\x08\x12\x17\n\x0ftb_base_address\x18\x02 \x01(\x04\x12\x0b\n\x03pos\x18\x03 \x01(\x04\"j\n\x08Mem_info\x12\x13\n\x0bins_address\x18\x01 \x01(\x04\x12\x0c\n\x04size\x18\x02 \x01(\x04\x12\x17\n\x0fmemmory_address\x18\x03 \x01(\x04\x12\x11\n\tdirection\x18\x04 \x01(\r\x12\x0f\n\x07\x63ounter\x18\x05 \x01(\x04\"d\n\x0fMem_dump_object\x12\x0f\n\x07\x61\x64\x64ress\x18\x01 \x01(\x04\x12\x0b\n\x03len\x18\x02 \x01(\x04\x12\x12\n\nused_dumps\x18\x03 \x01(\x04\x12\x1f\n\x05\x64umps\x18\x04 \x03(\x0b\x32\x10.archie.Mem_dump\"\x17\n\x08Mem_dump\x12\x0b\n\x03mem\x18\x01 \x01(\x0c\"Q\n\rArch_Register\x12-\n\x0eregister_dumps\x18\x01 \x03(\x0b\x32\x15.archie.Register_dump\x12\x11\n\tarch_type\x18\x02 \x01(\r\"D\n\rRegister_dump\x12\x15\n\rregister_data\x18\x01 \x03(\x04\x12\n\n\x02pc\x18\x02 \x01(\x04\x12\x10\n\x08tb_count\x18\x03 \x01(\x04\":\n\x0c\x46\x61ulted_data\x12\x17\n\x0ftrigger_address\x18\x01 \x01(\x04\x12\x11\n\tassembler\x18\x02 \x01(\tb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\ndata.proto\x12\x06\x61rchie\"\xb4\x02\n\x04\x44\x61ta\x12\x11\n\tend_point\x18\x01 \x01(\x05\x12\x12\n\nend_reason\x18\x02 \x01(\t\x12.\n\x0ftb_informations\x18\x03 \x03(\x0b\x32\x15.archie.TbInformation\x12+\n\x0etb_exec_orders\x18\x04 \x03(\x0b\x32\x13.archie.TbExecOrder\x12\"\n\tmem_infos\x18\x05 \x03(\x0b\x32\x0f.archie.MemInfo\x12+\n\rregister_info\x18\x06 \x01(\x0b\x32\x14.archie.RegisterInfo\x12*\n\rfaulted_datas\x18\x07 \x03(\x0b\x32\x13.archie.FaultedData\x12+\n\x0emem_dump_infos\x18\x08 \x03(\x0b\x32\x13.archie.MemDumpInfo\"v\n\rTbInformation\x12\x14\n\x0c\x62\x61se_address\x18\x01 \x01(\x04\x12\x0c\n\x04size\x18\x02 \x01(\x04\x12\x19\n\x11instruction_count\x18\x03 \x01(\x04\x12\x13\n\x0bnum_of_exec\x18\x04 \x01(\x04\x12\x11\n\tassembler\x18\x05 \x01(\t\"3\n\x0bTbExecOrder\x12\x17\n\x0ftb_base_address\x18\x01 \x01(\x04\x12\x0b\n\x03pos\x18\x02 \x01(\x04\"i\n\x07MemInfo\x12\x13\n\x0bins_address\x18\x01 \x01(\x04\x12\x0c\n\x04size\x18\x02 \x01(\x04\x12\x17\n\x0fmemmory_address\x18\x03 \x01(\x04\x12\x11\n\tdirection\x18\x04 \x01(\r\x12\x0f\n\x07\x63ounter\x18\x05 \x01(\x04\"K\n\x0bMemDumpInfo\x12\x0f\n\x07\x61\x64\x64ress\x18\x01 \x01(\x04\x12\x0b\n\x03len\x18\x02 \x01(\x04\x12\x1e\n\x05\x64umps\x18\x03 \x03(\x0b\x32\x0f.archie.MemDump\"\x16\n\x07MemDump\x12\x0b\n\x03mem\x18\x01 \x01(\x0c\"O\n\x0cRegisterInfo\x12,\n\x0eregister_dumps\x18\x01 \x03(\x0b\x32\x14.archie.RegisterDump\x12\x11\n\tarch_type\x18\x02 \x01(\r\"E\n\x0cRegisterDump\x12\x17\n\x0fregister_values\x18\x01 \x03(\x04\x12\n\n\x02pc\x18\x02 \x01(\x04\x12\x10\n\x08tb_count\x18\x03 \x01(\x04\"9\n\x0b\x46\x61ultedData\x12\x17\n\x0ftrigger_address\x18\x01 \x01(\x04\x12\x11\n\tassembler\x18\x02 \x01(\tb\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'data_pb2', globals())
@@ -21,21 +21,21 @@ if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
   _DATA._serialized_start=23
-  _DATA._serialized_end=353
-  _TB_INFORMATION._serialized_start=355
-  _TB_INFORMATION._serialized_end=474
-  _TB_EXEC_ORDER._serialized_start=476
-  _TB_EXEC_ORDER._serialized_end=552
-  _MEM_INFO._serialized_start=554
-  _MEM_INFO._serialized_end=660
-  _MEM_DUMP_OBJECT._serialized_start=662
-  _MEM_DUMP_OBJECT._serialized_end=762
-  _MEM_DUMP._serialized_start=764
-  _MEM_DUMP._serialized_end=787
-  _ARCH_REGISTER._serialized_start=789
-  _ARCH_REGISTER._serialized_end=870
-  _REGISTER_DUMP._serialized_start=872
-  _REGISTER_DUMP._serialized_end=940
-  _FAULTED_DATA._serialized_start=942
-  _FAULTED_DATA._serialized_end=1000
+  _DATA._serialized_end=331
+  _TBINFORMATION._serialized_start=333
+  _TBINFORMATION._serialized_end=451
+  _TBEXECORDER._serialized_start=453
+  _TBEXECORDER._serialized_end=504
+  _MEMINFO._serialized_start=506
+  _MEMINFO._serialized_end=611
+  _MEMDUMPINFO._serialized_start=613
+  _MEMDUMPINFO._serialized_end=688
+  _MEMDUMP._serialized_start=690
+  _MEMDUMP._serialized_end=712
+  _REGISTERINFO._serialized_start=714
+  _REGISTERINFO._serialized_end=793
+  _REGISTERDUMP._serialized_start=795
+  _REGISTERDUMP._serialized_end=864
+  _FAULTEDDATA._serialized_start=866
+  _FAULTEDDATA._serialized_end=923
 # @@protoc_insertion_point(module_scope)

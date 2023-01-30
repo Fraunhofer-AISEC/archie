@@ -338,38 +338,6 @@ void print_assembler(struct qemu_plugin_tb *tb)
 	qemu_plugin_outs(out->str);
 }
 
-
-
-int qemu_setup_config_contains_char(GString* out, char c);
-void qemu_setup_config_find_char(GString* out, char c);
-
-void qemu_setup_config_find_char(GString* out, char c)
-{
-	int i = qemu_setup_config_contains_char(out, c);
-	if(i == -1)
-		return;
-	i++;
-	g_string_erase(out, 0, i++);
-}
-
-int qemu_setup_config_contains_char(GString* out, char c)
-{
-	int i = 0;
-	char *s = out->str;
-	
-	while(*s != c)
-	{
-		if(*s == '\0')
-			return -1;
-		i++;
-		s++;
-	}
-	return i;
-}
-
-size_t readout_pipe_size(enum Pipe_type type);
-int readout_pipe(size_t to_read, uint8_t *out, enum Pipe_type type);
-
 /**
  *
  * qemu_setup_config
@@ -380,28 +348,17 @@ int readout_pipe(size_t to_read, uint8_t *out, enum Pipe_type type);
 
 int qemu_setup_config()
 {
-    size_t message_buff_size = readout_pipe_size(CONFIG_PIPE);
-    if (message_buff_size <= 0) {
-        qemu_plugin_outs("[DEBUG]: Config pipe is empty\n");
-        return -1;
-    }
-
-	uint8_t* conf = (uint8_t*) malloc(sizeof(char) * message_buff_size);
-	if(conf == NULL){
-		qemu_plugin_outs("[DEBUG]: Error allocating memory for incoming config message\n");
-		return -1;
-	}
-
 	g_autoptr(GString) out = g_string_new("");
 	g_string_printf(out, "[Info]: Start readout of FIFO\n");
-	
-	int msg_size = readout_pipe(message_buff_size, conf, CONFIG_PIPE);
-	if(msg_size <= 0){
-		qemu_plugin_outs("[DEBUG]: No message on FIFO\n");
+
+	uint8_t* conf;
+	int msg_size = readout_pipe(&conf, pipes->config);
+	if(msg_size <= 0)
+	{
+		qemu_plugin_outs("[DEBUG]: No message on config FIFO\n");
 		return -1;
 	}
-	
-	Archie__FaultPack* fault_pack = archie__fault__pack__unpack(NULL, msg_size, conf);	
+	Archie__FaultPack* fault_pack = archie__fault_pack__unpack(NULL, msg_size, conf);
 	if (fault_pack == NULL)
 	{
 		qemu_plugin_outs("[DEBUG]: Error unpacking the message from pipe\n");
@@ -451,7 +408,7 @@ int qemu_setup_config()
 	}
 	
 	free(conf);
-	archie__fault__pack__free_unpacked(fault_pack, NULL);
+	archie__fault_pack__free_unpacked(fault_pack, NULL);
 
 	g_string_append(out, "[Info]: Fault pipe read done\n");
 	qemu_plugin_outs(out->str);
@@ -778,19 +735,20 @@ size_t get_mem_info_list_size(){
 /**
  * plugin_dump_mem_information
  *
- * Write collected information about the memory accesses to data pipe
+ * Write collected information about the memory accesses to protobuf message
  */
-void plugin_dump_mem_information(Archie__Data* msg)
+void plugin_dump_mem_information(Archie__Data* protobuf_msg)
 {
 	if(mem_info_list == NULL)
 	{
 		return;
 	}
 
+    // Allocate and init memory for mem dump info on protobuf
     size_t size = get_mem_info_list_size();
     Archie__MemInfo** mem_info_arr;
     mem_info_arr = malloc(sizeof(Archie__MemInfo*) * size);
-    msg->n_mem_info_list = size;
+    protobuf_msg->n_mem_infos = size;
 
 	mem_info_t *item = mem_info_list;
     int counter = 0;
@@ -809,7 +767,7 @@ void plugin_dump_mem_information(Archie__Data* msg)
 		item = item->next;
 	}
 
-    msg->mem_info_list = mem_info_arr;
+    protobuf_msg->mem_infos = mem_info_arr;
 }
 
 /**
@@ -824,9 +782,9 @@ void plugin_end_information_dump(GString *end_reason)
 
 	int *error = NULL;
 	if(end_point->location.trignum == 4)
-        msg.endpoint = 1;
+        msg.end_point = 1;
 	else
-        msg.endpoint = 0;
+        msg.end_point = 0;
 
 	free_end_point_list(end_point);
 
@@ -864,15 +822,6 @@ void plugin_end_information_dump(GString *end_reason)
     size_t len;                  // Length of serialized data
 
     len = archie__data__get_packed_size(&msg);
-
-    g_autoptr(GString) db = g_string_new("");
-    g_string_append_printf(db, "Size: %d\n", len);
-
-    g_string_append_printf(db, "Endpoint: %d\n", msg.endpoint);
-    g_string_append_printf(db, "End reason : %s\n", msg.end_reason);
-    g_string_append_printf(db, "Tb_information: %s\n", msg.tb_information[0]->assembler);
-    qemu_plugin_outs(db->str);
-
     buf = malloc(len);
     if(buf == NULL){
         qemu_plugin_outs("[DEBUG]: Malloc for message failed!\n");
@@ -1095,21 +1044,8 @@ static void vcpu_translateblock_translation_event(qemu_plugin_id_t id, struct qe
 	}
 }
 
-size_t readout_pipe_size(enum Pipe_type type)
+size_t readout_pipe_size(int pipe_fd)
 {
-	int pipe_fd;
-
-	switch (type) {
-		case CONFIG_PIPE:
-			pipe_fd = pipes->config;
-			break;
-		case CONTROL_PIPE:
-			pipe_fd = pipes->control;
-			break;
-		case DATA_PIPE:
-			pipe_fd = pipes->data;
-	}
-
 	g_autoptr(GString) size_str = g_string_new("");
 	char c = ' ';
 	while (c != '\n') {
@@ -1123,38 +1059,40 @@ size_t readout_pipe_size(enum Pipe_type type)
 		g_string_append_c(size_str, c);
 	}
 
-    return strtoumax(size_str->str, NULL, 0);
+	return strtoumax(size_str->str, NULL, 0);
 }
 
-int readout_pipe(size_t to_read, uint8_t* out, enum Pipe_type type)
+int readout_pipe(uint8_t** protobuf_msg_buff, int pipe_fd)
 {
-    int total_read = 0;
-    int pipe_fd;
-    uint8_t* p_out = out;
+	size_t message_size = readout_pipe_size(pipe_fd);
+	if (message_size == 0)
+	{
+		qemu_plugin_outs("[DEBUG]: Pipe is empty\n");
+		return -1;
+	}
 
-    switch (type) {
-        case CONFIG_PIPE:
-            pipe_fd = pipes->config;
-            break;
-        case CONTROL_PIPE:
-            pipe_fd = pipes->control;
-            break;
-        case DATA_PIPE:
-            pipe_fd = pipes->data;
+    *protobuf_msg_buff = (uint8_t*) malloc(sizeof(char) * message_size);
+    if(*protobuf_msg_buff == NULL){
+        qemu_plugin_outs("[DEBUG]: Error allocating memory for incoming message\n");
+        return -1;
     }
 
+    int total_read = 0;
+    uint8_t* p_out = *protobuf_msg_buff;
+
     int n_chars_received = 0;
-    int left = to_read;
-    while(total_read < to_read){
+    int left = message_size;
+    while(total_read < message_size){
 		n_chars_received = read(pipe_fd, p_out, left);
-		if (n_chars_received == -1) {
+		if (n_chars_received == -1)
+		{
 			qemu_plugin_outs("[ERROR]: Readout pipe, no character found or too much read\n");
 			return -1;
 		}
 
         left -= n_chars_received;
         total_read += n_chars_received;
-		p_out += n_chars_received;
+        p_out += n_chars_received;
     }
 
     return total_read;
@@ -1163,52 +1101,42 @@ int readout_pipe(size_t to_read, uint8_t* out, enum Pipe_type type)
 
 int readout_control_qemu()
 {
-	size_t message_buff_size = readout_pipe_size(CONTROL_PIPE);
-	if (message_buff_size == 0) {
-		qemu_plugin_outs("[DEBUG]: Control pipe is empty\n");
-		return -1;
-	}
-
-	uint8_t* control = (uint8_t*) malloc(sizeof(char) * message_buff_size);
-	if(control == NULL){
-		qemu_plugin_outs("[DEBUG]: Error allocating memory for incoming control message\n");
-		return -1;
-	}
-
-	int msg_size = readout_pipe(message_buff_size, control, CONTROL_PIPE);
-	if(msg_size <= 0){
-		qemu_plugin_outs("[DEBUG]: No message on FIFO\n");
+	uint8_t* control_msg_buff;
+	int msg_size = readout_pipe(&control_msg_buff, pipes->control);
+	if(msg_size <= 0 || control_msg_buff == NULL)
+	{
+		qemu_plugin_outs("[DEBUG]: Error on control FIFO\n");
 		return -1;
 	}
 
 	// Unpack message from protobuf binary format
-	Archie__Config* config;
-	config = archie__config__unpack(NULL, msg_size, control);
-	if (config == NULL)
+	Archie__Control* control_message;
+    control_message = archie__control__unpack(NULL, msg_size, control_msg_buff);
+	if (control_message == NULL)
 	{
 		qemu_plugin_outs("[DEBUG]: Error unpacking the message from pipe\n");
 		return -1;
 	}
 
 	// Parse the control config
-	tb_counter_max = (int) config->max_duration;
-	fault_number = (int) config->num_faults;
+	tb_counter_max = (int) control_message->max_duration;
+	fault_number = (int) control_message->num_faults;
 	
-	if(config->exists_start){
-		start_point.address = config->start_address;
+	if(control_message->has_start){
+		start_point.address = control_message->start_address;
 		start_point.trignum = start_point.trignum | 2;
 
-		start_point.hitcounter = config->start_counter;
+		start_point.hitcounter = control_message->start_counter;
 		start_point.trignum = start_point.trignum | 1;
 	}
 
-	size_t size_end_points = config->n_end_list;
+	size_t size_end_points = control_message->n_end_points;
     struct end_point_t *cur = end_point;
     if(size_end_points > 0)
     {
         /* Head of the end_point is already malloced */
-        cur->location.address = config->end_list[0]->address;
-        cur->location.hitcounter = config->end_list[0]->counter;
+        cur->location.address = control_message->end_points[0]->address;
+        cur->location.hitcounter = control_message->end_points[0]->counter;
         cur->location.trignum |= 3; 
     }
 
@@ -1217,41 +1145,42 @@ int readout_control_qemu()
 		cur->next = malloc(sizeof(struct end_point_t));
 		cur = cur->next;
 		
-		cur->location.address = config->end_list[i]->address;
-		cur->location.hitcounter = config->end_list[i]->counter;
+		cur->location.address = control_message->end_points[i]->address;
+		cur->location.hitcounter = control_message->end_points[i]->counter;
         /* location.trignum is not initialized as 0 thus |= can not be used */
 
 		cur->location.trignum = 3;
 		cur->next = NULL;
 	}
 
-	mem_info_list_enabled = config->mem_info;
+	mem_info_list_enabled = control_message->mem_info;
 
-	if(config->exists_tb_info){
-		tb_info_enabled = config->tb_info;
+	if(control_message->has_tb_info)
+	{
+		tb_info_enabled = control_message->tb_info;
 	}
 
-	if(config->exists_tb_exec_list){
-		tb_exec_order_enabled= config->tb_exec_list;
+	if(control_message->has_tb_exec_list){
+		tb_exec_order_enabled = control_message->tb_exec_list;
 	}
 
-	if(config->exists_ring_buffer){
-		tb_exec_order_ring_buffer = config->tb_exec_list_ring_buffer;
+	if(control_message->has_ring_buffer){
+		tb_exec_order_ring_buffer = control_message->tb_exec_list_ring_buffer;
 	}
 	// End of control config
 
 	// Parse memory config
-	if(config->exists_memory_dump){
-        int status = init_memory(config->num_memregions);
+	if(control_message->n_memorydumps != 0){
+        size_t n_memory_region = control_message->n_memorydumps;
+        int status = init_memory(n_memory_region);
         if(status < 0){
             qemu_plugin_outs("[DEBUG]: Error initializing memory\n");
             return -1;
         }
 
-		size_t n_memory_region = config->n_memorydump;
 		for(int i = 0; i < n_memory_region; ++i){
-			uint64_t baseaddress = (uint64_t) config->memorydump[i]->address;
-			uint64_t len = (uint64_t) config->memorydump[i]->length;
+			uint64_t baseaddress = (uint64_t) control_message->memorydumps[i]->address;
+			uint64_t len = (uint64_t) control_message->memorydumps[i]->length;
 
 			if(insert_memorydump_config(baseaddress, len) < 0){
 				qemu_plugin_outs("[DEBUG]: Error inserting memorydump\n");
@@ -1259,9 +1188,10 @@ int readout_control_qemu()
 			}
 		}
 	}
+
 	// End of memory config
-	free(control);
-	archie__config__free_unpacked(config, NULL);
+	free(control_msg_buff);
+	archie__control__free_unpacked(control_message, NULL);
 	
 	if(memory_module_configured() == 0)
 	{

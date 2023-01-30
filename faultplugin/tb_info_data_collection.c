@@ -114,38 +114,39 @@ size_t get_tb_info_list_size(){
  *
  *
  */
-void plugin_dump_tb_information(Archie__Data* msg)
+void plugin_dump_tb_information(Archie__Data* protobuf_msg)
 {
 	if(tb_info_list == NULL)
 	{
 		return;
 	}
 
+    // Allocate and init list for protobuf tb information dumps
     size_t size = get_tb_info_list_size();
-    Archie__TbInformation** tb_information;
-    tb_information = malloc(sizeof(Archie__TbInformation*) * size);
-    msg->n_tb_information = size;
+    Archie__TbInformation** tb_information_list;
+    tb_information_list = malloc(sizeof(Archie__TbInformation*) * size);
+    protobuf_msg->n_tb_informations = size;
 
 
 	tb_info_t *item = tb_info_list;
     int counter = 0;
 	while(item != NULL)
 	{
-        tb_information[counter] = malloc(sizeof(Archie__TbInformation));
-        archie__tb_information__init(tb_information[counter]);
+        tb_information_list[counter] = malloc(sizeof(Archie__TbInformation));
+        archie__tb_information__init(tb_information_list[counter]);
 
-        tb_information[counter]->base_address = item->base_address;
-        tb_information[counter]->size = item->size;
-        tb_information[counter]->instruction_count = item->instruction_count;
-        tb_information[counter]->num_of_exec = item->num_of_exec;
-        tb_information[counter]->assembler = item->assembler->str;
+        tb_information_list[counter]->base_address = item->base_address;
+        tb_information_list[counter]->size = item->size;
+        tb_information_list[counter]->instruction_count = item->instruction_count;
+        tb_information_list[counter]->num_of_exec = item->num_of_exec;
+        tb_information_list[counter]->assembler = item->assembler->str;
 
         counter++;
 
 		item = item->next;
 	}
 
-    msg->tb_information = tb_information;
+    protobuf_msg->tb_informations = tb_information_list;
 }
 
 tb_info_t * add_tb_info(struct qemu_plugin_tb *tb)

@@ -75,11 +75,13 @@ class Fault:
         self.num_bytes = num_bytes
         self.wildcard = wildcard
 
+
 def write_fault_list_to_pipe(fault_list, fifo):
-    fault_pack = fault_pb2.Fault_Pack()
+    fault_pack = fault_pb2.FaultPack()
 
     for fault_instance in fault_list:
         new_fault = fault_pack.faults.add()
+
         new_fault.address = fault_instance.address
         new_fault.type = fault_instance.type
         new_fault.model = fault_instance.model
@@ -170,7 +172,7 @@ def readout_tbinfo(data_protobuf):
     Builds the dict for tb info from line provided by qemu
     """
     tb_list = []
-    for tb_info in data_protobuf.tb_information:
+    for tb_info in data_protobuf.tb_informations:
         tb = {}
         tb["id"] = tb_info.base_address
         tb["size"] = tb_info.size
@@ -375,7 +377,7 @@ def readout_meminfo(data_protobuf):
     Builds the dict for memory info from protobuf message provided by qemu
     """
     memlist = []
-    for meminfo in data_protobuf.mem_info_list:
+    for meminfo in data_protobuf.mem_infos:
         mem = {}
         mem["ins"] = meminfo.ins_address
         mem["size"] = meminfo.size
@@ -402,17 +404,12 @@ def connect_meminfo_tb(meminfolist, tblist):
 
 def readout_memdump(protobuf_msg):
     """
-    This function will readout the lines. If it receives memorydump, it
-    means a new configured dump will be transmitted. Therefore the
-    dictionary is initialised. If only B: is received, Binary data is
-    transmitted. If Dump end is received, the dump is finished and needs
-    to be appended to the dic, as multiple dumps are possible. If
-    memorydump end is received, the current memorydump is finished and
-    is added to the memdumplist
+    This function parses memory dumps received from data pipe and returns
+    a list containing them
     """
     memdumplist = []
 
-    for mem_dump_info in protobuf_msg.Mem_dump_object_list:
+    for mem_dump_info in protobuf_msg.mem_dump_infos:
         memdumpdict = {}
         memdumpdict["address"] = mem_dump_info.address
         memdumpdict["len"] = mem_dump_info.len
@@ -429,7 +426,7 @@ def readout_memdump(protobuf_msg):
 
 def readout_registers(data_protobuf):
     register_list = []
-    reg_type = data_protobuf.arch_register.arch_type
+    reg_type = data_protobuf.register_info.arch_type
     reg_size = 0
     reg_name = ''
 
@@ -440,18 +437,16 @@ def readout_registers(data_protobuf):
         reg_size = 32
         reg_name = "x"
 
-    for reg_dump in data_protobuf.arch_register.register_dumps:
-        register = {}
-        register["pc"] = reg_dump.pc
-        register["tbcounter"] = reg_dump.tb_count
+    for reg_dump in data_protobuf.register_info.register_dumps:
+        register = {"pc": reg_dump.pc, "tbcounter": reg_dump.tb_count}
         for i in range(0, reg_size):
-            register[f"{reg_name}{i}"] = reg_dump.register_data[i]
+            register[f"{reg_name}{i}"] = reg_dump.register_values[i]
 
-        # Last element of register_data is XPSR for Arm, PC for RISCV
+        # Last element of register_values is XPSR for Arm, PC for RISCV
         if reg_type == Register.ARM:
-            register["xpsr"] = reg_dump.register_data[reg_size]
+            register["xpsr"] = reg_dump.register_values[reg_size]
         elif reg_type == Register.RISCV:
-            register[f"{reg_name}{reg_size}"] = reg_dump.register_data[reg_size]
+            register[f"{reg_name}{reg_size}"] = reg_dump.register_values[reg_size]
 
         register_list.append(register)
 
@@ -461,7 +456,7 @@ def readout_registers(data_protobuf):
 def readout_tb_faulted(data_protobuf):
     tb_faulted_list = []
 
-    for tb_fault in data_protobuf.faulted_data_list:
+    for tb_fault in data_protobuf.faulted_datas:
         tbfaulted = {}
         tbfaulted["faultaddress"] = tb_fault.trigger_address
         tbfaulted["assembly"] = tb_fault.assembler.replace("!!", "\n")
@@ -508,14 +503,14 @@ def readout_data(
     # Process loaded information
     output = {}
 
-    endpoint = data_protobuf.endpoint
+    endpoint = data_protobuf.end_point
     end_reason = data_protobuf.end_reason
 
-    if len(data_protobuf.tb_information) != 0:
+    if len(data_protobuf.tb_informations) != 0:
         tbinfo = 1
         tblist = readout_tbinfo(data_protobuf)
 
-    if len(data_protobuf.mem_info_list) != 0:
+    if len(data_protobuf.mem_infos) != 0:
         meminfo = 1
         memlist = readout_meminfo(data_protobuf)
 
@@ -542,18 +537,18 @@ def readout_data(
                     index,
                 )
 
-    if len(data_protobuf.Mem_dump_object_list) != 0:
+    if len(data_protobuf.mem_dump_infos) != 0:
         memdumplist = readout_memdump(data_protobuf)
         output["memdumplist"] = memdumplist
 
-    if data_protobuf.arch_register.arch_type == Register.ARM:
+    if data_protobuf.register_info.arch_type == Register.ARM:
         regtype = "arm"
         registerlist = readout_registers(data_protobuf)
-    elif data_protobuf.arch_register.arch_type == Register.RISCV:
+    elif data_protobuf.register_info.arch_type == Register.RISCV:
         regtype = "riscv"
         registerlist = readout_registers(data_protobuf)
 
-    if len(data_protobuf.faulted_data_list) != 0:
+    if len(data_protobuf.faulted_datas) != 0:
         tbfaultedlist = readout_tb_faulted(data_protobuf)
         output["tbfaulted"] = tbfaultedlist
 
@@ -638,12 +633,15 @@ def delete_fifos():
 
     os.rmdir(path)
 
+
 def configure_qemu(control, config_qemu, num_faults, memorydump_list,
                    goldenrun):
     """
-    Function to write commands and configuration needed to start qemu plugin
+    Creates a protobuf message instance and writes it to the control pipe
     """
-    control_message = control_pb2.Config()
+
+    # Protobuf control message
+    control_message = control_pb2.Control()
 
     control_message.max_duration = config_qemu["max_instruction_count"]
     control_message.num_faults = num_faults
@@ -662,37 +660,36 @@ def configure_qemu(control, config_qemu, num_faults, memorydump_list,
         control_message.mem_info = False
 
     if "start" in config_qemu:
-        control_message.exists_start = True
+        control_message.has_start = True
         control_message.start_address = (config_qemu["start"])["address"]
         control_message.start_counter = (config_qemu["start"])["counter"]
 
     if "end" in config_qemu:
-        control_message.exists_end = True
         for end_loc in config_qemu["end"]:
-            end_instance = control_message.end_list.add()
+            new_end_point = control_message.end_points.add()
 
-            end_instance.address = end_loc["address"]
-            end_instance.counter = end_loc["counter"]
+            new_end_point.address = end_loc["address"]
+            new_end_point.counter = end_loc["counter"]
 
     # If enabled, use the ring buffer for all runs except for the goldenrun
     if config_qemu["ring_buffer"] is True and goldenrun is False:
-        control_message.exists_ring_buffer = True
+        control_message.has_ring_buffer = True
         control_message.tb_exec_list_ring_buffer = True
 
-    if memorydump_list is not None:
-        control_message.exists_memory_dump = True
-        control_message.num_memregions = len(memorydump_list)
 
+    if memorydump_list is not None:
         for memorydump in memorydump_list:
-            memory_region = control_message.memorydump.add()
+            memory_region = control_message.memorydumps.add()
 
             memory_region.address = memorydump["address"]
             memory_region.length = memorydump["length"]
 
+    # Writing protobuf message to pipe
+    # Size is also sent for correct parsing on the faultplugin side
     message_size = control_message.ByteSize()
     message_size_string = str(message_size) + '\n'
     control.write(message_size_string.encode())
-    
+
     out = control_message.SerializeToString()
     control.write(out)
 
@@ -761,7 +758,6 @@ def python_worker(
 
         configure_qemu(control_fifo, config_qemu, len(fault_list), memorydump,
                        goldenrun)
-
         logger.debug("Started QEMU")
         """Write faults to config pipe"""
         write_fault_list_to_pipe(fault_list, config_fifo)

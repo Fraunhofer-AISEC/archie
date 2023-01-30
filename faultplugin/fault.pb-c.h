@@ -48,8 +48,8 @@ struct  Archie__FaultPack
   size_t n_faults;
   Archie__Fault **faults;
 };
-#define ARCHIE__FAULT__PACK__INIT \
- { PROTOBUF_C_MESSAGE_INIT (&archie__fault__pack__descriptor) \
+#define ARCHIE__FAULT_PACK__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&archie__fault_pack__descriptor) \
     , 0,NULL }
 
 
@@ -73,22 +73,22 @@ void   archie__fault__free_unpacked
                      (Archie__Fault *message,
                       ProtobufCAllocator *allocator);
 /* Archie__FaultPack methods */
-void   archie__fault__pack__init
+void   archie__fault_pack__init
                      (Archie__FaultPack         *message);
-size_t archie__fault__pack__get_packed_size
+size_t archie__fault_pack__get_packed_size
                      (const Archie__FaultPack   *message);
-size_t archie__fault__pack__pack
+size_t archie__fault_pack__pack
                      (const Archie__FaultPack   *message,
                       uint8_t             *out);
-size_t archie__fault__pack__pack_to_buffer
+size_t archie__fault_pack__pack_to_buffer
                      (const Archie__FaultPack   *message,
                       ProtobufCBuffer     *buffer);
 Archie__FaultPack *
-       archie__fault__pack__unpack
+       archie__fault_pack__unpack
                      (ProtobufCAllocator  *allocator,
                       size_t               len,
                       const uint8_t       *data);
-void   archie__fault__pack__free_unpacked
+void   archie__fault_pack__free_unpacked
                      (Archie__FaultPack *message,
                       ProtobufCAllocator *allocator);
 /* --- per-message closures --- */
@@ -106,7 +106,7 @@ typedef void (*Archie__FaultPack_Closure)
 /* --- descriptors --- */
 
 extern const ProtobufCMessageDescriptor archie__fault__descriptor;
-extern const ProtobufCMessageDescriptor archie__fault__pack__descriptor;
+extern const ProtobufCMessageDescriptor archie__fault_pack__descriptor;
 
 PROTOBUF_C__END_DECLS
 

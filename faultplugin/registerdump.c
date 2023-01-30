@@ -60,7 +60,7 @@ void readout_riscv_registers(registerdump_t * current);
  *
  * returns 0 on success, -1 on fail
  */
-void read_registers(Archie__ArchRegister* protobuf_reg);
+int read_registers(Archie__RegisterInfo* protobuf_reg_info);
 
 void init_register_module(int architecture)
 {
@@ -122,28 +122,6 @@ void readout_arm_registers(registerdump_t * current)
 	current->regs[16] = qemu_plugin_read_reg(25);
 }
 
-
-void read_register_module(Archie__Data* msg)
-{
-    Archie__ArchRegister* reg = malloc(sizeof(Archie__ArchRegister));
-    archie__arch__register__init(reg);
-
-	if(arch == ARM)
-	{
-		qemu_plugin_outs("[DEBUG]: start reading arm registerdumps\n");
-        reg->arch_type = ARM;
-	} else if(arch == RISCV)
-	{
-		qemu_plugin_outs("[DEBUG]: start reading riscv registerdump\n");
-        reg->arch_type = RISCV;
-	} else {
-        qemu_plugin_outs("[ERROR]: [CRITICAL]: Unknown Architecture for register module");
-    }
-
-    read_registers(reg);
-    msg->arch_register = reg;
-}
-
 size_t get_register_dump_count(){
     size_t size = 0;
     registerdump_t* current = first_registerdump;
@@ -156,43 +134,64 @@ size_t get_register_dump_count(){
     return size;
 }
 
-void read_registers(Archie__ArchRegister* reg)
+int read_registers(Archie__RegisterInfo* protobuf_reg_info)
 {
+    // Allocate memory for register info on protobuf message
     size_t n_register_dumps = get_register_dump_count();
-    Archie__RegisterDump** reg_dump_list;
-    reg_dump_list = malloc(sizeof(Archie__RegisterDump*) * n_register_dumps);
+    Archie__RegisterDump** protobuf_reg_dump_list;
+    protobuf_reg_dump_list = malloc(sizeof(Archie__RegisterDump*) * n_register_dumps);
 
     uint64_t register_size = 0;
-    switch(reg->arch_type){
-        case ARM:
-            register_size = 17;
-            break;
-        case RISCV:
-            register_size = 33;
-            break;
+    if(arch == ARM)
+    {
+        qemu_plugin_outs("[DEBUG]: start reading arm registerdumps\n");
+        protobuf_reg_info->arch_type = ARM;
+        register_size = 17;
+    } else if(arch == RISCV)
+    {
+        qemu_plugin_outs("[DEBUG]: start reading riscv registerdump\n");
+        protobuf_reg_info->arch_type = RISCV;
+        register_size = 33;
+    } else {
+        qemu_plugin_outs("[ERROR]: [CRITICAL]: Unknown Architecture for register module");
+        return -1;
     }
 
     registerdump_t* current = first_registerdump;
     int counter = 0;
 	while(current != NULL)
 	{
-        reg_dump_list[counter] = malloc(sizeof(Archie__RegisterDump));
-        archie__register_dump__init(reg_dump_list[counter]);
+        protobuf_reg_dump_list[counter] = malloc(sizeof(Archie__RegisterDump));
+        archie__register_dump__init(protobuf_reg_dump_list[counter]);
 
-        reg_dump_list[counter]->n_register_data = register_size;
-        reg_dump_list[counter]->register_data = malloc(sizeof(uint64_t) * register_size);
+        // Copy register values into current protobuf register info dump
+        protobuf_reg_dump_list[counter]->n_register_values = register_size;
+        protobuf_reg_dump_list[counter]->register_values = malloc(sizeof(uint64_t) * register_size);
 		for(int i = 0; i < register_size; i++)
 		{
-            reg_dump_list[counter]->register_data[i] = current->regs[i];
+            protobuf_reg_dump_list[counter]->register_values[i] = current->regs[i];
 		}
 
-        reg_dump_list[counter]->pc = current->pc;
-        reg_dump_list[counter]->tb_count = current->tbcount;
+        protobuf_reg_dump_list[counter]->pc = current->pc;
+        protobuf_reg_dump_list[counter]->tb_count = current->tbcount;
 
         counter++;
 		current = current->next;
 	}
 
-    reg->n_register_dumps = n_register_dumps;
-    reg->register_dumps = reg_dump_list;
+    protobuf_reg_info->n_register_dumps = n_register_dumps;
+    protobuf_reg_info->register_dumps = protobuf_reg_dump_list;
+
+    return 1;
 }
+
+void read_register_module(Archie__Data* msg)
+{
+    // Allocate and init register info of protobuf data message
+    Archie__RegisterInfo* reg = malloc(sizeof(Archie__RegisterInfo));
+    archie__register_info__init(reg);
+
+    read_registers(reg);
+    msg->register_info = reg;
+}
+

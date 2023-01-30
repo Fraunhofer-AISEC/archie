@@ -19,9 +19,9 @@ typedef struct Archie__Data Archie__Data;
 typedef struct Archie__TbInformation Archie__TbInformation;
 typedef struct Archie__TbExecOrder Archie__TbExecOrder;
 typedef struct Archie__MemInfo Archie__MemInfo;
-typedef struct Archie__MemDumpObject Archie__MemDumpObject;
+typedef struct Archie__MemDumpInfo Archie__MemDumpInfo;
 typedef struct Archie__MemDump Archie__MemDump;
-typedef struct Archie__ArchRegister Archie__ArchRegister;
+typedef struct Archie__RegisterInfo Archie__RegisterInfo;
 typedef struct Archie__RegisterDump Archie__RegisterDump;
 typedef struct Archie__FaultedData Archie__FaultedData;
 
@@ -34,19 +34,19 @@ typedef struct Archie__FaultedData Archie__FaultedData;
 struct  Archie__Data
 {
   ProtobufCMessage base;
-  int32_t endpoint;
+  int32_t end_point;
   char *end_reason;
-  size_t n_tb_information;
-  Archie__TbInformation **tb_information;
+  size_t n_tb_informations;
+  Archie__TbInformation **tb_informations;
   size_t n_tb_exec_orders;
   Archie__TbExecOrder **tb_exec_orders;
-  size_t n_mem_info_list;
-  Archie__MemInfo **mem_info_list;
-  Archie__ArchRegister *arch_register;
-  size_t n_faulted_data_list;
-  Archie__FaultedData **faulted_data_list;
-  size_t n_mem_dump_object_list;
-  Archie__MemDumpObject **mem_dump_object_list;
+  size_t n_mem_infos;
+  Archie__MemInfo **mem_infos;
+  Archie__RegisterInfo *register_info;
+  size_t n_faulted_datas;
+  Archie__FaultedData **faulted_datas;
+  size_t n_mem_dump_infos;
+  Archie__MemDumpInfo **mem_dump_infos;
 };
 #define ARCHIE__DATA__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&archie__data__descriptor) \
@@ -70,13 +70,12 @@ struct  Archie__TbInformation
 struct  Archie__TbExecOrder
 {
   ProtobufCMessage base;
-  protobuf_c_boolean tb_info_exist;
   uint64_t tb_base_address;
   uint64_t pos;
 };
 #define ARCHIE__TB_EXEC_ORDER__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&archie__tb_exec_order__descriptor) \
-    , 0, 0, 0 }
+    , 0, 0 }
 
 
 struct  Archie__MemInfo
@@ -93,18 +92,17 @@ struct  Archie__MemInfo
     , 0, 0, 0, 0, 0 }
 
 
-struct  Archie__MemDumpObject
+struct  Archie__MemDumpInfo
 {
   ProtobufCMessage base;
   uint64_t address;
   uint64_t len;
-  uint64_t used_dumps;
   size_t n_dumps;
   Archie__MemDump **dumps;
 };
-#define ARCHIE__MEM_DUMP_OBJECT__INIT \
- { PROTOBUF_C_MESSAGE_INIT (&archie__mem_dump_object__descriptor) \
-    , 0, 0, 0, 0,NULL }
+#define ARCHIE__MEM_DUMP_INFO__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&archie__mem_dump_info__descriptor) \
+    , 0, 0, 0,NULL }
 
 
 struct  Archie__MemDump
@@ -121,23 +119,23 @@ struct  Archie__MemDump
  * Type 0 = ARM
  * Type 1 = RISCV
  */
-struct  Archie__ArchRegister
+struct  Archie__RegisterInfo
 {
   ProtobufCMessage base;
   size_t n_register_dumps;
   Archie__RegisterDump **register_dumps;
   uint32_t arch_type;
 };
-#define ARCHIE__ARCH__REGISTER__INIT \
- { PROTOBUF_C_MESSAGE_INIT (&archie__arch__register__descriptor) \
+#define ARCHIE__REGISTER_INFO__INIT \
+ { PROTOBUF_C_MESSAGE_INIT (&archie__register_info__descriptor) \
     , 0,NULL, 0 }
 
 
 struct  Archie__RegisterDump
 {
   ProtobufCMessage base;
-  size_t n_register_data;
-  uint64_t *register_data;
+  size_t n_register_values;
+  uint64_t *register_values;
   uint64_t pc;
   uint64_t tb_count;
 };
@@ -233,24 +231,24 @@ Archie__MemInfo *
 void   archie__mem_info__free_unpacked
                      (Archie__MemInfo *message,
                       ProtobufCAllocator *allocator);
-/* Archie__MemDumpObject methods */
-void   archie__mem_dump_object__init
-                     (Archie__MemDumpObject         *message);
-size_t archie__mem_dump_object__get_packed_size
-                     (const Archie__MemDumpObject   *message);
-size_t archie__mem_dump_object__pack
-                     (const Archie__MemDumpObject   *message,
+/* Archie__MemDumpInfo methods */
+void   archie__mem_dump_info__init
+                     (Archie__MemDumpInfo         *message);
+size_t archie__mem_dump_info__get_packed_size
+                     (const Archie__MemDumpInfo   *message);
+size_t archie__mem_dump_info__pack
+                     (const Archie__MemDumpInfo   *message,
                       uint8_t             *out);
-size_t archie__mem_dump_object__pack_to_buffer
-                     (const Archie__MemDumpObject   *message,
+size_t archie__mem_dump_info__pack_to_buffer
+                     (const Archie__MemDumpInfo   *message,
                       ProtobufCBuffer     *buffer);
-Archie__MemDumpObject *
-       archie__mem_dump_object__unpack
+Archie__MemDumpInfo *
+       archie__mem_dump_info__unpack
                      (ProtobufCAllocator  *allocator,
                       size_t               len,
                       const uint8_t       *data);
-void   archie__mem_dump_object__free_unpacked
-                     (Archie__MemDumpObject *message,
+void   archie__mem_dump_info__free_unpacked
+                     (Archie__MemDumpInfo *message,
                       ProtobufCAllocator *allocator);
 /* Archie__MemDump methods */
 void   archie__mem_dump__init
@@ -271,24 +269,24 @@ Archie__MemDump *
 void   archie__mem_dump__free_unpacked
                      (Archie__MemDump *message,
                       ProtobufCAllocator *allocator);
-/* Archie__ArchRegister methods */
-void   archie__arch__register__init
-                     (Archie__ArchRegister         *message);
-size_t archie__arch__register__get_packed_size
-                     (const Archie__ArchRegister   *message);
-size_t archie__arch__register__pack
-                     (const Archie__ArchRegister   *message,
+/* Archie__RegisterInfo methods */
+void   archie__register_info__init
+                     (Archie__RegisterInfo         *message);
+size_t archie__register_info__get_packed_size
+                     (const Archie__RegisterInfo   *message);
+size_t archie__register_info__pack
+                     (const Archie__RegisterInfo   *message,
                       uint8_t             *out);
-size_t archie__arch__register__pack_to_buffer
-                     (const Archie__ArchRegister   *message,
+size_t archie__register_info__pack_to_buffer
+                     (const Archie__RegisterInfo   *message,
                       ProtobufCBuffer     *buffer);
-Archie__ArchRegister *
-       archie__arch__register__unpack
+Archie__RegisterInfo *
+       archie__register_info__unpack
                      (ProtobufCAllocator  *allocator,
                       size_t               len,
                       const uint8_t       *data);
-void   archie__arch__register__free_unpacked
-                     (Archie__ArchRegister *message,
+void   archie__register_info__free_unpacked
+                     (Archie__RegisterInfo *message,
                       ProtobufCAllocator *allocator);
 /* Archie__RegisterDump methods */
 void   archie__register_dump__init
@@ -342,14 +340,14 @@ typedef void (*Archie__TbExecOrder_Closure)
 typedef void (*Archie__MemInfo_Closure)
                  (const Archie__MemInfo *message,
                   void *closure_data);
-typedef void (*Archie__MemDumpObject_Closure)
-                 (const Archie__MemDumpObject *message,
+typedef void (*Archie__MemDumpInfo_Closure)
+                 (const Archie__MemDumpInfo *message,
                   void *closure_data);
 typedef void (*Archie__MemDump_Closure)
                  (const Archie__MemDump *message,
                   void *closure_data);
-typedef void (*Archie__ArchRegister_Closure)
-                 (const Archie__ArchRegister *message,
+typedef void (*Archie__RegisterInfo_Closure)
+                 (const Archie__RegisterInfo *message,
                   void *closure_data);
 typedef void (*Archie__RegisterDump_Closure)
                  (const Archie__RegisterDump *message,
@@ -367,9 +365,9 @@ extern const ProtobufCMessageDescriptor archie__data__descriptor;
 extern const ProtobufCMessageDescriptor archie__tb_information__descriptor;
 extern const ProtobufCMessageDescriptor archie__tb_exec_order__descriptor;
 extern const ProtobufCMessageDescriptor archie__mem_info__descriptor;
-extern const ProtobufCMessageDescriptor archie__mem_dump_object__descriptor;
+extern const ProtobufCMessageDescriptor archie__mem_dump_info__descriptor;
 extern const ProtobufCMessageDescriptor archie__mem_dump__descriptor;
-extern const ProtobufCMessageDescriptor archie__arch__register__descriptor;
+extern const ProtobufCMessageDescriptor archie__register_info__descriptor;
 extern const ProtobufCMessageDescriptor archie__register_dump__descriptor;
 extern const ProtobufCMessageDescriptor archie__faulted_data__descriptor;
 

@@ -187,49 +187,49 @@ void   archie__mem_info__free_unpacked
   assert(message->base.descriptor == &archie__mem_info__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
-void   archie__mem_dump_object__init
-                     (Archie__MemDumpObject         *message)
+void   archie__mem_dump_info__init
+                     (Archie__MemDumpInfo         *message)
 {
-  static const Archie__MemDumpObject init_value = ARCHIE__MEM_DUMP_OBJECT__INIT;
+  static const Archie__MemDumpInfo init_value = ARCHIE__MEM_DUMP_INFO__INIT;
   *message = init_value;
 }
-size_t archie__mem_dump_object__get_packed_size
-                     (const Archie__MemDumpObject *message)
+size_t archie__mem_dump_info__get_packed_size
+                     (const Archie__MemDumpInfo *message)
 {
-  assert(message->base.descriptor == &archie__mem_dump_object__descriptor);
+  assert(message->base.descriptor == &archie__mem_dump_info__descriptor);
   return protobuf_c_message_get_packed_size ((const ProtobufCMessage*)(message));
 }
-size_t archie__mem_dump_object__pack
-                     (const Archie__MemDumpObject *message,
+size_t archie__mem_dump_info__pack
+                     (const Archie__MemDumpInfo *message,
                       uint8_t       *out)
 {
-  assert(message->base.descriptor == &archie__mem_dump_object__descriptor);
+  assert(message->base.descriptor == &archie__mem_dump_info__descriptor);
   return protobuf_c_message_pack ((const ProtobufCMessage*)message, out);
 }
-size_t archie__mem_dump_object__pack_to_buffer
-                     (const Archie__MemDumpObject *message,
+size_t archie__mem_dump_info__pack_to_buffer
+                     (const Archie__MemDumpInfo *message,
                       ProtobufCBuffer *buffer)
 {
-  assert(message->base.descriptor == &archie__mem_dump_object__descriptor);
+  assert(message->base.descriptor == &archie__mem_dump_info__descriptor);
   return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage*)message, buffer);
 }
-Archie__MemDumpObject *
-       archie__mem_dump_object__unpack
+Archie__MemDumpInfo *
+       archie__mem_dump_info__unpack
                      (ProtobufCAllocator  *allocator,
                       size_t               len,
                       const uint8_t       *data)
 {
-  return (Archie__MemDumpObject *)
-     protobuf_c_message_unpack (&archie__mem_dump_object__descriptor,
+  return (Archie__MemDumpInfo *)
+     protobuf_c_message_unpack (&archie__mem_dump_info__descriptor,
                                 allocator, len, data);
 }
-void   archie__mem_dump_object__free_unpacked
-                     (Archie__MemDumpObject *message,
+void   archie__mem_dump_info__free_unpacked
+                     (Archie__MemDumpInfo *message,
                       ProtobufCAllocator *allocator)
 {
   if(!message)
     return;
-  assert(message->base.descriptor == &archie__mem_dump_object__descriptor);
+  assert(message->base.descriptor == &archie__mem_dump_info__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
 void   archie__mem_dump__init
@@ -277,49 +277,49 @@ void   archie__mem_dump__free_unpacked
   assert(message->base.descriptor == &archie__mem_dump__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
-void   archie__arch__register__init
-                     (Archie__ArchRegister         *message)
+void   archie__register_info__init
+                     (Archie__RegisterInfo         *message)
 {
-  static const Archie__ArchRegister init_value = ARCHIE__ARCH__REGISTER__INIT;
+  static const Archie__RegisterInfo init_value = ARCHIE__REGISTER_INFO__INIT;
   *message = init_value;
 }
-size_t archie__arch__register__get_packed_size
-                     (const Archie__ArchRegister *message)
+size_t archie__register_info__get_packed_size
+                     (const Archie__RegisterInfo *message)
 {
-  assert(message->base.descriptor == &archie__arch__register__descriptor);
+  assert(message->base.descriptor == &archie__register_info__descriptor);
   return protobuf_c_message_get_packed_size ((const ProtobufCMessage*)(message));
 }
-size_t archie__arch__register__pack
-                     (const Archie__ArchRegister *message,
+size_t archie__register_info__pack
+                     (const Archie__RegisterInfo *message,
                       uint8_t       *out)
 {
-  assert(message->base.descriptor == &archie__arch__register__descriptor);
+  assert(message->base.descriptor == &archie__register_info__descriptor);
   return protobuf_c_message_pack ((const ProtobufCMessage*)message, out);
 }
-size_t archie__arch__register__pack_to_buffer
-                     (const Archie__ArchRegister *message,
+size_t archie__register_info__pack_to_buffer
+                     (const Archie__RegisterInfo *message,
                       ProtobufCBuffer *buffer)
 {
-  assert(message->base.descriptor == &archie__arch__register__descriptor);
+  assert(message->base.descriptor == &archie__register_info__descriptor);
   return protobuf_c_message_pack_to_buffer ((const ProtobufCMessage*)message, buffer);
 }
-Archie__ArchRegister *
-       archie__arch__register__unpack
+Archie__RegisterInfo *
+       archie__register_info__unpack
                      (ProtobufCAllocator  *allocator,
                       size_t               len,
                       const uint8_t       *data)
 {
-  return (Archie__ArchRegister *)
-     protobuf_c_message_unpack (&archie__arch__register__descriptor,
+  return (Archie__RegisterInfo *)
+     protobuf_c_message_unpack (&archie__register_info__descriptor,
                                 allocator, len, data);
 }
-void   archie__arch__register__free_unpacked
-                     (Archie__ArchRegister *message,
+void   archie__register_info__free_unpacked
+                     (Archie__RegisterInfo *message,
                       ProtobufCAllocator *allocator)
 {
   if(!message)
     return;
-  assert(message->base.descriptor == &archie__arch__register__descriptor);
+  assert(message->base.descriptor == &archie__register_info__descriptor);
   protobuf_c_message_free_unpacked ((ProtobufCMessage*)message, allocator);
 }
 void   archie__register_dump__init
@@ -415,12 +415,12 @@ void   archie__faulted_data__free_unpacked
 static const ProtobufCFieldDescriptor archie__data__field_descriptors[8] =
 {
   {
-    "endpoint",
+    "end_point",
     1,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_INT32,
     0,   /* quantifier_offset */
-    offsetof(Archie__Data, endpoint),
+    offsetof(Archie__Data, end_point),
     NULL,
     NULL,
     0,             /* flags */
@@ -439,12 +439,12 @@ static const ProtobufCFieldDescriptor archie__data__field_descriptors[8] =
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "tb_information",
+    "tb_informations",
     3,
     PROTOBUF_C_LABEL_REPEATED,
     PROTOBUF_C_TYPE_MESSAGE,
-    offsetof(Archie__Data, n_tb_information),
-    offsetof(Archie__Data, tb_information),
+    offsetof(Archie__Data, n_tb_informations),
+    offsetof(Archie__Data, tb_informations),
     &archie__tb_information__descriptor,
     NULL,
     0,             /* flags */
@@ -463,63 +463,63 @@ static const ProtobufCFieldDescriptor archie__data__field_descriptors[8] =
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "mem_info_list",
+    "mem_infos",
     5,
     PROTOBUF_C_LABEL_REPEATED,
     PROTOBUF_C_TYPE_MESSAGE,
-    offsetof(Archie__Data, n_mem_info_list),
-    offsetof(Archie__Data, mem_info_list),
+    offsetof(Archie__Data, n_mem_infos),
+    offsetof(Archie__Data, mem_infos),
     &archie__mem_info__descriptor,
     NULL,
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "arch_register",
+    "register_info",
     6,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_MESSAGE,
     0,   /* quantifier_offset */
-    offsetof(Archie__Data, arch_register),
-    &archie__arch__register__descriptor,
+    offsetof(Archie__Data, register_info),
+    &archie__register_info__descriptor,
     NULL,
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "faulted_data_list",
+    "faulted_datas",
     7,
     PROTOBUF_C_LABEL_REPEATED,
     PROTOBUF_C_TYPE_MESSAGE,
-    offsetof(Archie__Data, n_faulted_data_list),
-    offsetof(Archie__Data, faulted_data_list),
+    offsetof(Archie__Data, n_faulted_datas),
+    offsetof(Archie__Data, faulted_datas),
     &archie__faulted_data__descriptor,
     NULL,
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
   {
-    "Mem_dump_object_list",
+    "mem_dump_infos",
     8,
     PROTOBUF_C_LABEL_REPEATED,
     PROTOBUF_C_TYPE_MESSAGE,
-    offsetof(Archie__Data, n_mem_dump_object_list),
-    offsetof(Archie__Data, mem_dump_object_list),
-    &archie__mem_dump_object__descriptor,
+    offsetof(Archie__Data, n_mem_dump_infos),
+    offsetof(Archie__Data, mem_dump_infos),
+    &archie__mem_dump_info__descriptor,
     NULL,
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
 };
 static const unsigned archie__data__field_indices_by_name[] = {
-  7,   /* field[7] = Mem_dump_object_list */
-  5,   /* field[5] = arch_register */
+  0,   /* field[0] = end_point */
   1,   /* field[1] = end_reason */
-  0,   /* field[0] = endpoint */
-  6,   /* field[6] = faulted_data_list */
-  4,   /* field[4] = mem_info_list */
+  6,   /* field[6] = faulted_datas */
+  7,   /* field[7] = mem_dump_infos */
+  4,   /* field[4] = mem_infos */
+  5,   /* field[5] = register_info */
   3,   /* field[3] = tb_exec_orders */
-  2,   /* field[2] = tb_information */
+  2,   /* field[2] = tb_informations */
 };
 static const ProtobufCIntRange archie__data__number_ranges[1 + 1] =
 {
@@ -619,7 +619,7 @@ static const ProtobufCIntRange archie__tb_information__number_ranges[1 + 1] =
 const ProtobufCMessageDescriptor archie__tb_information__descriptor =
 {
   PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
-  "archie.Tb_information",
+  "archie.TbInformation",
   "TbInformation",
   "Archie__TbInformation",
   "archie",
@@ -631,23 +631,11 @@ const ProtobufCMessageDescriptor archie__tb_information__descriptor =
   (ProtobufCMessageInit) archie__tb_information__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor archie__tb_exec_order__field_descriptors[3] =
+static const ProtobufCFieldDescriptor archie__tb_exec_order__field_descriptors[2] =
 {
   {
-    "tb_info_exist",
-    1,
-    PROTOBUF_C_LABEL_NONE,
-    PROTOBUF_C_TYPE_BOOL,
-    0,   /* quantifier_offset */
-    offsetof(Archie__TbExecOrder, tb_info_exist),
-    NULL,
-    NULL,
-    0,             /* flags */
-    0,NULL,NULL    /* reserved1,reserved2, etc */
-  },
-  {
     "tb_base_address",
-    2,
+    1,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_UINT64,
     0,   /* quantifier_offset */
@@ -659,7 +647,7 @@ static const ProtobufCFieldDescriptor archie__tb_exec_order__field_descriptors[3
   },
   {
     "pos",
-    3,
+    2,
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_UINT64,
     0,   /* quantifier_offset */
@@ -671,24 +659,23 @@ static const ProtobufCFieldDescriptor archie__tb_exec_order__field_descriptors[3
   },
 };
 static const unsigned archie__tb_exec_order__field_indices_by_name[] = {
-  2,   /* field[2] = pos */
-  1,   /* field[1] = tb_base_address */
-  0,   /* field[0] = tb_info_exist */
+  1,   /* field[1] = pos */
+  0,   /* field[0] = tb_base_address */
 };
 static const ProtobufCIntRange archie__tb_exec_order__number_ranges[1 + 1] =
 {
   { 1, 0 },
-  { 0, 3 }
+  { 0, 2 }
 };
 const ProtobufCMessageDescriptor archie__tb_exec_order__descriptor =
 {
   PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
-  "archie.Tb_exec_order",
+  "archie.TbExecOrder",
   "TbExecOrder",
   "Archie__TbExecOrder",
   "archie",
   sizeof(Archie__TbExecOrder),
-  3,
+  2,
   archie__tb_exec_order__field_descriptors,
   archie__tb_exec_order__field_indices_by_name,
   1,  archie__tb_exec_order__number_ranges,
@@ -773,7 +760,7 @@ static const ProtobufCIntRange archie__mem_info__number_ranges[1 + 1] =
 const ProtobufCMessageDescriptor archie__mem_info__descriptor =
 {
   PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
-  "archie.Mem_info",
+  "archie.MemInfo",
   "MemInfo",
   "Archie__MemInfo",
   "archie",
@@ -785,7 +772,7 @@ const ProtobufCMessageDescriptor archie__mem_info__descriptor =
   (ProtobufCMessageInit) archie__mem_info__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor archie__mem_dump_object__field_descriptors[4] =
+static const ProtobufCFieldDescriptor archie__mem_dump_info__field_descriptors[3] =
 {
   {
     "address",
@@ -793,7 +780,7 @@ static const ProtobufCFieldDescriptor archie__mem_dump_object__field_descriptors
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_UINT64,
     0,   /* quantifier_offset */
-    offsetof(Archie__MemDumpObject, address),
+    offsetof(Archie__MemDumpInfo, address),
     NULL,
     NULL,
     0,             /* flags */
@@ -805,19 +792,7 @@ static const ProtobufCFieldDescriptor archie__mem_dump_object__field_descriptors
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_UINT64,
     0,   /* quantifier_offset */
-    offsetof(Archie__MemDumpObject, len),
-    NULL,
-    NULL,
-    0,             /* flags */
-    0,NULL,NULL    /* reserved1,reserved2, etc */
-  },
-  {
-    "used_dumps",
-    3,
-    PROTOBUF_C_LABEL_NONE,
-    PROTOBUF_C_TYPE_UINT64,
-    0,   /* quantifier_offset */
-    offsetof(Archie__MemDumpObject, used_dumps),
+    offsetof(Archie__MemDumpInfo, len),
     NULL,
     NULL,
     0,             /* flags */
@@ -825,41 +800,40 @@ static const ProtobufCFieldDescriptor archie__mem_dump_object__field_descriptors
   },
   {
     "dumps",
-    4,
+    3,
     PROTOBUF_C_LABEL_REPEATED,
     PROTOBUF_C_TYPE_MESSAGE,
-    offsetof(Archie__MemDumpObject, n_dumps),
-    offsetof(Archie__MemDumpObject, dumps),
+    offsetof(Archie__MemDumpInfo, n_dumps),
+    offsetof(Archie__MemDumpInfo, dumps),
     &archie__mem_dump__descriptor,
     NULL,
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
 };
-static const unsigned archie__mem_dump_object__field_indices_by_name[] = {
+static const unsigned archie__mem_dump_info__field_indices_by_name[] = {
   0,   /* field[0] = address */
-  3,   /* field[3] = dumps */
+  2,   /* field[2] = dumps */
   1,   /* field[1] = len */
-  2,   /* field[2] = used_dumps */
 };
-static const ProtobufCIntRange archie__mem_dump_object__number_ranges[1 + 1] =
+static const ProtobufCIntRange archie__mem_dump_info__number_ranges[1 + 1] =
 {
   { 1, 0 },
-  { 0, 4 }
+  { 0, 3 }
 };
-const ProtobufCMessageDescriptor archie__mem_dump_object__descriptor =
+const ProtobufCMessageDescriptor archie__mem_dump_info__descriptor =
 {
   PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
-  "archie.Mem_dump_object",
-  "MemDumpObject",
-  "Archie__MemDumpObject",
+  "archie.MemDumpInfo",
+  "MemDumpInfo",
+  "Archie__MemDumpInfo",
   "archie",
-  sizeof(Archie__MemDumpObject),
-  4,
-  archie__mem_dump_object__field_descriptors,
-  archie__mem_dump_object__field_indices_by_name,
-  1,  archie__mem_dump_object__number_ranges,
-  (ProtobufCMessageInit) archie__mem_dump_object__init,
+  sizeof(Archie__MemDumpInfo),
+  3,
+  archie__mem_dump_info__field_descriptors,
+  archie__mem_dump_info__field_indices_by_name,
+  1,  archie__mem_dump_info__number_ranges,
+  (ProtobufCMessageInit) archie__mem_dump_info__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
 static const ProtobufCFieldDescriptor archie__mem_dump__field_descriptors[1] =
@@ -888,7 +862,7 @@ static const ProtobufCIntRange archie__mem_dump__number_ranges[1 + 1] =
 const ProtobufCMessageDescriptor archie__mem_dump__descriptor =
 {
   PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
-  "archie.Mem_dump",
+  "archie.MemDump",
   "MemDump",
   "Archie__MemDump",
   "archie",
@@ -900,15 +874,15 @@ const ProtobufCMessageDescriptor archie__mem_dump__descriptor =
   (ProtobufCMessageInit) archie__mem_dump__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
-static const ProtobufCFieldDescriptor archie__arch__register__field_descriptors[2] =
+static const ProtobufCFieldDescriptor archie__register_info__field_descriptors[2] =
 {
   {
     "register_dumps",
     1,
     PROTOBUF_C_LABEL_REPEATED,
     PROTOBUF_C_TYPE_MESSAGE,
-    offsetof(Archie__ArchRegister, n_register_dumps),
-    offsetof(Archie__ArchRegister, register_dumps),
+    offsetof(Archie__RegisterInfo, n_register_dumps),
+    offsetof(Archie__RegisterInfo, register_dumps),
     &archie__register_dump__descriptor,
     NULL,
     0,             /* flags */
@@ -920,46 +894,46 @@ static const ProtobufCFieldDescriptor archie__arch__register__field_descriptors[
     PROTOBUF_C_LABEL_NONE,
     PROTOBUF_C_TYPE_UINT32,
     0,   /* quantifier_offset */
-    offsetof(Archie__ArchRegister, arch_type),
+    offsetof(Archie__RegisterInfo, arch_type),
     NULL,
     NULL,
     0,             /* flags */
     0,NULL,NULL    /* reserved1,reserved2, etc */
   },
 };
-static const unsigned archie__arch__register__field_indices_by_name[] = {
+static const unsigned archie__register_info__field_indices_by_name[] = {
   1,   /* field[1] = arch_type */
   0,   /* field[0] = register_dumps */
 };
-static const ProtobufCIntRange archie__arch__register__number_ranges[1 + 1] =
+static const ProtobufCIntRange archie__register_info__number_ranges[1 + 1] =
 {
   { 1, 0 },
   { 0, 2 }
 };
-const ProtobufCMessageDescriptor archie__arch__register__descriptor =
+const ProtobufCMessageDescriptor archie__register_info__descriptor =
 {
   PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
-  "archie.Arch_Register",
-  "ArchRegister",
-  "Archie__ArchRegister",
+  "archie.RegisterInfo",
+  "RegisterInfo",
+  "Archie__RegisterInfo",
   "archie",
-  sizeof(Archie__ArchRegister),
+  sizeof(Archie__RegisterInfo),
   2,
-  archie__arch__register__field_descriptors,
-  archie__arch__register__field_indices_by_name,
-  1,  archie__arch__register__number_ranges,
-  (ProtobufCMessageInit) archie__arch__register__init,
+  archie__register_info__field_descriptors,
+  archie__register_info__field_indices_by_name,
+  1,  archie__register_info__number_ranges,
+  (ProtobufCMessageInit) archie__register_info__init,
   NULL,NULL,NULL    /* reserved[123] */
 };
 static const ProtobufCFieldDescriptor archie__register_dump__field_descriptors[3] =
 {
   {
-    "register_data",
+    "register_values",
     1,
     PROTOBUF_C_LABEL_REPEATED,
     PROTOBUF_C_TYPE_UINT64,
-    offsetof(Archie__RegisterDump, n_register_data),
-    offsetof(Archie__RegisterDump, register_data),
+    offsetof(Archie__RegisterDump, n_register_values),
+    offsetof(Archie__RegisterDump, register_values),
     NULL,
     NULL,
     0 | PROTOBUF_C_FIELD_FLAG_PACKED,             /* flags */
@@ -992,7 +966,7 @@ static const ProtobufCFieldDescriptor archie__register_dump__field_descriptors[3
 };
 static const unsigned archie__register_dump__field_indices_by_name[] = {
   1,   /* field[1] = pc */
-  0,   /* field[0] = register_data */
+  0,   /* field[0] = register_values */
   2,   /* field[2] = tb_count */
 };
 static const ProtobufCIntRange archie__register_dump__number_ranges[1 + 1] =
@@ -1003,7 +977,7 @@ static const ProtobufCIntRange archie__register_dump__number_ranges[1 + 1] =
 const ProtobufCMessageDescriptor archie__register_dump__descriptor =
 {
   PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
-  "archie.Register_dump",
+  "archie.RegisterDump",
   "RegisterDump",
   "Archie__RegisterDump",
   "archie",
@@ -1054,7 +1028,7 @@ static const ProtobufCIntRange archie__faulted_data__number_ranges[1 + 1] =
 const ProtobufCMessageDescriptor archie__faulted_data__descriptor =
 {
   PROTOBUF_C__MESSAGE_DESCRIPTOR_MAGIC,
-  "archie.Faulted_data",
+  "archie.FaultedData",
   "FaultedData",
   "Archie__FaultedData",
   "archie",
