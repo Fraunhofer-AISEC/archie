@@ -28,7 +28,9 @@ impl ToPyObject for MemInfo {
 
 pub struct Logs {
     pub meminfo: RwLock<HashMap<String, MemInfo>>,
-    pub last_tbid: RwLock<u64>
+
+    pub last_tbid: RwLock<u64>,
+    pub endpoints: RwLock<HashMap<u64, u32>>
 }
 
 impl ToPyObject for Logs {
