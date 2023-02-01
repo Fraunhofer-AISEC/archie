@@ -144,19 +144,20 @@ void check_tb_faulted(struct qemu_plugin_tb *tb)
 	}
 }
 
-size_t get_tb_faulted_data_count(void){
-    size_t size = 0;
-    tb_faulted_t *item = tb_faulted_list;
-    while(item != NULL)
-    {
-        if(item->assembler != NULL)
-        {
-            size++;
-        }
-        item = item->next;
-    }
+size_t get_tb_faulted_data_count(void)
+{
+	size_t size = 0;
+	tb_faulted_t *item = tb_faulted_list;
+	while(item != NULL)
+	{
+		if(item->assembler != NULL)
+		{
+			size++;
+		}
+		item = item->next;
+	}
 
-    return size;
+	return size;
 }
 
 void dump_tb_faulted_data(Archie__Data* protobuf_msg)
@@ -167,28 +168,28 @@ void dump_tb_faulted_data(Archie__Data* protobuf_msg)
 		return;
 	}
 
-    // Allocate and init a list of tb_faulted_data on protobuf
-    size_t size = get_tb_faulted_data_count();
-    Archie__FaultedData** faulted_data_list;
-    faulted_data_list = malloc(sizeof(Archie__FaultedData*) * size);
+	// Allocate and init a list of tb_faulted_data on protobuf
+	size_t size = get_tb_faulted_data_count();
+	Archie__FaultedData** faulted_data_list;
+	faulted_data_list = malloc(sizeof(Archie__FaultedData*) * size);
 
-    int counter = 0;
+	int counter = 0;
 	tb_faulted_t *item = tb_faulted_list;
 	while(item != NULL)
 	{
 		if(item->assembler != NULL)
 		{
-            faulted_data_list[counter] = malloc(sizeof(Archie__FaultedData));
-            archie__faulted_data__init(faulted_data_list[counter]);
+			faulted_data_list[counter] = malloc(sizeof(Archie__FaultedData));
+			archie__faulted_data__init(faulted_data_list[counter]);
 
-            faulted_data_list[counter]->trigger_address = item->trigger_address;
-            faulted_data_list[counter]->assembler = item->assembler->str;
+			faulted_data_list[counter]->trigger_address = item->trigger_address;
+			faulted_data_list[counter]->assembler = item->assembler->str;
 
-            counter++;
+			counter++;
 		}
 		item = item->next;
 	}
 
-    protobuf_msg->n_faulted_datas = size;
-    protobuf_msg->faulted_datas = faulted_data_list;
+	protobuf_msg->n_faulted_datas = size;
+	protobuf_msg->faulted_datas = faulted_data_list;
 }

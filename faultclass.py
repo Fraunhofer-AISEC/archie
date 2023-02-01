@@ -108,7 +108,6 @@ def write_fault_list_to_pipe(fault_list, fifo):
     fifo.flush()
     return tmp
 
-
 def run_qemu(
     control,
     config,
@@ -169,7 +168,7 @@ def run_qemu(
 
 def readout_tbinfo(data_protobuf):
     """
-    Builds the dict for tb info from line provided by qemu
+    Builds a list of dicts for tb info from provided by qemu
     """
     tb_list = []
     for tb_info in data_protobuf.tb_informations:
@@ -205,7 +204,7 @@ def write_output_wrt_goldenrun(keyword, data, goldenrun_data):
 
 def readout_tbexec(data_protobuf):
     """
-    Builds the dict for tb exec from line provided by qemu
+    Builds a list of dicts for tb exec provided by qemu
     """
     pdtbexeclist = pd.DataFrame()
     tbexeclist = []
@@ -374,7 +373,7 @@ def filter_tb(tbexeclist, tbinfo, tbexecgolden, tbinfogolden, id_num):
 
 def readout_meminfo(data_protobuf):
     """
-    Builds the dict for memory info from protobuf message provided by qemu
+    Builds a list of dicts for memory info from protobuf message provided by qemu
     """
     memlist = []
     for meminfo in data_protobuf.mem_infos:
@@ -428,7 +427,7 @@ def readout_registers(data_protobuf):
     register_list = []
     reg_type = data_protobuf.register_info.arch_type
     reg_size = 0
-    reg_name = ''
+    reg_name = ""
 
     if reg_type == Register.ARM:
         reg_size = 16
@@ -634,8 +633,7 @@ def delete_fifos():
     os.rmdir(path)
 
 
-def configure_qemu(control, config_qemu, num_faults, memorydump_list,
-                   goldenrun):
+def configure_qemu(control, config_qemu, num_faults, memorydump_list, goldenrun):
     """
     Creates a protobuf message instance and writes it to the control pipe
     """
@@ -676,7 +674,6 @@ def configure_qemu(control, config_qemu, num_faults, memorydump_list,
         control_message.has_ring_buffer = True
         control_message.tb_exec_list_ring_buffer = True
 
-
     if memorydump_list is not None:
         for memorydump in memorydump_list:
             memory_region = control_message.memorydumps.add()
@@ -687,7 +684,7 @@ def configure_qemu(control, config_qemu, num_faults, memorydump_list,
     # Writing protobuf message to pipe
     # Size is also sent for correct parsing on the faultplugin side
     message_size = control_message.ByteSize()
-    message_size_string = str(message_size) + '\n'
+    message_size_string = str(message_size) + "\n"
     control.write(message_size_string.encode())
 
     out = control_message.SerializeToString()
@@ -740,6 +737,7 @@ def python_worker(
                 qemu_custom_paths,
             ),
         )
+
         p_qemu.start()
         logger.debug("Started QEMU process")
         control_fifo = open(paths["control"], mode="wb")
@@ -756,8 +754,10 @@ def python_worker(
         else:
             goldenrun = False
 
-        configure_qemu(control_fifo, config_qemu, len(fault_list), memorydump,
-                       goldenrun)
+        configure_qemu(
+            control_fifo, config_qemu, len(fault_list), memorydump, goldenrun
+        )
+
         logger.debug("Started QEMU")
         """Write faults to config pipe"""
         write_fault_list_to_pipe(fault_list, config_fifo)

@@ -14,10 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from faultclass import build_filters
-
 import logging
+
 import pandas
+
+from faultclass import build_filters
 
 logger = logging.getLogger(__name__)
 

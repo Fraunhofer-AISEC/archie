@@ -79,7 +79,8 @@ int tb_comparison_func(const void *tbl_a, const void *tbl_b, void * tbl_param);
 /**
  * plugin_dump_tb_information()
  *
- * Function that reads the tb information structs and prints each to the data pipe. Furthermore writes the command to python, such that it knows tb information is provided
+ * Function that reads the tb information structs and writes them to protobuf message.
+ * Furthermore writes the command to python, such that it knows tb information is provided
  *
  *
  */

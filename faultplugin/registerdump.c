@@ -84,13 +84,23 @@ int add_new_registerdump(uint64_t tbcount)
 	registerdump_t* current = NULL;
 	if(arch == ARM)
 	{
-		current = malloc(sizeof(registerdump_t) + sizeof(uint64_t[17]) );
-		readout_arm_registers( current);
+		current = malloc(sizeof(registerdump_t) + sizeof(uint64_t[N_ARM_REGISTERS + 1]) );
+		if(current == NULL)
+		{
+			qemu_plugin_outs("failed\n[ERROR]: Malloc error for registerdump_t");
+			return -1;
+		}
+		readout_arm_registers(current);
 		current->pc = current->regs[15];
 	}
 	if(arch == RISCV)
 	{
-		current = malloc(sizeof(registerdump_t) + sizeof(uint64_t[33]));
+		current = malloc(sizeof(registerdump_t) + sizeof(uint64_t[N_RISCV_REGISTERS + 1]));
+		if(current == NULL)
+		{
+			qemu_plugin_outs("failed\n[ERROR]: Malloc error for registerdump_t");
+			return -1;
+		}
 		readout_riscv_registers(current);
 		current->pc = current->regs[32];
 	}
@@ -103,7 +113,7 @@ int add_new_registerdump(uint64_t tbcount)
 void readout_riscv_registers(registerdump_t * current)
 {
 	//read all registers (32 is PC)
-	for(int i = 0; i < 33; i++)
+	for(int i = 0; i < N_RISCV_REGISTERS + 1; i++)
 	{
 		current->regs[i] = 0;
 		current->regs[i] = qemu_plugin_read_reg(i);
@@ -113,7 +123,7 @@ void readout_riscv_registers(registerdump_t * current)
 void readout_arm_registers(registerdump_t * current)
 {
 	// read r0 - r15
-	for(int i = 0; i < 16; i++)
+	for(int i = 0; i < N_ARM_REGISTERS; i++)
 	{
 		current->regs[i] = 0;
 		current->regs[i] = qemu_plugin_read_reg(i);
@@ -122,74 +132,87 @@ void readout_arm_registers(registerdump_t * current)
 	current->regs[16] = qemu_plugin_read_reg(25);
 }
 
-size_t get_register_dump_count(){
-    size_t size = 0;
-    registerdump_t* current = first_registerdump;
-    while(current != NULL)
-    {
-        size++;
-        current = current->next;
-    }
+size_t get_register_dump_count()
+{
+	size_t size = 0;
+	registerdump_t* current = first_registerdump;
+	while(current != NULL)
+	{
+		size++;
+		current = current->next;
+	}
 
-    return size;
+	return size;
 }
 
 int read_registers(Archie__RegisterInfo* protobuf_reg_info)
 {
-    // Allocate memory for register info on protobuf message
-    size_t n_register_dumps = get_register_dump_count();
-    Archie__RegisterDump** protobuf_reg_dump_list;
-    protobuf_reg_dump_list = malloc(sizeof(Archie__RegisterDump*) * n_register_dumps);
+	// Allocate memory for register info on protobuf message
+	size_t n_register_dumps = get_register_dump_count();
+	Archie__RegisterDump** protobuf_reg_dump_list;
+	protobuf_reg_dump_list = malloc(sizeof(Archie__RegisterDump*) * n_register_dumps);
 
-    uint64_t register_size = 0;
-    if(arch == ARM)
-    {
-        qemu_plugin_outs("[DEBUG]: start reading arm registerdumps\n");
-        protobuf_reg_info->arch_type = ARM;
-        register_size = 17;
-    } else if(arch == RISCV)
-    {
-        qemu_plugin_outs("[DEBUG]: start reading riscv registerdump\n");
-        protobuf_reg_info->arch_type = RISCV;
-        register_size = 33;
-    } else {
-        qemu_plugin_outs("[ERROR]: [CRITICAL]: Unknown Architecture for register module");
-        return -1;
-    }
+	uint64_t n_registers = 0;
+	if(arch == ARM)
+	{
+		qemu_plugin_outs("[DEBUG]: start reading arm registerdumps\n");
+		protobuf_reg_info->arch_type = ARM;
 
-    registerdump_t* current = first_registerdump;
-    int counter = 0;
+		// Extra register carries the XPSR register
+		n_registers = N_ARM_REGISTERS + 1;
+	}
+	else if(arch == RISCV)
+	{
+		qemu_plugin_outs("[DEBUG]: start reading riscv registerdumps\n");
+		protobuf_reg_info->arch_type = RISCV;
+
+		// Extra register carries the program counter
+		n_registers = N_RISCV_REGISTERS + 1;
+	}
+	else
+	{
+		qemu_plugin_outs("[ERROR]: [CRITICAL]: Unknown Architecture for register module");
+		return -1;
+	}
+
+	registerdump_t* current = first_registerdump;
+	int counter = 0;
 	while(current != NULL)
 	{
-        protobuf_reg_dump_list[counter] = malloc(sizeof(Archie__RegisterDump));
-        archie__register_dump__init(protobuf_reg_dump_list[counter]);
+		protobuf_reg_dump_list[counter] = malloc(sizeof(Archie__RegisterDump));
+		archie__register_dump__init(protobuf_reg_dump_list[counter]);
 
-        // Copy register values into current protobuf register info dump
-        protobuf_reg_dump_list[counter]->n_register_values = register_size;
-        protobuf_reg_dump_list[counter]->register_values = malloc(sizeof(uint64_t) * register_size);
-		for(int i = 0; i < register_size; i++)
+		// Copy register values into current protobuf register info dump
+		protobuf_reg_dump_list[counter]->n_register_values = n_registers;
+		protobuf_reg_dump_list[counter]->register_values = malloc(sizeof(uint64_t) * n_registers);
+		if(protobuf_reg_dump_list[counter]->register_values == NULL)
 		{
-            protobuf_reg_dump_list[counter]->register_values[i] = current->regs[i];
+			qemu_plugin_outs("[ERROR]: Malloc failed\n");
+			return -1;
+		}
+		for(int i = 0; i < n_registers; i++)
+		{
+			protobuf_reg_dump_list[counter]->register_values[i] = current->regs[i];
 		}
 
-        protobuf_reg_dump_list[counter]->pc = current->pc;
-        protobuf_reg_dump_list[counter]->tb_count = current->tbcount;
+		protobuf_reg_dump_list[counter]->pc = current->pc;
+		protobuf_reg_dump_list[counter]->tb_count = current->tbcount;
 
-        counter++;
+		counter++;
 		current = current->next;
 	}
 
-    protobuf_reg_info->n_register_dumps = n_register_dumps;
-    protobuf_reg_info->register_dumps = protobuf_reg_dump_list;
+	protobuf_reg_info->n_register_dumps = n_register_dumps;
+	protobuf_reg_info->register_dumps = protobuf_reg_dump_list;
 
-    return 1;
+	return 0;
 }
 
 void read_register_module(Archie__Data* msg)
 {
-    // Allocate and init register info of protobuf data message
-    Archie__RegisterInfo* reg = malloc(sizeof(Archie__RegisterInfo));
-    archie__register_info__init(reg);
+	// Allocate and init register info of protobuf data message
+	Archie__RegisterInfo* reg = malloc(sizeof(Archie__RegisterInfo));
+	archie__register_info__init(reg);
 
     read_registers(reg);
     msg->register_info = reg;

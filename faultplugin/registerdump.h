@@ -29,7 +29,10 @@
 /**
  * This enum is the internal value for all available architectures supported
  */
-enum architecture {ARM, RISCV};
+enum architecture {ARM = 0, RISCV = 1};
+
+#define N_ARM_REGISTERS 16
+#define N_RISCV_REGISTERS 32
 
 /**
  * init_register_module

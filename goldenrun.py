@@ -14,17 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from faultclass import Fault
-from faultclass import python_worker
+import copy
+import logging
+from multiprocessing import Queue
 
 import pandas as pd
 
 from calculate_trigger import calculate_trigger_addresses
+from faultclass import Fault
+from faultclass import python_worker
 
-from multiprocessing import Queue
-
-import logging
-import copy
 
 logger = logging.getLogger(__name__)
 
