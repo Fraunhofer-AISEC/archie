@@ -106,7 +106,7 @@ int read_memoryregion(uint64_t memorydump_position);
  *
  * @param memorydump_position: select which region should be read in vector element
  * @param dump_pos: select which data dump should be written to pipe. Multiple can be taken during the execution of the config.
- * @param protobuf_msg_memdump: protobuf mem_dump belonging to mem_dump_object
+ * @param protobuf_msg_memdump: protobuf mem_dump belonging to mem_dump_info
  */
 void readout_memorydump_dump(uint64_t memorydump_position, uint64_t dump_pos, Archie__MemDump* protobuf_msg_memdump);
 

@@ -14,13 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import tables
-
-import prctl
+import logging
+import time
 
 import numpy
-import time
-import logging
+import prctl
+import tables
+
 
 logger = logging.getLogger(__name__)
 

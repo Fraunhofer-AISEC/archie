@@ -155,4 +155,3 @@ fault_list_t * get_fault_struct_by_trigger(uint64_t fault_trigger_address, uint6
 	}
 	return NULL;
 }
-

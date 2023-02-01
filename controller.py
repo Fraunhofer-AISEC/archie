@@ -20,12 +20,13 @@ import argparse
 import logging
 import lzma
 from multiprocessing import Manager, Process
-import pandas as pd
 from pathlib import Path
 import pickle
-import prctl
 import subprocess
 import time
+
+import pandas as pd
+import prctl
 
 try:
     import json5 as json

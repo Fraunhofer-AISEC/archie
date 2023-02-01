@@ -91,7 +91,7 @@ void plugin_dump_tb_exec_order(Archie__Data* protobuf_msg)
 {
 	uint64_t i = 0;
 
-    Archie__TbExecOrder** msg_tb_exec_order_list;
+	Archie__TbExecOrder** msg_tb_exec_order_list;
 	if (tb_exec_order_ring_buffer)
 	{
 		/*
@@ -99,27 +99,29 @@ void plugin_dump_tb_exec_order(Archie__Data* protobuf_msg)
 		 * at index 0. Otherwise, it is stored in tb_exec_rb_list_index.
 		 */
 		if (num_exec_order >= TB_EXEC_RB_SIZE) {
-            i = tb_exec_rb_list_index;
-            msg_tb_exec_order_list = malloc(sizeof(Archie__TbExecOrder *) * TB_EXEC_RB_SIZE);
+			i = tb_exec_rb_list_index;
+			msg_tb_exec_order_list = malloc(sizeof(Archie__TbExecOrder *) * TB_EXEC_RB_SIZE);
 			protobuf_msg->n_tb_exec_orders = TB_EXEC_RB_SIZE;
-        } else {
-            msg_tb_exec_order_list = malloc(sizeof(Archie__TbExecOrder*) * num_exec_order);
-            protobuf_msg->n_tb_exec_orders = num_exec_order;
-        }
+		}
+		else
+		{
+			msg_tb_exec_order_list = malloc(sizeof(Archie__TbExecOrder*) * num_exec_order);
+			protobuf_msg->n_tb_exec_orders = num_exec_order;
+		}
 		for (int j = 0; j < TB_EXEC_RB_SIZE && j < num_exec_order; j++)
 		{
-            msg_tb_exec_order_list[j] = malloc(sizeof(Archie__TbExecOrder));
-            archie__tb_exec_order__init(msg_tb_exec_order_list[j]);
+			msg_tb_exec_order_list[j] = malloc(sizeof(Archie__TbExecOrder));
+			archie__tb_exec_order__init(msg_tb_exec_order_list[j]);
 
 			if (tb_exec_rb_list[i].tb_info == NULL)
 			{
-                msg_tb_exec_order_list[j]->tb_base_address = 0;
-                msg_tb_exec_order_list[j]->pos = tb_exec_rb_list[i].pos;
+				msg_tb_exec_order_list[j]->tb_base_address = 0;
+				msg_tb_exec_order_list[j]->pos = tb_exec_rb_list[i].pos;
 			}
 			else
 			{
-                msg_tb_exec_order_list[j]->tb_base_address = tb_exec_rb_list[i].tb_info->base_address;
-                msg_tb_exec_order_list[j]->pos = tb_exec_rb_list[i].pos;
+				msg_tb_exec_order_list[j]->tb_base_address = tb_exec_rb_list[i].tb_info->base_address;
+				msg_tb_exec_order_list[j]->pos = tb_exec_rb_list[i].pos;
 			}
 
 			i++;
@@ -133,11 +135,12 @@ void plugin_dump_tb_exec_order(Archie__Data* protobuf_msg)
 	{
 		tb_exec_order_t *item =  tb_exec_order_list;
 
-        msg_tb_exec_order_list = malloc(sizeof(Archie__TbExecOrder*) * num_exec_order);
-        if(msg_tb_exec_order_list == NULL){
-            qemu_plugin_outs("[DEBUG]: Tb_exec_order could not saved to protobuf message\n");
-        }
-        protobuf_msg->n_tb_exec_orders = num_exec_order;
+		msg_tb_exec_order_list = malloc(sizeof(Archie__TbExecOrder*) * num_exec_order);
+		if(msg_tb_exec_order_list == NULL)
+		{
+			qemu_plugin_outs("[DEBUG]: Tb_exec_order could not saved to protobuf message\n");
+		}
+		protobuf_msg->n_tb_exec_orders = num_exec_order;
 
 		if(item == NULL)
 		{
@@ -157,30 +160,30 @@ void plugin_dump_tb_exec_order(Archie__Data* protobuf_msg)
 		i = 0;
 		while(item != NULL)
 		{
-            msg_tb_exec_order_list[i] = malloc(sizeof(Archie__TbExecOrder));
-            if(msg_tb_exec_order_list[i] == NULL){
-                qemu_plugin_outs("[DEBUG]: Tb_exec_order could not saved to protobuf message\n");
-            }
-            archie__tb_exec_order__init(msg_tb_exec_order_list[i]);
+			msg_tb_exec_order_list[i] = malloc(sizeof(Archie__TbExecOrder));
+			if(msg_tb_exec_order_list[i] == NULL)
+			{
+				qemu_plugin_outs("[DEBUG]: Tb_exec_order could not saved to protobuf message\n");
+			}
+			archie__tb_exec_order__init(msg_tb_exec_order_list[i]);
 
 			if(item->tb_info == NULL)
 			{
-                msg_tb_exec_order_list[i]->tb_base_address = 0;
-                msg_tb_exec_order_list[i]->pos = i;
+				msg_tb_exec_order_list[i]->tb_base_address = 0;
+				msg_tb_exec_order_list[i]->pos = i;
 			}
 			else
 			{
-                msg_tb_exec_order_list[i]->tb_base_address = item->tb_info->base_address;
-                msg_tb_exec_order_list[i]->pos = i;
-            }
+				msg_tb_exec_order_list[i]->tb_base_address = item->tb_info->base_address;
+				msg_tb_exec_order_list[i]->pos = i;
+			}
 
 			item = item->next;
 			i++;
 		}
-
 	}
 
-    protobuf_msg->tb_exec_orders = msg_tb_exec_order_list;
+	protobuf_msg->tb_exec_orders = msg_tb_exec_order_list;
 }
 
 /**
