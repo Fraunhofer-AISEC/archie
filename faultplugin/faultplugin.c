@@ -770,6 +770,51 @@ void plugin_dump_mem_information(Archie__Data* protobuf_msg)
     protobuf_msg->mem_infos = mem_info_arr;
 }
 
+void free_protobuf_message(Archie__Data* msg)
+{
+	// Free tb_informations
+	for(int i = 0; i < msg->n_tb_informations; ++i)
+	{
+		free(msg->tb_informations[i]);
+	}
+	free(msg->tb_informations);
+
+    // Free TbExecOrders
+    for(int i = 0; i < msg->n_tb_exec_orders; ++i){
+        free(msg->tb_exec_orders[i]);
+    }
+    free(msg->tb_exec_orders);
+
+    // Free MemInfos
+    for(int i = 0; i < msg->n_mem_infos; ++i){
+        free(msg->mem_infos[i]);
+    }
+    free(msg->mem_infos);
+
+    // Free RegisterInfo
+    for(int i = 0; i < msg->register_info->n_register_dumps; ++i){
+        free(msg->register_info->register_dumps[i]->register_values);
+        free(msg->register_info->register_dumps[i]);
+    }
+    free(msg->register_info);
+
+	// Free faultedData
+	for(int i = 0; i < msg->n_faulted_datas; ++i)
+	{
+		free(msg->faulted_datas[i]);
+	}
+	free(msg->faulted_datas);
+
+    // Free MemDumpInfo
+    // dumps themselves do not have to be freed, since they are just pointers to real location,
+    // which is already freed by delete_memory_dump()
+    for(int i = 0; i < msg->n_mem_dump_infos; ++i){
+        free(msg->mem_dump_infos[i]);
+    }
+    free(msg->mem_dump_infos);
+    free(msg);
+}
+
 /**
  * plugin_end_information_dump
  *
@@ -778,17 +823,18 @@ void plugin_dump_mem_information(Archie__Data* protobuf_msg)
  */
 void plugin_end_information_dump(GString *end_reason)
 {
-    Archie__Data msg = ARCHIE__DATA__INIT;
+    Archie__Data* msg = malloc(sizeof(Archie__Data));
+    archie__data__init(msg);
 
 	int *error = NULL;
 	if(end_point->location.trignum == 4)
-        msg.end_point = 1;
+        msg->end_point = 1;
 	else
-        msg.end_point = 0;
+        msg->end_point = 0;
 
 	free_end_point_list(end_point);
 
-    msg.end_reason = end_reason->str;
+    msg->end_reason = end_reason->str;
 	if(memory_module_configured())
 	{
 		qemu_plugin_outs("[DEBUG]: Read memory regions configured\n");
@@ -798,41 +844,38 @@ void plugin_end_information_dump(GString *end_reason)
 	qemu_plugin_outs("[DEBUG]: Read registers\n");
 	add_new_registerdump(tb_counter);
 	qemu_plugin_outs("[DEBUG]: Start parsing tb information\n");
-	plugin_dump_tb_information(&msg);
+	plugin_dump_tb_information(msg);
 	if(tb_exec_order_enabled == 1)
 	{
 		qemu_plugin_outs("[DEBUG]: Start parsing tb exec\n");
-		plugin_dump_tb_exec_order(&msg);
+		plugin_dump_tb_exec_order(msg);
 	}
 	qemu_plugin_outs("[DEBUG]: Start parsing tb mem\n");
-	plugin_dump_mem_information(&msg);
+	plugin_dump_mem_information(msg);
 	if(memory_module_configured())
 	{
 		qemu_plugin_outs("[DEBUG]: Start parsing memorydump\n");
-		readout_all_memorydump(&msg);
+		readout_all_memorydump(msg);
 	}
 
 	qemu_plugin_outs("[DEBUG]: Start parsing registerdumps\n");
-	read_register_module(&msg);
+	read_register_module(msg);
 	qemu_plugin_outs("[DEBUG]: Start parsing tb faulted\n");
-	dump_tb_faulted_data(&msg);
+	dump_tb_faulted_data(msg);
 
     qemu_plugin_outs("[DEBUG]: Writing to the data pipe\n");
-    void *buf;                     // Buffer to store serialized data
-    size_t len;                  // Length of serialized data
 
-    len = archie__data__get_packed_size(&msg);
-    buf = malloc(len);
+    size_t len = archie__data__get_packed_size(msg);
+    void *buf = malloc(len);
     if(buf == NULL){
-        qemu_plugin_outs("[DEBUG]: Malloc for message failed!\n");
+        qemu_plugin_outs("[DEBUG]: Malloc for protobuf message failed!\n");
     }
 
-    archie__data__pack(&msg, buf);
+    archie__data__pack(msg, buf);
     int status = plugin_write_to_data_pipe(buf, len);
     if(status < 0){
-        qemu_plugin_outs("[DEBUG]: Write failed!!!\n");
+        qemu_plugin_outs("[DEBUG]: Write to data pipe failed!\n");
     }
-    free(buf);
 
 	qemu_plugin_outs("[DEBUG]: Information now in pipe, start deleting information in memory\n");
 	qemu_plugin_outs("[DEBUG]: Delete tb_info\n");
@@ -845,6 +888,8 @@ void plugin_end_information_dump(GString *end_reason)
 	delete_memory_dump();
 	qemu_plugin_outs("[DEBUG]: Delete tb_faulted\n");
 	tb_faulted_free();
+    free(buf);
+    free_protobuf_message(msg);
 	qemu_plugin_outs("[DEBUG]: Finished\n");
 
 	//Stop Qemu executing
