@@ -43,7 +43,7 @@ class Fault:
         """
         self.trigger = Trigger(trigger_address, trigger_hitcounter)
         self.address = fault_address
-        self.type = fault_type
+        self.kind = fault_type
         self.model = fault_model
         self.lifespan = fault_lifespan
         self.mask = fault_mask
@@ -54,7 +54,7 @@ class Fault:
         out = "\n$$[Fault]\n"
         out = out + "% {:d} | {:d} | {:d} | {:d} | {:d} | {:d} | ".format(
             self.address,
-            self.type,
+            self.kind,
             self.model,
             self.lifespan,
             self.trigger.address,
@@ -539,6 +539,7 @@ def readout_data(
 
                 if callable(qemu_post):
                     output = qemu_post(qemu_pre_data, output)
+
                 queue_output.put(output)
 
                 max_ram_usage = gather_process_ram_usage(queue_ram_usage, max_ram_usage)
@@ -800,7 +801,7 @@ def python_worker_unicorn(
     if change_nice:
         os.nice(19)
 
-    logs = run_unicorn(pregoldenrun_data, config_qemu)
+    logs = run_unicorn(pregoldenrun_data, fault_list, config_qemu)
     logger.info(f"Ended qemu for exp {index}! Took {time.time() - t0}")
 
     logs["index"] = index

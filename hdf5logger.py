@@ -224,7 +224,7 @@ def process_faults(f, group, faultlist, endpoint, end_reason, myfilter):
         faultrow["trigger_address"] = fault.trigger.address
         faultrow["trigger_hitcounter"] = fault.trigger.hitcounter
         faultrow["fault_address"] = fault.address
-        faultrow["fault_type"] = fault.type
+        faultrow["fault_type"] = fault.kind
         faultrow["fault_model"] = fault.model
         faultrow["fault_lifespan"] = fault.lifespan
         faultrow["fault_mask_upper"] = (fault.mask >> 64) & (pow(2, 64) - 1)
