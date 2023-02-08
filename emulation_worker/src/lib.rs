@@ -17,16 +17,20 @@ mod arm;
 use crate::arm::initialize_arm_registers;
 
 mod logs;
-use crate::logs::{Logs, MemInfo};
+use crate::logs::{Fault, FaultModel, FaultType, Logs, MemInfo, State};
 
 mod hooks;
 use crate::hooks::initialize_hooks;
 
 #[pyfunction]
-fn run_unicorn(pregoldenrun_data: &PyDict, config: &PyDict) -> PyResult<PyObject> {
-
-    println!("{:?}", config);
-    let mut unicorn = Unicorn::new(Arch::ARM, Mode::THUMB).expect("failed to initialize Unicorn instance");
+fn run_unicorn(
+    pregoldenrun_data: &PyDict,
+    faults: Vec<Fault>,
+    config: &PyDict,
+) -> PyResult<PyObject> {
+    println!("{config:?}");
+    let mut unicorn =
+        Unicorn::new(Arch::ARM, Mode::THUMB).expect("failed to initialize Unicorn instance");
     let emu = &mut unicorn;
 
     let memdumplist: &PyList = pregoldenrun_data
@@ -57,23 +61,32 @@ fn run_unicorn(pregoldenrun_data: &PyDict, config: &PyDict) -> PyResult<PyObject
 
     let logs = Logs {
         meminfo: RwLock::new(HashMap::new()),
-        last_tbid: RwLock::new(0),
-        endpoints: RwLock::new(HashMap::new())
     };
-    let logs_arc : Arc<Logs> = Arc::new(logs);
 
-    initialize_hooks(emu, &logs_arc, config).expect("failed initializing hooks");
+    let state = State {
+        last_tbid: RwLock::new(0),
+        endpoints: RwLock::new(HashMap::new()),
+        faults: RwLock::new(HashMap::new()),
+        logs
+    };
+
+    let state_arc: Arc<State> = Arc::new(state);
+    initialize_hooks(emu, &state_arc, faults, config).expect("failed initializing hooks");
 
     let max_instruction_count: usize = config
         .get_item("max_instruction_count")
         .unwrap()
         .extract()?;
     let start: HashMap<String, u64> = config.get_item("start").unwrap().extract()?;
-    emu.emu_start(*start.get("address").unwrap()+1, 0, 0, max_instruction_count).expect("failed to emulate code");
+    emu.emu_start(
+        *start.get("address").unwrap() + 1,
+        0,
+        0,
+        max_instruction_count,
+    )
+    .expect("failed to emulate code");
 
-    let gil = Python::acquire_gil();
-    let py = gil.python();
-    Ok(logs_arc.to_object(py))
+    Python::with_gil(|py| Ok(state_arc.logs.to_object(py)))
 }
 
 #[pymodule]

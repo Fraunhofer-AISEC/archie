@@ -880,7 +880,7 @@ def python_worker_unicorn(
     if change_nice:
         os.nice(19)
 
-    logs = run_unicorn(pregoldenrun_data, config_qemu)
+    logs = run_unicorn(pregoldenrun_data, fault_list, config_qemu)
     logger.info(f"Ended qemu for exp {index}! Took {time.time() - t0}")
 
     logs["index"] = index
