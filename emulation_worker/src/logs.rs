@@ -1,4 +1,8 @@
-use pyo3::{prelude::*, types::{PyDict, PyList}};
+use pyo3::{
+    exceptions,
+    prelude::*,
+    types::{PyDict, PyList},
+};
 use std::collections::HashMap;
 use std::sync::RwLock;
 
@@ -25,12 +29,64 @@ impl ToPyObject for MemInfo {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum FaultModel {
+    Set0,
+    Set1,
+    Toggle,
+    Overwrite,
+}
+impl<'a> FromPyObject<'a> for FaultModel {
+    fn extract(arg: &'a PyAny) -> PyResult<FaultModel> {
+        let id: u8 = arg.extract().unwrap();
+        match id {
+            0 => Ok(FaultModel::Set0),
+            1 => Ok(FaultModel::Set1),
+            2 => Ok(FaultModel::Toggle),
+            3 => Ok(FaultModel::Overwrite),
+            4..=u8::MAX => Err(exceptions::PyValueError::new_err("unknown fault model")),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum FaultType {
+    Data,
+    Instruction,
+    Register,
+}
+impl<'a> FromPyObject<'a> for FaultType {
+    fn extract(arg: &'a PyAny) -> PyResult<FaultType> {
+        let id: u8 = arg.extract().unwrap();
+        match id {
+            0 => Ok(FaultType::Data),
+            1 => Ok(FaultType::Instruction),
+            2 => Ok(FaultType::Register),
+            3..=u8::MAX => Err(exceptions::PyValueError::new_err("unknown fault type")),
+        }
+    }
+}
+
+#[derive(FromPyObject, Debug, Clone, Copy)]
+pub struct Trigger {
+    pub address: u64,
+    pub hitcounter: u32,
+}
+
+#[derive(FromPyObject, Debug, Clone, Copy)]
+pub struct Fault {
+    pub trigger: Trigger,
+    pub address: u64,
+    #[pyo3(attribute("type"))]
+    pub r#type: FaultType,
+    pub model: FaultModel,
+    pub mask: u128,
+    pub lifespan: u32,
+    pub num_bytes: u32,
+}
 
 pub struct Logs {
     pub meminfo: RwLock<HashMap<String, MemInfo>>,
-
-    pub last_tbid: RwLock<u64>,
-    pub endpoints: RwLock<HashMap<u64, u32>>
 }
 
 impl ToPyObject for Logs {
@@ -48,3 +104,10 @@ impl ToPyObject for Logs {
     }
 }
 
+pub struct State {
+    pub last_tbid: RwLock<u64>,
+    pub endpoints: RwLock<HashMap<u64, u32>>,
+    pub faults: RwLock<HashMap<u64, Fault>>,
+
+    pub logs: Logs,
+}
