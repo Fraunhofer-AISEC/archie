@@ -784,6 +784,7 @@ def python_worker(
         p_qemu.join()
         logger.warning("Terminate Worker {}".format(index))
 
+
 def python_worker_unicorn(
     fault_list,
     config_qemu,

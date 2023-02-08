@@ -21,7 +21,7 @@ except ModuleNotFoundError:
     pass
 
 from faultclass import Fault, Trigger
-from faultclass import python_worker, python_worker_unicorn
+from faultclass import python_worker_unicorn
 from hdf5logger import hdf5collector
 from goldenrun import run_goldenrun
 

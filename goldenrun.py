@@ -99,7 +99,6 @@ def run_goldenrun(
                 )
             )
 
-
     return [config_qemu["max_instruction_count"], experiments[0]["data"], experiment["data"], faultconfig]
 
 
