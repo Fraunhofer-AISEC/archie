@@ -67,6 +67,9 @@ fn run_unicorn(
         last_tbid: RwLock::new(0),
         endpoints: RwLock::new(HashMap::new()),
         faults: RwLock::new(HashMap::new()),
+        live_faults: RwLock::new(PriorityQueue::new()),
+        instruction_count: RwLock::new(0),
+        single_step_hook_handle: RwLock::new(None),
         logs
     };
 
