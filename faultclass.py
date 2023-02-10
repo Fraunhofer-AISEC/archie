@@ -884,6 +884,7 @@ def python_worker_unicorn(
     logger.info(f"Ended qemu for exp {index}! Took {time.time() - t0}")
 
     logs["index"] = index
+    logs["faultlist"] = fault_list
 
     queue_output.put(logs)
 
