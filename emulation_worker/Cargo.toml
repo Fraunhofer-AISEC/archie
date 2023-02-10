@@ -12,3 +12,4 @@ crate-type = ["cdylib"]
 pyo3 = { version = "0.17.3", features = ["extension-module"] }
 unicorn-engine = "2.0.0"
 num = "0.4.0"
+priority-queue = "1.3.1"

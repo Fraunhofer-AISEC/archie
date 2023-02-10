@@ -13,7 +13,7 @@ fn mem_hook_cb(uc: &mut Unicorn<'_, ()>, mem_type: MemType, address: u64, size: 
 
     let identifier = format!("{address}|{pc}");
 
-    let mut meminfo = state.logs.meminfo.write().expect("RwLock poisoned");
+    let mut meminfo = state.logs.meminfo.write().unwrap();
 
     if meminfo.contains_key(&identifier) {
         if let Some(mut element) = meminfo.get_mut(&identifier) {
@@ -34,14 +34,53 @@ fn mem_hook_cb(uc: &mut Unicorn<'_, ()>, mem_type: MemType, address: u64, size: 
     true
 }
 
-fn block_hook_cb(_uc: &mut Unicorn<'_, ()>, address: u64, _size: u32, state: &Arc<State>) {
+fn block_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, size: u32, state: &Arc<State>) {
     // Save current tbid for meminfo logs
-    let mut last_tbid = state.last_tbid.write().expect("RwLock poisoned");
+    let mut last_tbid = state.last_tbid.write().unwrap();
     *last_tbid = address;
+
+    let live_faults = state.live_faults.read().unwrap();
+    let mut single_step_hook_handle = state.single_step_hook_handle.write().unwrap();
+
+    // Remove single step hook if no more faults are live
+    if live_faults.len() == 0 && single_step_hook_handle.is_some() {
+        uc.remove_hook(single_step_hook_handle.unwrap())
+            .expect("failed removing single step hook");
+        *single_step_hook_handle = None;
+    }
+
+    // If single step already active, return
+    if single_step_hook_handle.is_some() {
+        return;
+    }
+
+    let faults = state.faults.read().unwrap();
+
+    for fault in faults.values() {
+        if fault.lifespan == 0 {
+            continue;
+        }
+
+        if fault.trigger.hitcounter == 1
+            && fault.trigger.address >= address
+            && fault.trigger.address <= (address + size as u64)
+        {
+            let state_arc = Arc::clone(state);
+            let single_step_hook_closure =
+                move |uc: &mut Unicorn<'_, ()>, address: u64, size: u32| {
+                    single_step_hook_cb(uc, address, size, &state_arc);
+                };
+            *single_step_hook_handle = Some(
+                uc.add_code_hook(u64::MIN, u64::MAX, single_step_hook_closure)
+                    .unwrap(),
+            );
+        }
+    }
+
 }
 
 fn end_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, _size: u32, state: &Arc<State>) {
-    let mut endpoints = state.endpoints.write().expect("RwLock poisoned");
+    let mut endpoints = state.endpoints.write().unwrap();
 
     let counter = endpoints.get_mut(&address).unwrap();
     if *counter > 1 {
@@ -57,6 +96,47 @@ fn end_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, _size: u32, state: &Arc<S
     }
 }
 
+fn undo_faults(uc: &mut Unicorn<'_, ()>, state: &Arc<State>) {
+    {
+        let live_faults = state.live_faults.read().unwrap();
+
+        if live_faults.len() == 0 {
+            return;
+        }
+
+        let ((_, _), priority) = live_faults.peek().unwrap();
+        let lifespan = u64::MAX - priority;
+        let instruction_count = *state.instruction_count.read().unwrap();
+
+        if lifespan > instruction_count {
+            return;
+        }
+    }
+
+    let mut live_faults = state.live_faults.write().unwrap();
+    let ((address, prefault_data), _) = live_faults.pop().unwrap();
+
+    let faults = state.faults.read().unwrap();
+    let fault = faults.get(&address).unwrap();
+
+    println!("Undoing fault");
+    match fault.r#type {
+        FaultType::Register => {
+            uc.reg_write(fault.address as i32, prefault_data.to_u64().unwrap()).expect("failed restoring register value");
+        }
+        FaultType::Data | FaultType::Instruction => {
+            uc.mem_write(fault.address, prefault_data.to_bytes_le().as_slice()).expect("failed restoring memory value");
+        }
+    }
+}
+
+fn single_step_hook_cb(uc: &mut Unicorn<'_, ()>, _address: u64, _size: u32, state: &Arc<State>) {
+    undo_faults(uc, state);
+
+    let mut instruction_count = state.instruction_count.write().unwrap();
+    *instruction_count = *instruction_count + 1;
+}
+
 fn apply_model(data: &BigUint, fault: &Fault) -> BigUint {
     let mask_big = BigUint::from_bytes_le(&fault.mask.to_le_bytes());
     match fault.model {
@@ -68,7 +148,7 @@ fn apply_model(data: &BigUint, fault: &Fault) -> BigUint {
 }
 
 fn fault_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, _size: u32, state: &Arc<State>) {
-    let mut faults = state.faults.write().expect("RwLock poisoned");
+    let mut faults = state.faults.write().unwrap();
 
     let fault = faults.get_mut(&address).unwrap();
     if fault.trigger.hitcounter == 0 {
@@ -79,7 +159,9 @@ fn fault_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, _size: u32, state: &Arc
         return;
     }
 
-    println!("Reached fault trigger at {:?}", address);
+    println!("Executing fault at {address:?}");
+
+    let prefault_data;
 
     match fault.r#type {
         FaultType::Data | FaultType::Instruction => {
@@ -93,6 +175,7 @@ fn fault_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, _size: u32, state: &Arc
                     .unwrap()
                     .as_slice(),
             );
+            prefault_data = data.clone();
             println!(
                 "Overwriting {:?} with {:?}",
                 data,
@@ -109,6 +192,7 @@ fn fault_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, _size: u32, state: &Arc
                 uc.reg_read(fault.address as i32)
                     .expect("failed reading from register"),
             );
+            prefault_data = register_value.clone();
             let new_value = apply_model(&register_value, fault);
             uc.reg_write(fault.address as i32, new_value.to_u64().unwrap())
                 .expect("failed writing register fault");
@@ -117,6 +201,15 @@ fn fault_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, _size: u32, state: &Arc
                 fault.address, register_value, new_value
             );
         }
+    }
+
+    if fault.lifespan != 0 {
+        let mut live_faults = state.live_faults.write().unwrap();
+        let instruction_count = *state.instruction_count.read().unwrap();
+        live_faults.push(
+            (fault.trigger.address, prefault_data),
+            u64::MAX - fault.lifespan as u64 + instruction_count,
+        );
     }
 }
 
@@ -160,7 +253,7 @@ fn initialize_end_hook(emu: &mut Unicorn<()>, state_arc: &Arc<State>, config: &P
 
         let state_arc = Arc::clone(state_arc);
 
-        let mut endpoints = state_arc.endpoints.write().expect("RwLock poisoned");
+        let mut endpoints = state_arc.endpoints.write().unwrap();
         endpoints.insert(address, counter);
         drop(endpoints);
 
@@ -176,11 +269,15 @@ fn initialize_end_hook(emu: &mut Unicorn<()>, state_arc: &Arc<State>, config: &P
     Ok(())
 }
 
-fn initialize_fault_hook(emu: &mut Unicorn<()>, state_arc: &Arc<State>, faults: Vec<Fault>, config: &PyDict) -> io::Result<()> {
+fn initialize_fault_hook(
+    emu: &mut Unicorn<()>,
+    state_arc: &Arc<State>,
+    faults: Vec<Fault>,
+) -> io::Result<()> {
     for fault in faults {
         let state_arc = Arc::clone(state_arc);
 
-        let mut state_faults = state_arc.faults.write().expect("RwLock poisoned");
+        let mut state_faults = state_arc.faults.write().unwrap();
         state_faults.insert(fault.trigger.address, fault);
         drop(state_faults);
 
@@ -209,7 +306,7 @@ pub fn initialize_hooks(
     initialize_mem_hook(emu, state_arc)?;
     initialize_block_hook(emu, state_arc)?;
     initialize_end_hook(emu, state_arc, config)?;
-    initialize_fault_hook(emu, state_arc, faults, config)?;
+    initialize_fault_hook(emu, state_arc, faults)?;
 
     Ok(())
 }
