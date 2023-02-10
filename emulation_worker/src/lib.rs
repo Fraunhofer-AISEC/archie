@@ -61,6 +61,7 @@ fn run_unicorn(
 
     let logs = Logs {
         meminfo: RwLock::new(HashMap::new()),
+        endpoint: RwLock::new((false, 0, 0)),
     };
 
     let state = State {

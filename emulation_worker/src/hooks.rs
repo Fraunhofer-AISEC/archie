@@ -79,7 +79,13 @@ fn block_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, size: u32, state: &Arc<
 
 }
 
-fn end_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, _size: u32, state: &Arc<State>) {
+fn end_hook_cb(
+    uc: &mut Unicorn<'_, ()>,
+    address: u64,
+    _size: u32,
+    state: &Arc<State>,
+    first_endpoint: u64,
+) {
     let mut endpoints = state.endpoints.write().unwrap();
 
     let counter = endpoints.get_mut(&address).unwrap();
@@ -90,6 +96,8 @@ fn end_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, _size: u32, state: &Arc<S
         );
         *counter -= 1;
     } else {
+        let mut endpoint = state.logs.endpoint.write().unwrap();
+        *endpoint = (address == first_endpoint, address, 1);
         println!("Reached endpoint at {address:?}");
         uc.emu_stop()
             .expect("failed terminating the emulation engine");
@@ -244,7 +252,12 @@ fn initialize_block_hook(emu: &mut Unicorn<()>, state_arc: &Arc<State>) -> io::R
     Ok(())
 }
 
-fn initialize_end_hook(emu: &mut Unicorn<()>, state_arc: &Arc<State>, config: &PyDict) -> io::Result<()> {
+fn initialize_end_hook(
+    emu: &mut Unicorn<()>,
+    state_arc: &Arc<State>,
+    config: &PyDict,
+    first_endpoint: u64,
+) -> io::Result<()> {
     let config_endpoints: &PyList = config.get_item("end").unwrap().extract()?;
     for obj in config_endpoints {
         let end: &PyDict = obj.extract()?;
@@ -260,7 +273,7 @@ fn initialize_end_hook(emu: &mut Unicorn<()>, state_arc: &Arc<State>, config: &P
         let state_arc = Arc::clone(&state_arc);
 
         let end_hook_closure = move |uc: &mut Unicorn<'_, ()>, address: u64, size: u32| {
-            end_hook_cb(uc, address, size, &state_arc);
+            end_hook_cb(uc, address, size, &state_arc, first_endpoint);
         };
         emu.add_code_hook(address, address, end_hook_closure)
             .expect("failed to add end hook");
@@ -305,7 +318,7 @@ pub fn initialize_hooks(
 ) -> io::Result<()> {
     initialize_mem_hook(emu, state_arc)?;
     initialize_block_hook(emu, state_arc)?;
-    initialize_end_hook(emu, state_arc, config)?;
+    initialize_end_hook(emu, state_arc, config, faults[0].trigger.address)?;
     initialize_fault_hook(emu, state_arc, faults)?;
 
     Ok(())
