@@ -1,5 +1,7 @@
+use num::BigUint;
+use priority_queue::PriorityQueue;
 use pyo3::{prelude::*, types::{PyDict, PyList}, exceptions};
-use std::collections::HashMap;
+use std::{collections::HashMap, ffi::c_void};
 use std::sync::RwLock;
 
 pub struct MemInfo {
@@ -112,6 +114,9 @@ pub struct State {
     pub last_tbid: RwLock<u64>,
     pub endpoints: RwLock<HashMap<u64, u32>>,
     pub faults: RwLock<HashMap<u64, Fault>>,
+    pub live_faults: RwLock<PriorityQueue<(u64, BigUint), u64>>,
+    pub instruction_count: RwLock<u64>,
+    pub single_step_hook_handle: RwLock<Option<*mut c_void>>,
 
     pub logs: Logs
 }

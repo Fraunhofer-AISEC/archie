@@ -1,3 +1,4 @@
+use priority_queue::PriorityQueue;
 use pyo3::{prelude::*, types::{PyDict, PyList}};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
@@ -52,6 +53,9 @@ fn run_unicorn(pregoldenrun_data: &PyDict, faults: Vec<Fault>, config: &PyDict) 
         last_tbid: RwLock::new(0),
         endpoints: RwLock::new(HashMap::new()),
         faults: RwLock::new(HashMap::new()),
+        live_faults: RwLock::new(PriorityQueue::new()),
+        instruction_count: RwLock::new(0),
+        single_step_hook_handle: RwLock::new(None),
         logs
     };
 
