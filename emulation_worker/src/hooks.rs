@@ -80,6 +80,8 @@ fn end_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, _size: u32, state: &Arc<S
         println!("Decreasing endpoint counter for {:?} to {:?}", address, *counter);
         *counter -= 1;
     } else {
+        let mut endpoint = state.logs.endpoint.write().unwrap();
+        *endpoint = (address, true);
         println!("Reached endpoint at {:?}", address);
         uc.emu_stop().expect("failed terminating the emulation engine");
     }
