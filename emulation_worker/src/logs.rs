@@ -95,7 +95,7 @@ pub struct Fault {
 
 pub struct Logs {
     pub meminfo: RwLock<HashMap<String, MemInfo>>,
-    pub endpoint: RwLock<(u64, bool)>
+    pub endpoint: RwLock<(bool, u64, u32)>
 }
 
 impl ToPyObject for Logs {
@@ -107,12 +107,12 @@ impl ToPyObject for Logs {
         dict.set_item("meminfo", meminfo_list.to_object(py)).unwrap();
 
         let endpoint = self.endpoint.read().unwrap();
-        if endpoint.1 {
-            dict.set_item("end_reason", format!("{}/{}", endpoint.0.to_string(), if endpoint.1 { "1" } else { "0" })).unwrap();
+        if endpoint.2 == 1 {
+            dict.set_item("end_reason", format!("{}/1", endpoint.1.to_string())).unwrap();
         } else {
             dict.set_item("end_reason", "max tb").unwrap();
         }
-        dict.set_item("endpoint", if endpoint.1 { 1 } else { 0 }).unwrap();
+        dict.set_item("endpoint", if endpoint.0 { 1 } else { 0 }).unwrap();
         drop(meminfo);
 
         dict.to_object(py)
