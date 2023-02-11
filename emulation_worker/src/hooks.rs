@@ -3,36 +3,12 @@ use pyo3::types::{PyDict, PyList};
 use std::io;
 use std::sync::Arc;
 use unicorn_engine::unicorn_const::{HookType, MemType};
-use unicorn_engine::RegisterARM;
 use unicorn_engine::Unicorn;
 
 use crate::{Fault, FaultModel, FaultType, MemInfo, State};
 
-fn mem_hook_cb(uc: &mut Unicorn<'_, ()>, mem_type: MemType, address: u64, size: usize, _value: i64, state: &Arc<State>) -> bool {
-    let pc = uc.reg_read(RegisterARM::PC).unwrap();
-
-    let identifier = format!("{address}|{pc}");
-
-    let mut meminfo = state.logs.meminfo.write().unwrap();
-
-    if meminfo.contains_key(&identifier) {
-        if let Some(mut element) = meminfo.get_mut(&identifier) {
-            element.counter += 1;
-        }
-    } else {
-        let last_tbid = *state.last_tbid.read().unwrap();
-        meminfo.insert(identifier, MemInfo{
-            ins: address,
-            counter: 1,
-            direction: if mem_type == MemType::READ { 0 } else { 1 },
-            address: pc,
-            tbid: last_tbid,
-            size
-        });
-    }
-
-    true
-}
+mod util;
+use util::{log_tb_info, apply_model, undo_faults};
 
 fn block_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, size: u32, state: &Arc<State>) {
     // Save current tbid for meminfo logs
@@ -77,6 +53,8 @@ fn block_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, size: u32, state: &Arc<
         }
     }
 
+    let tbinfo = state.logs.tbinfo.write().unwrap();
+    log_tb_info(uc, address, size, &state.cs_engine, tbinfo);
 }
 
 fn end_hook_cb(
@@ -104,55 +82,54 @@ fn end_hook_cb(
     }
 }
 
-fn undo_faults(uc: &mut Unicorn<'_, ()>, state: &Arc<State>) {
-    {
-        let live_faults = state.live_faults.read().unwrap();
-
-        if live_faults.len() == 0 {
-            return;
-        }
-
-        let ((_, _), priority) = live_faults.peek().unwrap();
-        let lifespan = u64::MAX - priority;
-        let instruction_count = *state.instruction_count.read().unwrap();
-
-        if lifespan > instruction_count {
-            return;
-        }
-    }
-
-    let mut live_faults = state.live_faults.write().unwrap();
-    let ((address, prefault_data), _) = live_faults.pop().unwrap();
-
-    let faults = state.faults.read().unwrap();
-    let fault = faults.get(&address).unwrap();
-
-    println!("Undoing fault");
-    match fault.r#type {
-        FaultType::Register => {
-            uc.reg_write(fault.address as i32, prefault_data.to_u64().unwrap()).expect("failed restoring register value");
-        }
-        FaultType::Data | FaultType::Instruction => {
-            uc.mem_write(fault.address, prefault_data.to_bytes_le().as_slice()).expect("failed restoring memory value");
-        }
-    }
-}
-
-fn single_step_hook_cb(uc: &mut Unicorn<'_, ()>, _address: u64, _size: u32, state: &Arc<State>) {
-    undo_faults(uc, state);
-
+fn single_step_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, size: u32, state: &Arc<State>) {
     let mut instruction_count = state.instruction_count.write().unwrap();
-    *instruction_count = *instruction_count + 1;
+    undo_faults(
+        uc,
+        *instruction_count,
+        state.faults.read().unwrap(),
+        state.live_faults.write().unwrap(),
+    );
+    *instruction_count += 1;
+
+    let mut tbinfo = state.logs.tbinfo.write().unwrap();
+    if let Some(tbinfo) = tbinfo.get_mut(&(address, size as usize)) {
+        tbinfo.num_exec += 1;
+    } else {
+        log_tb_info(uc, address, size, &state.cs_engine, tbinfo);
+    }
 }
 
-fn apply_model(data: &BigUint, fault: &Fault) -> BigUint {
-    let mask_big = BigUint::from_bytes_le(&fault.mask.to_le_bytes());
-    match fault.model {
-        FaultModel::Set0 => data ^ (data & mask_big),
-        FaultModel::Set1 => data | mask_big,
-        FaultModel::Toggle => data & data,
-        FaultModel::Overwrite => mask_big
+fn mem_hook_cb(
+    uc: &mut Unicorn<'_, ()>,
+    mem_type: MemType,
+    address: u64,
+    size: usize,
+    _value: i64,
+    state: &Arc<State>,
+) -> bool {
+    let pc = uc.pc_read().unwrap();
+
+    let mut meminfo = state.logs.meminfo.write().unwrap();
+
+    if let Some(mut element) = meminfo.get_mut(&(address, pc)) {
+        element.counter += 1;
+    } else {
+        let last_tbid = *state.last_tbid.read().unwrap();
+        meminfo.insert(
+            (address, pc),
+            MemInfo {
+                ins: address,
+                counter: 1,
+                direction: if mem_type == MemType::READ { 0 } else { 1 },
+                address: pc,
+                tbid: last_tbid,
+                size,
+            },
+        );
     }
+
+    true
 }
 
 fn fault_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, _size: u32, state: &Arc<State>) {

@@ -1,3 +1,4 @@
+use capstone::{prelude::BuildsCapstone, Capstone};
 use priority_queue::PriorityQueue;
 use pyo3::{
     prelude::*,
@@ -62,6 +63,7 @@ fn run_unicorn(
     let logs = Logs {
         meminfo: RwLock::new(HashMap::new()),
         endpoint: RwLock::new((false, 0, 0)),
+        tbinfo: RwLock::new(HashMap::new())
     };
 
     let state = State {
@@ -71,7 +73,12 @@ fn run_unicorn(
         live_faults: RwLock::new(PriorityQueue::new()),
         instruction_count: RwLock::new(0),
         single_step_hook_handle: RwLock::new(None),
-        logs
+        cs_engine: Capstone::new()
+            .arm()
+            .mode(capstone::arch::arm::ArchMode::Thumb)
+            .build()
+            .unwrap(),
+        logs,
     };
 
     let state_arc: Arc<State> = Arc::new(state);

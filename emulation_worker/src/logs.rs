@@ -1,3 +1,4 @@
+use capstone::Capstone;
 use num::BigUint;
 use priority_queue::PriorityQueue;
 use pyo3::{
@@ -87,9 +88,31 @@ pub struct Fault {
     pub num_bytes: u32,
 }
 
+pub struct TbInfoBlock {
+    pub id: u64,
+    pub size: u32,
+    pub ins_count: u32,
+    pub num_exec: u32,
+    pub assembler: String,
+}
+
+impl ToPyObject for TbInfoBlock {
+    fn to_object(&self, py: Python<'_>) -> PyObject {
+        let dict = PyDict::new(py);
+        dict.set_item("id", self.id).unwrap();
+        dict.set_item("size", self.size).unwrap();
+        dict.set_item("ins_count", self.ins_count).unwrap();
+        dict.set_item("num_exec", self.num_exec).unwrap();
+        dict.set_item("assembler", self.assembler.clone()).unwrap();
+
+        dict.to_object(py)
+    }
+}
+
 pub struct Logs {
-    pub meminfo: RwLock<HashMap<String, MemInfo>>,
-    pub endpoint: RwLock<(bool, u64, u32)>
+    pub meminfo: RwLock<HashMap<(u64, u64), MemInfo>>,
+    pub endpoint: RwLock<(bool, u64, u32)>,
+    pub tbinfo: RwLock<HashMap<(u64, usize), TbInfoBlock>>
 }
 
 impl ToPyObject for Logs {
@@ -101,6 +124,10 @@ impl ToPyObject for Logs {
 
         dict.set_item("meminfo", meminfo_list.to_object(py))
             .unwrap();
+
+        let tbinfo = self.tbinfo.read().unwrap();
+        let tbinfo_list = PyList::new(py, tbinfo.values());
+        dict.set_item("tbinfo", tbinfo_list.to_object(py)).unwrap();
 
         let endpoint = self.endpoint.read().unwrap();
         if endpoint.2 == 1 {
@@ -124,6 +151,7 @@ pub struct State {
     pub live_faults: RwLock<PriorityQueue<(u64, BigUint), u64>>,
     pub instruction_count: RwLock<u64>,
     pub single_step_hook_handle: RwLock<Option<*mut c_void>>,
+    pub cs_engine: Capstone,
 
     pub logs: Logs,
 }
