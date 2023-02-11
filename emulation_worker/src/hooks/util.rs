@@ -1,10 +1,10 @@
-use std::collections::HashMap;
-use priority_queue::PriorityQueue;
-use unicorn_engine::Unicorn;
-use std::sync::{RwLockReadGuard, RwLockWriteGuard};
-use crate::logs::TbInfoBlock;
-use num::{ToPrimitive, BigUint};
+use crate::logs::{TbExecEntry, TbInfoBlock};
 use crate::{Fault, FaultModel, FaultType};
+use num::{BigUint, ToPrimitive};
+use priority_queue::PriorityQueue;
+use std::collections::HashMap;
+use std::sync::{RwLockReadGuard, RwLockWriteGuard};
+use unicorn_engine::Unicorn;
 
 pub fn log_tb_info(
     uc: &mut Unicorn<'_, ()>,
@@ -29,6 +29,14 @@ pub fn log_tb_info(
             },
         );
     }
+}
+
+pub fn log_tb_exec(address: u64, mut tbexec: RwLockWriteGuard<Vec<TbExecEntry>>) {
+    let tbexec_len = tbexec.len();
+    tbexec.push(TbExecEntry {
+        pos: tbexec_len as u64,
+        tb: address,
+    });
 }
 
 pub fn apply_model(data: &BigUint, fault: &Fault) -> BigUint {

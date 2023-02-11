@@ -109,10 +109,26 @@ impl ToPyObject for TbInfoBlock {
     }
 }
 
+pub struct TbExecEntry {
+    pub tb: u64,
+    pub pos: u64,
+}
+
+impl ToPyObject for TbExecEntry {
+    fn to_object(&self, py: Python<'_>) -> PyObject {
+        let dict = PyDict::new(py);
+        dict.set_item("tb", self.tb).unwrap();
+        dict.set_item("pos", self.pos).unwrap();
+
+        dict.to_object(py)
+    }
+}
+
 pub struct Logs {
     pub meminfo: RwLock<HashMap<(u64, u64), MemInfo>>,
     pub endpoint: RwLock<(bool, u64, u32)>,
-    pub tbinfo: RwLock<HashMap<(u64, usize), TbInfoBlock>>
+    pub tbinfo: RwLock<HashMap<(u64, usize), TbInfoBlock>>,
+    pub tbexec: RwLock<Vec<TbExecEntry>>,
 }
 
 impl ToPyObject for Logs {
@@ -128,6 +144,10 @@ impl ToPyObject for Logs {
         let tbinfo = self.tbinfo.read().unwrap();
         let tbinfo_list = PyList::new(py, tbinfo.values());
         dict.set_item("tbinfo", tbinfo_list.to_object(py)).unwrap();
+
+        let tbexec = self.tbexec.read().unwrap();
+        let tbexec_list = PyList::new(py, tbexec.as_slice());
+        dict.set_item("tbexec", tbexec_list.to_object(py)).unwrap();
 
         let endpoint = self.endpoint.read().unwrap();
         if endpoint.2 == 1 {
