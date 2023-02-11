@@ -49,7 +49,8 @@ fn run_unicorn(pregoldenrun_data: &PyDict, faults: Vec<Fault>, config: &PyDict) 
     let logs = Logs {
         meminfo: RwLock::new(HashMap::new()),
         endpoint: RwLock::new((false, 0, 0)),
-        tbinfo: RwLock::new(HashMap::new())
+        tbinfo: RwLock::new(HashMap::new()),
+        tbexec: RwLock::new(Vec::new())
     };
 
     let state = State {

@@ -12,7 +12,7 @@ use num::{ToPrimitive, BigUint};
 use crate::{State, MemInfo, Fault, FaultType, FaultModel};
 
 mod util;
-use util::{log_tb_info, apply_model, undo_faults};
+use util::{log_tb_info, log_tb_exec, apply_model, undo_faults};
 
 fn block_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, size: u32, state: &Arc<State>) {
     // Save current tbid for meminfo logs
@@ -49,6 +49,8 @@ fn block_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, size: u32, state: &Arc<
 
     let tbinfo = state.logs.tbinfo.write().unwrap();
     log_tb_info(uc, address, size, &state.cs_engine, tbinfo);
+    let tbexec = state.logs.tbexec.write().unwrap();
+    log_tb_exec(address, tbexec);
 }
 
 fn end_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, _size: u32, state: &Arc<State>, first_endpoint: u64) {
@@ -71,12 +73,10 @@ fn single_step_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, size: u32, state:
     undo_faults(uc, *instruction_count, state.faults.read().unwrap(), state.live_faults.write().unwrap());
     *instruction_count = *instruction_count + 1;
 
-    let mut tbinfo = state.logs.tbinfo.write().unwrap();
-    if let Some(tbinfo) = tbinfo.get_mut(&(address, size as usize)) {
-        tbinfo.num_exec += 1;
-    } else {
-        log_tb_info(uc, address, size, &state.cs_engine, tbinfo);
-    }
+    let tbinfo = state.logs.tbinfo.write().unwrap();
+    log_tb_info(uc, address, size, &state.cs_engine, tbinfo);
+    let tbexec = state.logs.tbexec.write().unwrap();
+    log_tb_exec(address, tbexec);
 }
 
 fn mem_hook_cb(uc: &mut Unicorn<'_, ()>, mem_type: MemType, address: u64, size: usize, _value: i64, state: &Arc<State>) -> bool {
