@@ -1,3 +1,4 @@
+use capstone::{Capstone, prelude::BuildsCapstone};
 use priority_queue::PriorityQueue;
 use pyo3::{prelude::*, types::{PyDict, PyList}};
 use std::collections::HashMap;
@@ -48,6 +49,7 @@ fn run_unicorn(pregoldenrun_data: &PyDict, faults: Vec<Fault>, config: &PyDict) 
     let logs = Logs {
         meminfo: RwLock::new(HashMap::new()),
         endpoint: RwLock::new((false, 0, 0)),
+        tbinfo: RwLock::new(HashMap::new())
     };
 
     let state = State {
@@ -57,6 +59,7 @@ fn run_unicorn(pregoldenrun_data: &PyDict, faults: Vec<Fault>, config: &PyDict) 
         live_faults: RwLock::new(PriorityQueue::new()),
         instruction_count: RwLock::new(0),
         single_step_hook_handle: RwLock::new(None),
+        cs_engine: Capstone::new().arm().mode(capstone::arch::arm::ArchMode::Thumb).build().unwrap(),
         logs
     };
 
