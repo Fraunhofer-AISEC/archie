@@ -1,9 +1,13 @@
 use capstone::Capstone;
 use num::BigUint;
 use priority_queue::PriorityQueue;
-use pyo3::{prelude::*, types::{PyDict, PyList}, exceptions};
-use std::{collections::HashMap, ffi::c_void};
+use pyo3::{
+    exceptions,
+    prelude::*,
+    types::{PyDict, PyList},
+};
 use std::sync::RwLock;
+use std::{collections::HashMap, ffi::c_void};
 
 pub struct MemInfo {
     pub ins: u64,
@@ -11,7 +15,7 @@ pub struct MemInfo {
     pub direction: u8,
     pub address: u64,
     pub tbid: u64,
-    pub size: usize
+    pub size: usize,
 }
 
 impl ToPyObject for MemInfo {
@@ -28,14 +32,12 @@ impl ToPyObject for MemInfo {
     }
 }
 
-#[derive(Debug)]
-#[derive(Clone)]
-#[derive(Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum FaultModel {
     Set0,
     Set1,
     Toggle,
-    Overwrite
+    Overwrite,
 }
 impl<'a> FromPyObject<'a> for FaultModel {
     fn extract(arg: &'a PyAny) -> PyResult<FaultModel> {
@@ -45,18 +47,16 @@ impl<'a> FromPyObject<'a> for FaultModel {
             1 => Ok(FaultModel::Set1),
             2 => Ok(FaultModel::Toggle),
             3 => Ok(FaultModel::Overwrite),
-            4..=u8::MAX => Err(exceptions::PyValueError::new_err("unknown fault model"))
+            4..=u8::MAX => Err(exceptions::PyValueError::new_err("unknown fault model")),
         }
     }
 }
 
-#[derive(Debug)]
-#[derive(Clone)]
-#[derive(Copy)]
+#[derive(Debug, Clone, Copy)]
 pub enum FaultType {
     Data,
     Instruction,
-    Register
+    Register,
 }
 impl<'a> FromPyObject<'a> for FaultType {
     fn extract(arg: &'a PyAny) -> PyResult<FaultType> {
@@ -65,24 +65,18 @@ impl<'a> FromPyObject<'a> for FaultType {
             0 => Ok(FaultType::Data),
             1 => Ok(FaultType::Instruction),
             2 => Ok(FaultType::Register),
-            3..=u8::MAX => Err(exceptions::PyValueError::new_err("unknown fault type"))
+            3..=u8::MAX => Err(exceptions::PyValueError::new_err("unknown fault type")),
         }
     }
 }
 
-#[derive(FromPyObject)]
-#[derive(Debug)]
-#[derive(Clone)]
-#[derive(Copy)]
+#[derive(FromPyObject, Debug, Clone, Copy)]
 pub struct Trigger {
     pub address: u64,
-    pub hitcounter: u32
+    pub hitcounter: u32,
 }
 
-#[derive(FromPyObject)]
-#[derive(Debug)]
-#[derive(Clone)]
-#[derive(Copy)]
+#[derive(FromPyObject, Debug, Clone, Copy)]
 pub struct Fault {
     pub trigger: Trigger,
     pub address: u64,
@@ -91,7 +85,7 @@ pub struct Fault {
     pub mask: u128,
     pub lifespan: u32,
     pub num_bytes: u32,
-    pub wildcard: bool
+    pub wildcard: bool,
 }
 
 pub struct TbInfoBlock {
@@ -99,7 +93,7 @@ pub struct TbInfoBlock {
     pub size: u32,
     pub ins_count: u32,
     pub num_exec: u32,
-    pub assembler: String
+    pub assembler: String,
 }
 
 impl ToPyObject for TbInfoBlock {
@@ -117,7 +111,7 @@ impl ToPyObject for TbInfoBlock {
 
 pub struct TbExecEntry {
     pub tb: u64,
-    pub pos: u64
+    pub pos: u64,
 }
 
 impl ToPyObject for TbExecEntry {
@@ -143,7 +137,8 @@ impl ToPyObject for Logs {
 
         let meminfo = self.meminfo.read().unwrap();
         let meminfo_list = PyList::new(py, meminfo.values());
-        dict.set_item("meminfo", meminfo_list.to_object(py)).unwrap();
+        dict.set_item("meminfo", meminfo_list.to_object(py))
+            .unwrap();
 
         let tbinfo = self.tbinfo.read().unwrap();
         let tbinfo_list = PyList::new(py, tbinfo.values());
@@ -155,11 +150,13 @@ impl ToPyObject for Logs {
 
         let endpoint = self.endpoint.read().unwrap();
         if endpoint.2 == 1 {
-            dict.set_item("end_reason", format!("{}/1", endpoint.1.to_string())).unwrap();
+            dict.set_item("end_reason", format!("{}/1", endpoint.1))
+                .unwrap();
         } else {
             dict.set_item("end_reason", "max tb").unwrap();
         }
-        dict.set_item("endpoint", if endpoint.0 { 1 } else { 0 }).unwrap();
+        dict.set_item("endpoint", if endpoint.0 { 1 } else { 0 })
+            .unwrap();
         drop(meminfo);
 
         dict.to_object(py)
@@ -175,6 +172,5 @@ pub struct State {
     pub single_step_hook_handle: RwLock<Option<*mut c_void>>,
     pub cs_engine: Capstone,
 
-    pub logs: Logs
+    pub logs: Logs,
 }
-

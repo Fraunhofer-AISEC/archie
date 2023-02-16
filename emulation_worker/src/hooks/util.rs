@@ -1,30 +1,42 @@
-use std::collections::HashMap;
-use priority_queue::PriorityQueue;
-use unicorn_engine::Unicorn;
-use std::sync::{RwLockReadGuard, RwLockWriteGuard};
-use crate::logs::{TbInfoBlock, TbExecEntry};
-use num::{ToPrimitive, BigUint};
+use crate::logs::{TbExecEntry, TbInfoBlock};
 use crate::{Fault, FaultModel, FaultType};
+use num::{BigUint, ToPrimitive};
+use priority_queue::PriorityQueue;
+use std::collections::HashMap;
+use std::sync::{RwLockReadGuard, RwLockWriteGuard};
+use unicorn_engine::Unicorn;
 
-pub fn log_tb_info(uc: &mut Unicorn<'_, ()>, address: u64, size: u32, cs: &capstone::Capstone, mut tbinfo: RwLockWriteGuard<HashMap<(u64, usize), TbInfoBlock>>) {
+pub fn log_tb_info(
+    uc: &mut Unicorn<'_, ()>,
+    address: u64,
+    size: u32,
+    cs: &capstone::Capstone,
+    mut tbinfo: RwLockWriteGuard<HashMap<(u64, usize), TbInfoBlock>>,
+) {
     if let Some(tbinfo) = tbinfo.get_mut(&(address, size as usize)) {
         tbinfo.num_exec += 1;
     } else {
         let code = uc.mem_read_as_vec(address, size as usize).unwrap();
         let assembler = cs.disasm_all(code.as_slice(), address).unwrap().to_string();
-        tbinfo.insert((address, size as usize), TbInfoBlock {
-            id: address,
-            size,
-            ins_count: assembler.matches("\n").count() as u32,
-            num_exec: 1,
-            assembler
-        });
+        tbinfo.insert(
+            (address, size as usize),
+            TbInfoBlock {
+                id: address,
+                size,
+                ins_count: assembler.matches('\n').count() as u32,
+                num_exec: 1,
+                assembler,
+            },
+        );
     }
 }
 
 pub fn log_tb_exec(address: u64, mut tbexec: RwLockWriteGuard<Vec<TbExecEntry>>) {
     let tbexec_len = tbexec.len();
-    tbexec.push(TbExecEntry { pos: tbexec_len as u64, tb: address});
+    tbexec.push(TbExecEntry {
+        pos: tbexec_len as u64,
+        tb: address,
+    });
 }
 
 pub fn apply_model(data: &BigUint, fault: &Fault) -> BigUint {
@@ -32,12 +44,20 @@ pub fn apply_model(data: &BigUint, fault: &Fault) -> BigUint {
     match fault.model {
         FaultModel::Set0 => data ^ (data & mask_big),
         FaultModel::Set1 => data | mask_big,
-        FaultModel::Toggle => data & data,
-        FaultModel::Overwrite => mask_big
+        FaultModel::Toggle => {
+            let mask = (BigUint::from(1u32) << data.bits()) - BigUint::from(1u32);
+            data ^ mask
+        }
+        FaultModel::Overwrite => mask_big,
     }
 }
 
-pub fn undo_faults(uc: &mut Unicorn<'_, ()>, instruction_count: u64, faults: RwLockReadGuard<HashMap<u64, Fault>>, mut live_faults: RwLockWriteGuard<PriorityQueue<(u64, BigUint), u64>>) {
+pub fn undo_faults(
+    uc: &mut Unicorn<'_, ()>,
+    instruction_count: u64,
+    faults: RwLockReadGuard<HashMap<u64, Fault>>,
+    mut live_faults: RwLockWriteGuard<PriorityQueue<(u64, BigUint), u64>>,
+) {
     if live_faults.len() == 0 {
         return;
     }
@@ -56,11 +76,12 @@ pub fn undo_faults(uc: &mut Unicorn<'_, ()>, instruction_count: u64, faults: RwL
     println!("Undoing fault");
     match fault.kind {
         FaultType::Register => {
-            uc.reg_write(fault.address as i32, prefault_data.to_u64().unwrap()).expect("failed restoring register value");
+            uc.reg_write(fault.address as i32, prefault_data.to_u64().unwrap())
+                .expect("failed restoring register value");
         }
         FaultType::Data | FaultType::Instruction => {
-            uc.mem_write(fault.address, prefault_data.to_bytes_le().as_slice()).expect("failed restoring memory value");
+            uc.mem_write(fault.address, prefault_data.to_bytes_le().as_slice())
+                .expect("failed restoring memory value");
         }
     }
 }
-
