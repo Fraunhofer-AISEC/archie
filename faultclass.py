@@ -790,13 +790,9 @@ def python_worker_unicorn(
     config_qemu,
     index,
     queue_output,
-    qemu_output,
     pregoldenrun_data,
     goldenrun_data,
     change_nice=False,
-    queue_ram_usage=None,
-    qemu_pre=None,
-    qemu_post=None,
 ):
     t0 = time.time()
     if change_nice:
