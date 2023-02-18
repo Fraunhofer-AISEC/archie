@@ -50,6 +50,7 @@ fn block_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, size: u32, state: &Arc<
                 uc.add_code_hook(u64::MIN, u64::MAX, single_step_hook_closure)
                     .unwrap(),
             );
+            return;
         }
     }
 
@@ -62,7 +63,7 @@ fn block_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, size: u32, state: &Arc<
 fn end_hook_cb(
     uc: &mut Unicorn<'_, ()>,
     address: u64,
-    _size: u32,
+    size: u32,
     state: &Arc<State>,
     first_endpoint: u64,
 ) {
@@ -79,6 +80,14 @@ fn end_hook_cb(
         let mut endpoint = state.logs.endpoint.write().unwrap();
         *endpoint = (address == first_endpoint, address, 1);
         println!("Reached endpoint at {address:?}");
+
+        // Since this hook has been registered before the single step hook we need to call it
+        // manullay to log the last instruction, since the callback would not be called otherwise
+        let single_step_hook_handle = state.single_step_hook_handle.read().unwrap();
+        if single_step_hook_handle.is_some() {
+            single_step_hook_cb(uc, address, size, state);
+        }
+
         uc.emu_stop()
             .expect("failed terminating the emulation engine");
     }

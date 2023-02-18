@@ -96,7 +96,7 @@ fn run_unicorn(
         0,
         max_instruction_count,
     )
-    .expect("failed to emulate code");
+    .unwrap_or_else(|_| panic!("failed to emulate code. PC: {}", emu.pc_read().unwrap()));
 
     Python::with_gil(|py| Ok(state_arc.logs.to_object(py)))
 }

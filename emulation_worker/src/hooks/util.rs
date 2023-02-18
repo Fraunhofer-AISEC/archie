@@ -17,13 +17,27 @@ pub fn log_tb_info(
         tbinfo.num_exec += 1;
     } else {
         let code = uc.mem_read_as_vec(address, size as usize).unwrap();
-        let assembler = cs.disasm_all(code.as_slice(), address).unwrap().to_string();
+
+        // Formatting may look a bit weird, but this needs to conform to QEMU's disassembly output
+        let mut assembler = String::from(" ");
+        let instructions = cs.disasm_all(code.as_slice(), address).unwrap();
+        for insn in instructions.iter() {
+            assembler += format!(
+                "[  {:x} ]: {} {} \n",
+                insn.address(),
+                insn.mnemonic().unwrap(),
+                insn.op_str().unwrap()
+            )
+            .as_str();
+        }
+        assembler += " \n";
+
         tbinfo.insert(
             (address, size as usize),
             TbInfoBlock {
                 id: address,
                 size,
-                ins_count: assembler.matches('\n').count() as u32,
+                ins_count: assembler.matches('\n').count() as u32 - 1,
                 num_exec: 1,
                 assembler,
             },
@@ -32,11 +46,8 @@ pub fn log_tb_info(
 }
 
 pub fn log_tb_exec(address: u64, mut tbexec: RwLockWriteGuard<Vec<TbExecEntry>>) {
-    let tbexec_len = tbexec.len();
-    tbexec.push(TbExecEntry {
-        pos: tbexec_len as u64,
-        tb: address,
-    });
+    let pos: u64 = tbexec.len() as u64 - 1;
+    tbexec.push(TbExecEntry { pos, tb: address });
 }
 
 pub fn apply_model(data: &BigUint, fault: &Fault) -> BigUint {
