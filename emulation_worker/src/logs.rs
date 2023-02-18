@@ -145,7 +145,8 @@ impl ToPyObject for Logs {
         let tbinfo_list = PyList::new(py, tbinfo.values());
         dict.set_item("tbinfo", tbinfo_list.to_object(py)).unwrap();
 
-        let tbexec = self.tbexec.read().unwrap();
+        let mut tbexec = self.tbexec.write().unwrap();
+        tbexec.remove(0);
         let tbexec_list = PyList::new(py, tbexec.as_slice());
         dict.set_item("tbexec", tbexec_list.to_object(py)).unwrap();
 

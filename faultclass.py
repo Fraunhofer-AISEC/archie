@@ -886,6 +886,17 @@ def python_worker_unicorn(
     logs["index"] = index
     logs["faultlist"] = fault_list
 
+    pdtbexeclist = pd.DataFrame(logs["tbexec"])
+    [pdtbexeclist, tblist] = filter_tb(
+        pdtbexeclist,
+        logs["tbinfo"],
+        goldenrun_data["tbexec"],
+        goldenrun_data["tbinfo"],
+        index,
+    )
+    logs["tbexec"] = write_output_wrt_goldenrun("tbexec", pdtbexeclist, goldenrun_data)
+    logs["tbinfo"] = write_output_wrt_goldenrun("tbinfo", tblist, goldenrun_data)
+
     queue_output.put(logs)
 
     logger.info(
