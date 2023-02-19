@@ -1,5 +1,5 @@
-use crate::logs::{TbExecEntry, TbInfoBlock};
-use crate::{Fault, FaultModel, FaultType};
+use crate::structs::{TbExecEntry, TbInfoBlock};
+use crate::{Fault, FaultModel, FaultType, MemDump};
 use num::{BigUint, ToPrimitive};
 use priority_queue::PriorityQueue;
 use std::collections::HashMap;
@@ -63,21 +63,22 @@ pub fn apply_model(data: &BigUint, fault: &Fault) -> BigUint {
     }
 }
 
+// Undo active faults. Returns fault that has been undone
 pub fn undo_faults(
     uc: &mut Unicorn<'_, ()>,
     instruction_count: u64,
     faults: RwLockReadGuard<HashMap<u64, Fault>>,
     mut live_faults: RwLockWriteGuard<PriorityQueue<(u64, BigUint), u64>>,
-) {
+) -> Option<Fault> {
     if live_faults.len() == 0 {
-        return;
+        return None;
     }
 
     let ((_, _), priority) = live_faults.peek().unwrap();
     let lifespan = u64::MAX - priority;
 
     if lifespan > instruction_count {
-        return;
+        return None;
     }
 
     let ((address, prefault_data), _) = live_faults.pop().unwrap();
@@ -95,4 +96,34 @@ pub fn undo_faults(
                 .expect("failed restoring memory value");
         }
     }
+
+    Some(*fault)
+}
+
+pub fn dump_memory(
+    uc: &mut Unicorn<'_, ()>,
+    address: u64,
+    size: u32,
+    mut memdumps: RwLockWriteGuard<HashMap<u64, MemDump>>,
+) {
+    let dump = uc.mem_read_as_vec(address, size as usize).unwrap();
+
+    if let Some(mem_dump) = memdumps.get_mut(&address) {
+        mem_dump.dumps.push(dump);
+    } else {
+        let mem_dump = MemDump {
+            address,
+            len: size,
+            dumps: Vec::from([dump]),
+        };
+        memdumps.insert(address, mem_dump);
+    }
+}
+
+pub fn calculate_fault_size(fault: &Fault) -> u32 {
+    if matches!(fault.model, FaultModel::Overwrite) {
+        return fault.num_bytes;
+    }
+
+    ((fault.mask as f64).log2() / 8_f64).floor() as u32 + 1
 }
