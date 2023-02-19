@@ -1,3 +1,4 @@
+use crate::ArchitectureDependentOperator;
 use capstone::Capstone;
 use num::BigUint;
 use priority_queue::PriorityQueue;
@@ -124,11 +125,31 @@ impl ToPyObject for TbExecEntry {
     }
 }
 
+pub struct MemDump {
+    pub address: u64,
+    pub len: u32,
+    pub dumps: Vec<Vec<u8>>,
+}
+
+impl ToPyObject for MemDump {
+    fn to_object(&self, py: Python<'_>) -> PyObject {
+        let dict = PyDict::new(py);
+        dict.set_item("address", self.address).unwrap();
+        dict.set_item("len", self.len).unwrap();
+        dict.set_item("numdumps", self.dumps.len()).unwrap();
+        dict.set_item("dumps", self.dumps.to_object(py)).unwrap();
+
+        dict.to_object(py)
+    }
+}
+
 pub struct Logs {
     pub meminfo: RwLock<HashMap<(u64, u64), MemInfo>>,
     pub endpoint: RwLock<(bool, u64, u32)>,
     pub tbinfo: RwLock<HashMap<(u64, usize), TbInfoBlock>>,
     pub tbexec: RwLock<Vec<TbExecEntry>>,
+    pub registerlist: RwLock<Vec<HashMap<String, u64>>>,
+    pub memdumps: RwLock<HashMap<u64, MemDump>>,
 }
 
 impl ToPyObject for Logs {
@@ -159,7 +180,14 @@ impl ToPyObject for Logs {
         }
         dict.set_item("endpoint", if endpoint.0 { 1 } else { 0 })
             .unwrap();
-        drop(meminfo);
+
+        let registerlist = self.registerlist.read().unwrap();
+        dict.set_item("registerlist", registerlist.to_object(py))
+            .unwrap();
+
+        let memdumps = self.memdumps.read().unwrap();
+        let memdump_list = PyList::new(py, memdumps.values());
+        dict.set_item("memdumplist", memdump_list).unwrap();
 
         dict.to_object(py)
     }
@@ -167,12 +195,14 @@ impl ToPyObject for Logs {
 
 pub struct State {
     pub last_tbid: RwLock<u64>,
+    pub tbcounter: RwLock<u64>,
     pub endpoints: RwLock<HashMap<u64, u32>>,
     pub faults: RwLock<HashMap<u64, Fault>>,
     pub live_faults: RwLock<PriorityQueue<(u64, BigUint), u64>>,
     pub instruction_count: RwLock<u64>,
     pub single_step_hook_handle: RwLock<Option<*mut c_void>>,
     pub cs_engine: Capstone,
+    pub arch_operator: ArchitectureDependentOperator,
 
     pub logs: Logs,
 }

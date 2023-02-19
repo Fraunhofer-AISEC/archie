@@ -1,19 +1,19 @@
 use num::{BigUint, ToPrimitive};
 use pyo3::types::{PyDict, PyList};
-use std::io;
-use std::sync::Arc;
+use std::{collections::HashMap, io, sync::Arc};
 use unicorn_engine::unicorn_const::{HookType, MemType};
 use unicorn_engine::Unicorn;
 
-use crate::{Fault, FaultModel, FaultType, MemInfo, State};
+use crate::{ArchitectureDependentOperations, Fault, FaultType, MemInfo, State};
 
 mod util;
-use util::{apply_model, log_tb_exec, log_tb_info, undo_faults};
+use util::{apply_model, calculate_fault_size, dump_memory, log_tb_exec, log_tb_info, undo_faults};
 
 fn block_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, size: u32, state: &Arc<State>) {
     // Save current tbid for meminfo logs
     let mut last_tbid = state.last_tbid.write().unwrap();
     *last_tbid = address;
+    *state.tbcounter.write().unwrap() += 1;
 
     let live_faults = state.live_faults.read().unwrap();
     let mut single_step_hook_handle = state.single_step_hook_handle.write().unwrap();
@@ -66,6 +66,7 @@ fn end_hook_cb(
     size: u32,
     state: &Arc<State>,
     first_endpoint: u64,
+    memorydump: &Vec<HashMap<&str, u64>>,
 ) {
     let mut endpoints = state.endpoints.write().unwrap();
 
@@ -88,6 +89,15 @@ fn end_hook_cb(
             single_step_hook_cb(uc, address, size, state);
         }
 
+        for dump_info in memorydump {
+            dump_memory(
+                uc,
+                *(*dump_info).get("address").unwrap(),
+                *(*dump_info).get("length").unwrap() as u32,
+                state.logs.memdumps.write().unwrap(),
+            );
+        }
+
         uc.emu_stop()
             .expect("failed terminating the emulation engine");
     }
@@ -95,12 +105,28 @@ fn end_hook_cb(
 
 fn single_step_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, size: u32, state: &Arc<State>) {
     let mut instruction_count = state.instruction_count.write().unwrap();
-    undo_faults(
+    let undone_fault = undo_faults(
         uc,
         *instruction_count,
         state.faults.read().unwrap(),
         state.live_faults.write().unwrap(),
     );
+
+    if let Some(fault) = undone_fault {
+        if matches!(fault.r#type, FaultType::Register) {
+            dump_memory(
+                uc,
+                address,
+                calculate_fault_size(&fault),
+                state.logs.memdumps.write().unwrap(),
+            );
+        }
+        state.arch_operator.dump_registers(
+            uc,
+            state.logs.registerlist.write().unwrap(),
+            *state.tbcounter.read().unwrap(),
+        );
+    }
     *instruction_count += 1;
 
     let tbinfo = state.logs.tbinfo.write().unwrap();
@@ -159,11 +185,7 @@ fn fault_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, _size: u32, state: &Arc
 
     match fault.r#type {
         FaultType::Data | FaultType::Instruction => {
-            let fault_size = if matches!(fault.model, FaultModel::Overwrite) {
-                fault.num_bytes
-            } else {
-                1
-            };
+            let fault_size = calculate_fault_size(fault);
             let data = BigUint::from_bytes_le(
                 uc.mem_read_as_vec(fault.address, fault_size as usize)
                     .unwrap()
@@ -175,11 +197,22 @@ fn fault_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, _size: u32, state: &Arc
                 data,
                 apply_model(&data, fault)
             );
-            uc.mem_write(
+            dump_memory(
+                uc,
                 fault.address,
-                apply_model(&data, fault).to_bytes_le().as_slice(),
-            )
-            .expect("failed writing fault data to memory");
+                fault_size,
+                state.logs.memdumps.write().unwrap(),
+            );
+            let mut fault_data = apply_model(&data, fault).to_bytes_le();
+            fault_data.extend(std::iter::repeat(0).take(fault_size as usize - fault_data.len()));
+            uc.mem_write(fault.address, fault_data.as_slice())
+                .expect("failed writing fault data to memory");
+            dump_memory(
+                uc,
+                fault.address,
+                fault_size,
+                state.logs.memdumps.write().unwrap(),
+            );
         }
         FaultType::Register => {
             let register_value = BigUint::from(
@@ -205,6 +238,12 @@ fn fault_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, _size: u32, state: &Arc
             u64::MAX - fault.lifespan as u64 + instruction_count,
         );
     }
+
+    state.arch_operator.dump_registers(
+        uc,
+        state.logs.registerlist.write().unwrap(),
+        *state.tbcounter.read().unwrap(),
+    );
 }
 
 fn initialize_mem_hook(emu: &mut Unicorn<()>, state_arc: &Arc<State>) -> io::Result<()> {
@@ -238,11 +277,12 @@ fn initialize_block_hook(emu: &mut Unicorn<()>, state_arc: &Arc<State>) -> io::R
     Ok(())
 }
 
-fn initialize_end_hook(
-    emu: &mut Unicorn<()>,
+fn initialize_end_hook<'a, 'b: 'a>(
+    emu: &mut Unicorn<'a, ()>,
     state_arc: &Arc<State>,
     config: &PyDict,
     first_endpoint: u64,
+    memorydump: &'b Vec<HashMap<&str, u64>>,
 ) -> io::Result<()> {
     let config_endpoints: &PyList = config.get_item("end").unwrap().extract()?;
     for obj in config_endpoints {
@@ -259,7 +299,7 @@ fn initialize_end_hook(
         let state_arc = Arc::clone(&state_arc);
 
         let end_hook_closure = move |uc: &mut Unicorn<'_, ()>, address: u64, size: u32| {
-            end_hook_cb(uc, address, size, &state_arc, first_endpoint);
+            end_hook_cb(uc, address, size, &state_arc, first_endpoint, memorydump);
         };
         emu.add_code_hook(address, address, end_hook_closure)
             .expect("failed to add end hook");
@@ -271,13 +311,13 @@ fn initialize_end_hook(
 fn initialize_fault_hook(
     emu: &mut Unicorn<()>,
     state_arc: &Arc<State>,
-    faults: Vec<Fault>,
+    faults: &Vec<Fault>,
 ) -> io::Result<()> {
     for fault in faults {
         let state_arc = Arc::clone(state_arc);
 
         let mut state_faults = state_arc.faults.write().unwrap();
-        state_faults.insert(fault.trigger.address, fault);
+        state_faults.insert(fault.trigger.address, *fault);
         drop(state_faults);
 
         let state_arc = Arc::clone(&state_arc);
@@ -296,15 +336,22 @@ fn initialize_fault_hook(
     Ok(())
 }
 
-pub fn initialize_hooks(
-    emu: &mut Unicorn<()>,
+pub fn initialize_hooks<'a, 'b: 'a>(
+    emu: &mut Unicorn<'a, ()>,
     state_arc: &Arc<State>,
-    faults: Vec<Fault>,
+    faults: &Vec<Fault>,
+    memorydump: &'b Vec<HashMap<&str, u64>>,
     config: &PyDict,
 ) -> io::Result<()> {
     initialize_mem_hook(emu, state_arc)?;
     initialize_block_hook(emu, state_arc)?;
-    initialize_end_hook(emu, state_arc, config, faults[0].trigger.address)?;
+    initialize_end_hook(
+        emu,
+        state_arc,
+        config,
+        faults[0].trigger.address,
+        memorydump,
+    )?;
     initialize_fault_hook(emu, state_arc, faults)?;
 
     Ok(())

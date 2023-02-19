@@ -883,8 +883,13 @@ def python_worker_unicorn(
     logs = run_unicorn(pregoldenrun_data, fault_list, config_qemu)
     logger.info(f"Ended qemu for exp {index}! Took {time.time() - t0}")
 
-    logs["index"] = index
-    logs["faultlist"] = fault_list
+    output = {}
+
+    output["index"] = index
+    output["faultlist"] = fault_list
+    output["endpoint"] = logs["endpoint"]
+    output["end_reason"] = logs["end_reason"]
+    output["memdumplist"] = logs["memdumplist"]
 
     pdtbexeclist = pd.DataFrame(logs["tbexec"])
     [pdtbexeclist, tblist] = filter_tb(
@@ -894,10 +899,12 @@ def python_worker_unicorn(
         goldenrun_data["tbinfo"],
         index,
     )
-    logs["tbexec"] = write_output_wrt_goldenrun("tbexec", pdtbexeclist, goldenrun_data)
-    logs["tbinfo"] = write_output_wrt_goldenrun("tbinfo", tblist, goldenrun_data)
+    output["tbexec"] = write_output_wrt_goldenrun("tbexec", pdtbexeclist, goldenrun_data)
+    output["tbinfo"] = write_output_wrt_goldenrun("tbinfo", tblist, goldenrun_data)
 
-    queue_output.put(logs)
+    output["armregisters"] = write_output_wrt_goldenrun("armregisters", pd.DataFrame(logs["registerlist"], dtype="UInt64"), goldenrun_data)
+
+    queue_output.put(output)
 
     logger.info(
         "Python worker for experiment {} done. Took {}s".format(
