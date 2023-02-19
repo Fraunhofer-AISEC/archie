@@ -1,85 +1,48 @@
 use pyo3::types::PyDict;
+use std::collections::HashMap;
+use std::sync::RwLockWriteGuard;
 use unicorn_engine::{RegisterARM, Unicorn};
 
-pub fn initialize_arm_registers(emu: &mut Unicorn<()>, registerdump: &PyDict) {
-    emu.reg_write(
-        RegisterARM::R0,
-        registerdump.get_item("r0").unwrap().extract().unwrap(),
-    )
-    .unwrap();
-    emu.reg_write(
-        RegisterARM::R1,
-        registerdump.get_item("r1").unwrap().extract().unwrap(),
-    )
-    .unwrap();
-    emu.reg_write(
-        RegisterARM::R2,
-        registerdump.get_item("r2").unwrap().extract().unwrap(),
-    )
-    .unwrap();
-    emu.reg_write(
-        RegisterARM::R3,
-        registerdump.get_item("r3").unwrap().extract().unwrap(),
-    )
-    .unwrap();
-    emu.reg_write(
-        RegisterARM::R4,
-        registerdump.get_item("r4").unwrap().extract().unwrap(),
-    )
-    .unwrap();
-    emu.reg_write(
-        RegisterARM::R5,
-        registerdump.get_item("r5").unwrap().extract().unwrap(),
-    )
-    .unwrap();
-    emu.reg_write(
-        RegisterARM::R6,
-        registerdump.get_item("r6").unwrap().extract().unwrap(),
-    )
-    .unwrap();
-    emu.reg_write(
-        RegisterARM::R7,
-        registerdump.get_item("r7").unwrap().extract().unwrap(),
-    )
-    .unwrap();
-    emu.reg_write(
-        RegisterARM::R8,
-        registerdump.get_item("r8").unwrap().extract().unwrap(),
-    )
-    .unwrap();
-    emu.reg_write(
-        RegisterARM::R9,
-        registerdump.get_item("r9").unwrap().extract().unwrap(),
-    )
-    .unwrap();
-    emu.reg_write(
-        RegisterARM::R10,
-        registerdump.get_item("r10").unwrap().extract().unwrap(),
-    )
-    .unwrap();
-    emu.reg_write(
-        RegisterARM::R11,
-        registerdump.get_item("r11").unwrap().extract().unwrap(),
-    )
-    .unwrap();
-    emu.reg_write(
-        RegisterARM::R12,
-        registerdump.get_item("r12").unwrap().extract().unwrap(),
-    )
-    .unwrap();
-    emu.reg_write(
-        RegisterARM::R13,
-        registerdump.get_item("r13").unwrap().extract().unwrap(),
-    )
-    .unwrap();
-    emu.reg_write(
-        RegisterARM::R14,
-        registerdump.get_item("r14").unwrap().extract().unwrap(),
-    )
-    .unwrap();
-    emu.reg_write(
-        RegisterARM::R15,
-        registerdump.get_item("r15").unwrap().extract().unwrap(),
-    )
-    .unwrap();
+static ARM_REGISTERS: &[(&str, RegisterARM)] = &[
+    ("pc", RegisterARM::PC),
+    ("r0", RegisterARM::R0),
+    ("r1", RegisterARM::R1),
+    ("r2", RegisterARM::R2),
+    ("r3", RegisterARM::R3),
+    ("r4", RegisterARM::R4),
+    ("r5", RegisterARM::R5),
+    ("r6", RegisterARM::R6),
+    ("r7", RegisterARM::R7),
+    ("r8", RegisterARM::R8),
+    ("r9", RegisterARM::R9),
+    ("r10", RegisterARM::R10),
+    ("r11", RegisterARM::R11),
+    ("r12", RegisterARM::R12),
+    ("r13", RegisterARM::R13),
+    ("r14", RegisterARM::R14),
+    ("r15", RegisterARM::R15),
+    ("xpsr", RegisterARM::XPSR),
+];
+
+pub fn initialize_arm_registers(uc: &mut Unicorn<()>, registerdump: &PyDict) {
+    for (name, reg) in ARM_REGISTERS {
+        uc.reg_write(
+            *reg,
+            registerdump.get_item(*name).unwrap().extract().unwrap(),
+        )
+        .unwrap();
+    }
+}
+
+pub fn dump_arm_registers(
+    uc: &mut Unicorn<()>,
+    mut registerlist: RwLockWriteGuard<Vec<HashMap<String, u64>>>,
+    tbcounter: u64,
+) {
+    let mut dump = HashMap::new();
+    for (name, reg) in ARM_REGISTERS {
+        dump.insert(name.to_string(), uc.reg_read(*reg).unwrap());
+    }
+    dump.insert("tbcounter".to_string(), tbcounter);
+    registerlist.push(dump);
 }

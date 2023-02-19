@@ -11,10 +11,10 @@ use unicorn_engine::unicorn_const::{Arch, Mode, Permission};
 use unicorn_engine::Unicorn;
 
 mod arm;
-use crate::arm::initialize_arm_registers;
+use crate::arm::{dump_arm_registers, initialize_arm_registers};
 
 mod logs;
-use crate::logs::{Fault, FaultModel, FaultType, Logs, MemInfo, State};
+use crate::logs::{Fault, FaultModel, FaultType, Logs, MemDump, MemInfo, State};
 
 mod hooks;
 use crate::hooks::initialize_hooks;
@@ -26,6 +26,9 @@ fn run_unicorn(
     config: &PyDict,
 ) -> PyResult<PyObject> {
     println!("{config:?}");
+
+    let memorydump: Vec<HashMap<&str, u64>> = config.get_item("memorydump").unwrap().extract()?;
+
     let mut unicorn =
         Unicorn::new(Arch::ARM, Mode::THUMB).expect("failed to initialize Unicorn instance");
     let emu = &mut unicorn;
@@ -61,10 +64,13 @@ fn run_unicorn(
         endpoint: RwLock::new((false, 0, 0)),
         tbinfo: RwLock::new(HashMap::new()),
         tbexec: RwLock::new(Vec::new()),
+        registerlist: RwLock::new(Vec::new()),
+        memdumps: RwLock::new(HashMap::new()),
     };
 
     let state = State {
         last_tbid: RwLock::new(0),
+        tbcounter: RwLock::new(0),
         endpoints: RwLock::new(HashMap::new()),
         faults: RwLock::new(HashMap::new()),
         live_faults: RwLock::new(PriorityQueue::new()),
@@ -79,7 +85,8 @@ fn run_unicorn(
     };
 
     let state_arc: Arc<State> = Arc::new(state);
-    initialize_hooks(emu, &state_arc, faults, config).expect("failed initializing hooks");
+    initialize_hooks(emu, &state_arc, &faults, &memorydump, config)
+        .expect("failed initializing hooks");
 
     let max_instruction_count: usize = config
         .get_item("max_instruction_count")
