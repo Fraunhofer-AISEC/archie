@@ -1482,6 +1482,9 @@ QEMU_PLUGIN_EXPORT int qemu_plugin_install(qemu_plugin_id_t id,
 	g_string_append(out, "Done\n");
 	g_string_append_printf(out, "[Start]: Reached end of initialisation, starting guest now\n");
 	qemu_plugin_outs(out->str);
+
+	g_string_printf(out, "$$$[Architecture]:%s\n", info->target_name);
+	plugin_write_to_data_pipe(out->str, out->len);
 	return 0;
 ABORT:
 	if(mem_avl_root != NULL)

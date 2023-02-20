@@ -439,6 +439,7 @@ def readout_data(
     max_ram_usage = 0
     regtype = None
     tbfaulted = 0
+    architecture = ""
 
     while 1:
         line = pipe.readline()
@@ -470,6 +471,10 @@ def readout_data(
             elif "[Memdump]" in line:
                 state = "memdump"
                 memdump = 1
+
+            elif "[Architecture]" in line:
+                split = line.split("]:")
+                architecture = split[1].strip()
 
             elif "[END]" in line:
                 state = "none"
@@ -533,6 +538,7 @@ def readout_data(
                 output["faultlist"] = faultlist
                 output["endpoint"] = endpoint
                 output["end_reason"] = end_reason
+                output["architecture"] = architecture
 
                 if memdump == 1:
                     output["memdumplist"] = memdumplist
@@ -802,8 +808,6 @@ def python_worker_unicorn(
 
     logs = run_unicorn(pregoldenrun_data, fault_list, config_qemu)
     logger.info(f"Ended qemu for exp {index}! Took {time.time() - t0}")
-    print(logs["registerlist"])
-    print(logs["memdumplist"])
 
     output = {}
 
