@@ -513,7 +513,7 @@ def readout_data(
                 )
 
                 output = {}
-                for (flag, keyword, data) in datasets:
+                for flag, keyword, data in datasets:
                     if not flag:
                         continue
                     if keyword.endswith("registers"):

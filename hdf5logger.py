@@ -359,7 +359,7 @@ def hdf5collector(
         datasets.append((process_riscv_registers, "riscvregisters"))
         datasets.append((process_tb_faulted, "tbfaulted"))
 
-        for (fn_ptr, keyword) in datasets:
+        for fn_ptr, keyword in datasets:
             if keyword not in exp:
                 continue
             fn_ptr(f, exp_group, exp[keyword], myfilter)

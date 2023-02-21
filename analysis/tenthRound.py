@@ -258,7 +258,6 @@ def mixColumns(s):
     b = [[0] * 4 for i in range(4)]
     # go through column
     for j in range(0, 4):
-
         for k in range(0, 4):
             # calculate Galois Mix Columns "multiplication" elements
             if a[j][k] == 0:
@@ -309,7 +308,6 @@ def invMixColumns(s):
     b = [[0] * 4 for i in range(4)]
     # go through column
     for j in range(0, 4):
-
         # calculate Galois Mix Columns "multiplication" elements
         # cases 0x00 and 0x01 are specific in terms of multiplication
         for k in range(0, 4):
