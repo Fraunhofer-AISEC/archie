@@ -338,7 +338,6 @@ def controller(
             and itter < len(faultlist)
             and queue_output.qsize() < queuedepth
         ):
-
             faults = faultlist[itter]
             itter += 1
 
