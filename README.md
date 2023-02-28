@@ -58,6 +58,7 @@ tables (tested 3.6.1)
 python-prctl (tested 1.6.1)
 numpy (tested 1.17.4)
 json (tested 2.0.9), or json5 (tested 0.9.6)
+pyelftools (tested 0.29)
 ```
 These python3 libraries can either be installed using your linux-distribution's installation method or by using pip3.
 JSON5 is strongly recommended as it allows integers to be represented as hexadecimal numbers.

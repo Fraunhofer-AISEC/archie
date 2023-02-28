@@ -36,8 +36,10 @@ struct FlatRange {
 
 bool dump_memmap_information(Int128 start, Int128 len, const MemoryRegion *mr, hwaddr offset_in_region, void *opaque) {
 	g_autoptr(GString) out = g_string_new("");
-	g_string_printf(out, "$$ 0x%lx | 0x%lx \n", int128_get64(start), int128_get64(len));
-	plugin_write_to_data_pipe(out->str, out->len);
+	if (mr->ram) {
+	    g_string_printf(out, "$$ 0x%lx | 0x%lx \n", int128_get64(start), int128_get64(len));
+	    plugin_write_to_data_pipe(out->str, out->len);
+	}
 	return false;
 }
 

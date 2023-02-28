@@ -11,6 +11,8 @@ import prctl
 import subprocess
 import time
 
+from elftools.elf.elffile import ELFFile
+
 try:
     import json5 as json
 
@@ -251,7 +253,7 @@ def controller(
     qemu_pre=None,
     qemu_post=None,
     logger_postprocess=None,
-    unicorn_emulation=False
+    unicorn_emulation=False,
 ):
     """
     This function builds the unrolled fault structure, performs golden run and
@@ -284,7 +286,12 @@ def controller(
             config_qemu, qemu_output, queue_output, faultlist, qemu_pre, qemu_post
         )
         pickle.dump(
-            (config_qemu["max_instruction_count"], pregoldenrun_data, goldenrun_data, faultlist),
+            (
+                config_qemu["max_instruction_count"],
+                pregoldenrun_data,
+                goldenrun_data,
+                faultlist,
+            ),
             lzma.open("bkup_goldenrun_results.xz", "wb"),
         )
     else:
@@ -294,6 +301,21 @@ def controller(
             goldenrun_data,
             faultlist,
         ) = pickle.load(lzma.open("bkup_goldenrun_results.xz", "rb"))
+
+    if unicorn_emulation:
+        elffile = ELFFile(open(config_qemu["kernel"], "rb"))
+        for segment in elffile.iter_segments():
+            if segment["p_type"] == "PT_LOAD":
+                segment_data = segment.data()
+                pregoldenrun_data["memdumplist"].append(
+                    {
+                        "address": segment["p_vaddr"],
+                        "len": len(segment_data),
+                        "numpdumps": 1,
+                        "dumps": [list(segment_data)],
+                    }
+                )
+                break
 
     p_logger = Process(
         target=logger,
@@ -657,5 +679,5 @@ if __name__ == "__main__":
         None,  # qemu_pre
         None,  # qemu_post
         None,  # logger_postprocess
-        parguments["unicorn_emulation"], # enable unicorn emulation
+        parguments["unicorn_emulation"],  # enable unicorn emulation
     )

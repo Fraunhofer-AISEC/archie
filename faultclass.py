@@ -405,6 +405,14 @@ def readout_tb_faulted(line):
     return tbfaulted
 
 
+def readout_memmap(line):
+    split = line.split("|")
+    memmap = {}
+    memmap["address"] = int(split[0], 16)
+    memmap["length"] = int(split[1], 16)
+    return memmap
+
+
 def readout_data(
     pipe,
     index,
@@ -430,10 +438,12 @@ def readout_data(
     memdumptmp = []
     registerlist = []
     tbfaultedlist = []
+    memmaplist = []
     tbinfo = 0
     tbexec = 0
     meminfo = 0
     memdump = 0
+    memmap = 0
     endpoint = 0
     end_reason = ""
     max_ram_usage = 0
@@ -476,13 +486,15 @@ def readout_data(
                 split = line.split("]:")
                 architecture = split[1].strip()
 
+            elif "[Memory Map]" in line:
+                state = "memmap"
+                memmap = 1
+
             elif "[END]" in line:
                 state = "none"
                 logger.info(
                     f"Data received now on post processing for Experiment {index}"
                 )
-                print(registerlist)
-                print(memdumplist)
 
                 if tbexec == 1:
                     if pdtbexeclist is not None:
@@ -540,6 +552,9 @@ def readout_data(
                 output["end_reason"] = end_reason
                 output["architecture"] = architecture
 
+                if memmap == 1:
+                    output["memmaplist"] = memmaplist
+
                 if memdump == 1:
                     output["memdumplist"] = memdumplist
 
@@ -559,7 +574,7 @@ def readout_data(
                 regtype = "arm"
             elif "[RiscV Registers]" in line:
                 state = "riscvregisters"
-                regtype = "riscv"
+                regtype = "riscv64"
             elif "[TB Faulted]" in line:
                 state = "tbfaulted"
                 tbfaulted = 1
@@ -596,6 +611,8 @@ def readout_data(
                 registerlist.append(readout_riscv_registers(line))
             elif "tbfaulted" in state:
                 tbfaultedlist.append(readout_tb_faulted(line))
+            elif "memmap" in state:
+                memmaplist.append(readout_memmap(line))
             else:
                 logger.warning("In exp {} unknown state {}".format(index, line))
     return max_ram_usage
@@ -652,8 +669,10 @@ def configure_qemu(control, config_qemu, num_faults, memorydump_list, index):
     out = out + "$$ num_faults: {}\n".format(num_faults)
 
     if index is -2:
+        out = out + "$$enable_memmap_dump\n"
         out = out + "$$enable_full_mem_dump\n"
     else:
+        out = out + "$$disable_memmap_dump\n"
         out = out + "$$disable_full_mem_dump\n"
 
     if "tb_exec_list" in config_qemu:
@@ -825,17 +844,20 @@ def python_worker_unicorn(
         goldenrun_data["tbinfo"],
         index,
     )
-    output["tbexec"] = write_output_wrt_goldenrun("tbexec", pdtbexeclist, goldenrun_data)
+    output["tbexec"] = write_output_wrt_goldenrun(
+        "tbexec", pdtbexeclist, goldenrun_data
+    )
     output["tbinfo"] = write_output_wrt_goldenrun("tbinfo", tblist, goldenrun_data)
 
-    output["armregisters"] = write_output_wrt_goldenrun("armregisters", pd.DataFrame(logs["registerlist"], dtype="UInt64"), goldenrun_data)
+    regtype = pregoldenrun_data["architecture"]
+    output[f"{regtype}registers"] = pd.DataFrame(
+        logs["registerlist"], dtype="UInt64"
+    ).to_dict("records")
 
     queue_output.put(output)
 
     logger.info(
-        "Python worker for experiment {} done. Took {}s".format(
-            index, time.time() - t0
-        )
+        "Python worker for experiment {} done. Took {}s".format(index, time.time() - t0)
     )
 
     return
