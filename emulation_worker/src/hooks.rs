@@ -5,7 +5,7 @@ use unicorn_engine::unicorn_const::{HookType, MemType};
 use unicorn_engine::RegisterARM;
 use unicorn_engine::Unicorn;
 
-use crate::{dump_arm_registers, Fault, FaultType, MemInfo, State};
+use crate::{ArchitectureDependentOperations, Fault, FaultType, MemInfo, State};
 
 mod util;
 use util::{apply_model, calculate_fault_size, dump_memory, log_tb_exec, log_tb_info, undo_faults};
@@ -120,7 +120,7 @@ fn single_step_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, size: u32, state:
                 state.logs.memdumps.write().unwrap(),
             );
         }
-        dump_arm_registers(
+        state.arch_operator.dump_registers(
             uc,
             state.logs.registerlist.write().unwrap(),
             *state.tbcounter.read().unwrap(),
@@ -234,7 +234,7 @@ fn fault_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, _size: u32, state: &Arc
         );
     }
 
-    dump_arm_registers(
+    state.arch_operator.dump_registers(
         uc,
         state.logs.registerlist.write().unwrap(),
         *state.tbcounter.read().unwrap(),

@@ -1,3 +1,4 @@
+use crate::ArchitectureDependentOperator;
 use capstone::Capstone;
 use num::BigUint;
 use priority_queue::PriorityQueue;
@@ -200,6 +201,7 @@ pub struct State {
     pub instruction_count: RwLock<u64>,
     pub single_step_hook_handle: RwLock<Option<*mut c_void>>,
     pub cs_engine: Capstone,
+    pub arch_operator: ArchitectureDependentOperator,
 
     pub logs: Logs,
 }

@@ -1,4 +1,4 @@
-use crate::logs::{TbExecEntry, TbInfoBlock};
+use crate::structs::{TbExecEntry, TbInfoBlock};
 use crate::{Fault, FaultModel, FaultType, MemDump};
 use num::{BigUint, ToPrimitive};
 use priority_queue::PriorityQueue;
