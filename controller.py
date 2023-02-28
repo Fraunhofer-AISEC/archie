@@ -32,6 +32,7 @@ import time
 import pandas as pd
 import prctl
 from tqdm import tqdm
+from elftools.elf.elffile import ELFFile
 
 try:
     import json5 as json
@@ -563,7 +564,7 @@ def controller(
     qemu_pre=None,
     qemu_post=None,
     logger_postprocess=None,
-    unicorn_emulation=False
+    unicorn_emulation=False,
 ):
     """
     This function builds the unrolled fault structure, performs golden run and
@@ -667,6 +668,21 @@ def controller(
             clogger.info(f"{len(faultlist)} faults are missing and will be simulated")
         else:
             clogger.info("All faults are already simulated")
+
+    if unicorn_emulation:
+        elffile = ELFFile(open(config_qemu["kernel"], "rb"))
+        for segment in elffile.iter_segments():
+            if segment["p_type"] == "PT_LOAD":
+                segment_data = segment.data()
+                pregoldenrun_data["memdumplist"].append(
+                    {
+                        "address": segment["p_vaddr"],
+                        "len": len(segment_data),
+                        "numpdumps": 1,
+                        "dumps": [list(segment_data)],
+                    }
+                )
+                break
 
     p_logger = Process(
         target=logger,

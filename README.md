@@ -63,11 +63,14 @@ If you change the build directory for *archie-qemu*, please change the path in t
 
 For the Python3 program, the following libraries are needed
 ```
-pandas (tested 0.25.3)
-tables (tested 3.6.1)
-python-prctl (tested 1.6.1)
-numpy (tested 1.17.4)
-json (tested 2.0.9), or json5 (tested 0.9.6)
+pandas (tested 2.2)
+python-prctl (tested 1.8)
+tables (tested 3.10)
+json (tested 2.0.9), or json5 (tested 0.12)
+protobuf (tested 6.31)
+tqdm (tested 4.67)
+psutil (tested 7.0)
+pyelftools (tested 0.32)
 ```
 These python3 libraries can either be installed using your linux-distribution's installation method or by using pip3.
 JSON5 is strongly recommended as it allows integers to be represented as hexadecimal numbers.

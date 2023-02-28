@@ -547,6 +547,13 @@ def readout_tb_faulted(data_protobuf):
     return tb_faulted_list
 
 
+def readout_memmap(data_protobuf):
+    memmap = []
+    for mm_info in data_protobuf.mem_map_infos:
+        memmap.append({"address": mm_info.address, "size": mm_info.size})
+    return memmap
+
+
 def readout_data(
     pipe,
     index,
@@ -569,6 +576,7 @@ def readout_data(
     memdumplist = []
     registerlist = []
     tbfaultedlist = []
+    memmaplist = []
     tbinfo = 0
     tbexec = 0
     meminfo = 0
@@ -596,6 +604,9 @@ def readout_data(
     if len(data_protobuf.mem_infos) != 0:
         meminfo = 1
         memlist = readout_meminfo(data_protobuf)
+
+    if len(data_protobuf.mem_map_infos) != 0:
+        memmaplist = readout_memmap(data_protobuf)
 
     if tbinfo == 1 and meminfo == 1:
         connect_meminfo_tb(memlist, tblist)
@@ -663,6 +674,10 @@ def readout_data(
     output["faultlist"] = faultlist
     output["endpoint"] = endpoint
     output["end_reason"] = end_reason
+    output["architecture"] = data_protobuf.architecture
+
+    if len(memmaplist) != 0:
+        output["memmaplist"] = memmaplist
 
     max_ram_usage = gather_process_ram_usage(queue_ram_usage, max_ram_usage)
 
@@ -746,6 +761,7 @@ def configure_qemu(control, config_qemu, num_faults, memorydump_list, index):
     # If enabled, use the ring buffer for all runs except for the goldenrun
     control_message.tb_exec_list_ring_buffer = config_qemu["ring_buffer"] and index >= 0
 
+    control_message.memmap_dump = index == -2
     control_message.full_mem_dump = index == -2
 
     if index != -2 and memorydump_list is not None:
@@ -899,17 +915,20 @@ def python_worker_unicorn(
         goldenrun_data["tbinfo"],
         index,
     )
-    output["tbexec"] = write_output_wrt_goldenrun("tbexec", pdtbexeclist, goldenrun_data)
+    output["tbexec"] = write_output_wrt_goldenrun(
+        "tbexec", pdtbexeclist, goldenrun_data
+    )
     output["tbinfo"] = write_output_wrt_goldenrun("tbinfo", tblist, goldenrun_data)
 
-    output["armregisters"] = write_output_wrt_goldenrun("armregisters", pd.DataFrame(logs["registerlist"], dtype="UInt64"), goldenrun_data)
+    regtype = pregoldenrun_data["architecture"]
+    output[f"{regtype}registers"] = pd.DataFrame(
+        logs["registerlist"], dtype="UInt64"
+    ).to_dict("records")
 
     queue_output.put(output)
 
     logger.info(
-        "Python worker for experiment {} done. Took {}s".format(
-            index, time.time() - t0
-        )
+        "Python worker for experiment {} done. Took {}s".format(index, time.time() - t0)
     )
 
     return

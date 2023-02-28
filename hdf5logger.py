@@ -158,6 +158,11 @@ class address_table(tables.IsDescription):
     counter = tables.UInt64Col()
 
 
+class memmap_table(tables.IsDescription):
+    address = tables.UInt64Col()
+    size = tables.UInt64Col()
+
+
 binary_atom = tables.UInt8Atom()
 
 
@@ -256,6 +261,24 @@ def process_dumps(f, group, memdumplist, myfilter):
             memdumpsrow.append()
     memdumpstable.flush()
     memdumpstable.close()
+
+
+def process_memmap(f, group, memmaplist, myfilter):
+    _memmap_table = f.create_table(
+        group,
+        "memory_map",
+        memmap_table,
+        "Table containing a list of memory regions.",
+        expectedrows=(len(memmaplist)),
+        filters=myfilter,
+    )
+    memmap_row = _memmap_table.row
+    for mem_region in memmaplist:
+        memmap_row["address"] = mem_region["address"]
+        memmap_row["size"] = mem_region["size"]
+        memmap_row.append()
+    _memmap_table.flush()
+    _memmap_table.close()
 
 
 def process_faults(f, group, faultlist, endpoint, end_reason, myfilter, name="faults"):
@@ -550,6 +573,7 @@ def hdf5collector(
                 "Pregoldenrun",
                 "Group containing all information regarding firmware running before start point is reached",
             )
+            exp_group._v_attrs["architecture"] = exp["architecture"]
             log_pregoldenrun = False
         elif exp["index"] == -1 and log_goldenrun:
             if "Goldenrun" in f.root:
@@ -576,6 +600,7 @@ def hdf5collector(
         datasets.append((process_tbexec, "tbexec"))
         datasets.append((process_memory_info, "meminfo"))
         datasets.append((process_dumps, "memdumplist"))
+        datasets.append((process_memmap, "memmaplist"))
         datasets.append((process_arm_registers, "armregisters"))
         datasets.append((process_riscv_registers, "riscvregisters"))
         datasets.append((process_tb_faulted, "tbfaulted"))
