@@ -38,7 +38,7 @@ struct tb_exec_rb_element {
 struct tb_exec_rb_element *tb_exec_rb_list = NULL;
 int tb_exec_rb_list_index;
 
-int tb_exec_order_init()
+int tb_exec_order_init(void)
 {
 	// List of execution order of tbs.
 	tb_exec_order_list = NULL;
@@ -65,7 +65,7 @@ int tb_exec_order_init()
  * Free linked list of tb_exec_order_t elements. It does not free the tb_info_t inside.
  * These must be freed separately with tb_info_free()
  */
-void tb_exec_order_free()
+void tb_exec_order_free(void)
 {
 	tb_exec_order_t *item;
 	while(tb_exec_order_list != NULL)

@@ -44,14 +44,14 @@ typedef struct tb_info_t
  *
  * This function initialises all global variables used in module
  */
-void tb_info_init();
+void tb_info_init(void);
 
 /**
  * tb_info_avl_init()
  *
  * function initialises avl tree for tb info
  */
-int tb_info_avl_init();
+int tb_info_avl_init(void);
 
 /**
  * tb_info_free()
@@ -59,7 +59,7 @@ int tb_info_avl_init();
  * function to delete the translation block information
  * structs from memory. Also deletes the avl tree
  */
-void tb_info_free();
+void tb_info_free(void);
 
 /**
  * tb_comparison_func

@@ -33,8 +33,7 @@ typedef struct tb_exec_order_t
 	tb_exec_order_t *next;
 }tb_exec_order_t;
 
-
-int tb_exec_order_init();
+int tb_exec_order_init(void);
 
 /**
  * tb_exec_order_free()
@@ -42,7 +41,7 @@ int tb_exec_order_init();
  * Free linked list of tb_exec_order_t elements. It does not free the tb_info_t inside.
  * These must be freed separately with tb_info_free()
  */
-void tb_exec_order_free();
+void tb_exec_order_free(void);
 
 /**
  * plugin_dump_tb_exec_order

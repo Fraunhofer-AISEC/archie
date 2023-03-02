@@ -132,7 +132,7 @@ void readout_arm_registers(registerdump_t * current)
 	current->regs[16] = qemu_plugin_read_reg(25);
 }
 
-size_t get_register_dump_count()
+size_t get_register_dump_count(void)
 {
 	size_t size = 0;
 	registerdump_t* current = first_registerdump;

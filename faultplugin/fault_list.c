@@ -25,7 +25,7 @@
 
 fault_list_t *first_fault;
 
-void init_fault_list()
+void init_fault_list(void)
 {
 	first_fault = NULL;
 }
@@ -85,7 +85,7 @@ int add_fault(uint64_t fault_address, uint64_t fault_type, uint64_t fault_model,
  * This function removes faults from linked list
  *
  */
-void delete_fault_queue()
+void delete_fault_queue(void)
 {
 	fault_list_t *del_item = NULL;
 	while(first_fault != NULL)
@@ -102,7 +102,7 @@ void delete_fault_queue()
  *
  * This function exists to separate fault list management from the rest of the code base
  */
-fault_list_t* return_first_fault()
+fault_list_t* return_first_fault(void)
 {
 	return first_fault;
 }
