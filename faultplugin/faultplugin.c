@@ -140,7 +140,7 @@ static void free_end_point_list(struct end_point_t *list)
  * This function deletes all mem info elements in the global linked list mem_info_list.
  * Furthermore it deletes the associated avl tree
  */
-void mem_info_free()
+void mem_info_free(void)
 {
 	mem_info_t *item;
 	while(mem_info_list != NULL)
@@ -346,7 +346,7 @@ void print_assembler(struct qemu_plugin_tb *tb)
  *
  */
 
-int qemu_setup_config()
+int qemu_setup_config(void)
 {
 	g_autoptr(GString) out = g_string_new("");
 	g_string_printf(out, "[Info]: Start readout of FIFO\n");
@@ -422,7 +422,7 @@ int qemu_setup_config()
  *
  * This function will fill the global fault trigger address array and fault address array
  */
-int register_fault_trigger_addresses()
+int register_fault_trigger_addresses(void)
 {
 	g_autoptr(GString) out = g_string_new("");
 	g_string_printf(out, "[Info]: Calculate number of faults .......");
@@ -480,7 +480,7 @@ void invalidate_fault_trigger_address(int fault_trigger_number)
  *
  * delete the vector containing the fault triggers
  */
-void delete_fault_trigger_addresses()
+void delete_fault_trigger_addresses(void)
 {
 	free(fault_trigger_addresses);
 }
@@ -518,7 +518,7 @@ int register_live_faults_callback(fault_list_t *fault)
  * This function is called in the first used tb block
  * This function is maybe a TODO
  */
-void handle_first_tb_fault_insertion()
+void handle_first_tb_fault_insertion(void)
 {
 
 	g_autoptr(GString) out = g_string_new("");
@@ -721,7 +721,7 @@ int plugin_write_to_data_pipe(char *str, size_t len)
 }
 
 
-size_t get_mem_info_list_size()
+size_t get_mem_info_list_size(void)
 {
 	size_t size = 0;
 	mem_info_t *item = mem_info_list;
@@ -1158,7 +1158,7 @@ int readout_pipe(uint8_t** protobuf_msg_buff, int pipe_fd)
 }
 
 
-int readout_control_qemu()
+int readout_control_qemu(void)
 {
 	uint8_t* control_msg_buff;
 	int msg_size = readout_pipe(&control_msg_buff, pipes->control);

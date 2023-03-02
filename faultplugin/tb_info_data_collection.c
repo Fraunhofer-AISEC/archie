@@ -27,14 +27,14 @@ tb_info_t *tb_info_list;
 /* AVL global variables */
 struct avl_table *tb_avl_root;
 
-void tb_info_init()
+void tb_info_init(void)
 {
 	// Linked list of tb structs inside tb. Used to delete them.
 	tb_info_list = NULL;
 	tb_avl_root = NULL;
 }
 
-int tb_info_avl_init()
+int tb_info_avl_init(void)
 {
 	// AVL tree used in collecting data. This contains the tbs info of all generated tbs.
 	// The id of a tb is its base address
@@ -53,7 +53,7 @@ int tb_info_avl_init()
  * Function to delete the translation block information
  * structs from memory. Also deletes the avl tree
  */
-void tb_info_free()
+void tb_info_free(void)
 {
 	tb_info_t *item;
 	while(tb_info_list != NULL)
@@ -95,7 +95,7 @@ int tb_comparison_func(const void *tbl_a, const void *tbl_b, void * tbl_param)
 	else return 0;
 }
 
-size_t get_tb_info_list_size()
+size_t get_tb_info_list_size(void)
 {
 	tb_info_t *item = tb_info_list;
 	size_t size = 0;
