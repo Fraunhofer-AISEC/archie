@@ -1,4 +1,4 @@
-use capstone::{prelude::BuildsCapstone, Capstone};
+use log::{debug, error, info, warn, LevelFilter};
 use priority_queue::PriorityQueue;
 use pyo3::{
     prelude::*,
@@ -6,6 +6,7 @@ use pyo3::{
 };
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+use time::macros::format_description;
 
 use unicorn_engine::unicorn_const::Permission;
 
@@ -20,12 +21,40 @@ use crate::structs::{Fault, FaultModel, FaultType, Logs, MemDump, MemInfo, State
 mod hooks;
 use crate::hooks::initialize_hooks;
 
+fn setup_logging(index: u64, debug: bool) {
+    let config = simplelog::ConfigBuilder::new()
+        .set_time_format_custom(format_description!(
+            "[year]-[month]-[day] [hour]:[minute]:[second],[subsecond digits:3]"
+        ))
+        .build();
+    let mut loggers: Vec<Box<dyn simplelog::SharedLogger>> = Vec::new();
+    if debug {
+        loggers.push(simplelog::WriteLogger::new(
+            LevelFilter::Debug,
+            config.clone(),
+            std::fs::File::create(format!("log_{index:?}.txt")).unwrap(),
+        ));
+    }
+    let log_level = if debug {
+        LevelFilter::Debug
+    } else {
+        LevelFilter::Info
+    };
+    loggers.push(simplelog::SimpleLogger::new(log_level, config));
+
+    simplelog::CombinedLogger::init(loggers).unwrap();
+}
+
 #[pyfunction]
 fn run_unicorn(
     pregoldenrun_data: &PyDict,
     faults: Vec<Fault>,
     config: &PyDict,
+    index: u64,
+    engine_output: bool,
 ) -> PyResult<PyObject> {
+    setup_logging(index, engine_output);
+
     let arch_str = pregoldenrun_data
         .get_item("architecture")
         .unwrap()
@@ -64,7 +93,11 @@ fn run_unicorn(
         let memmap: &PyDict = obj.extract()?;
         let address: u64 = memmap.get_item("address").unwrap().extract()?;
         let length: usize = memmap.get_item("length").unwrap().extract()?;
-        //println!("Mapping memory at {:x} size {:x}", address & (u64::MAX ^0xfff), cmp::max(length, 0x1000));
+        debug!(
+            "Mapping memory at 0x{:x} size 0x{:x}",
+            address & (u64::MAX ^ 0xfff),
+            usize::max(length, 0x1000)
+        );
         match emu.mem_map(
             address & (u64::MAX ^ 0xfff),
             usize::max(length, 0x1000),
@@ -72,10 +105,10 @@ fn run_unicorn(
         ) {
             Ok(()) => {}
             Err(unicorn_engine::unicorn_const::uc_error::MAP) => {
-                println!("Memory space is already mapped. Ignoring...")
+                warn!("Memory space is already mapped. Ignoring...")
             }
             Err(unicorn_engine::unicorn_const::uc_error::NOMEM) => {
-                println!("Memory space too big, cannot allocate. Ignoring...")
+                warn!("Memory space too big, cannot allocate. Ignoring...")
             }
             Err(err) => panic!("failed mapping memory: {err:?}"),
         }
@@ -90,9 +123,10 @@ fn run_unicorn(
         let address: u64 = memdump.get_item("address").unwrap().extract()?;
         let dumps: &PyList = memdump.get_item("dumps").unwrap().extract()?;
         let dump: Vec<u8> = dumps.get_item(0).unwrap().extract()?;
+        debug!("writing {:?} bytes to 0x{:x}", dump.len(), address);
 
         emu.mem_write(address, dump.as_slice())
-            .expect("failed to write instructions");
+            .unwrap_or_else(|_| error!("failed to write dumped data at 0x{:X}", address));
     }
 
     let logs = Logs {
@@ -112,11 +146,7 @@ fn run_unicorn(
         live_faults: RwLock::new(PriorityQueue::new()),
         instruction_count: RwLock::new(0),
         single_step_hook_handle: RwLock::new(None),
-        cs_engine: Capstone::new()
-            .arm()
-            .mode(capstone::arch::arm::ArchMode::Thumb)
-            .build()
-            .unwrap(),
+        cs_engine: arch_operator.initialize_cs_engine(),
         arch_operator: arch_operator.clone(),
         logs,
     };
@@ -130,8 +160,19 @@ fn run_unicorn(
         .unwrap()
         .extract()?;
 
+    info!("Starting emulation at 0x{:x}", start_address);
     emu.emu_start(start_address, 0, 0, max_instruction_count)
-        .unwrap_or_else(|_| println!("failed to emulate code at 0x{:x}", emu.pc_read().unwrap()));
+        .unwrap_or_else(|_| error!("failed to emulate code at 0x{:x}", emu.pc_read().unwrap()));
+
+    {
+        let state = Arc::clone(&state_arc);
+        state.arch_operator.dump_registers(
+            emu,
+            state.logs.registerlist.write().unwrap(),
+            *state.tbcounter.read().unwrap(),
+        );
+    }
+    info!("Finished emulation");
 
     Python::with_gil(|py| Ok(state_arc.logs.to_object(py)))
 }

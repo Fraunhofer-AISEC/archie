@@ -567,6 +567,7 @@ def controller(
     compressionlevel,
     missing_only,
     goldenrun_only,
+    engine_output,
     goldenrun=True,
     logger=hdf5collector,
     qemu_pre=None,
@@ -584,7 +585,7 @@ def controller(
     total_start_time = time.time()
 
     hdf5path = args.hdf5file
-    qemu_output = args.debug
+    engine_output = args.debug
 
     m = Manager()
     m2 = Manager()
@@ -648,7 +649,7 @@ def controller(
             goldenrun_data,
             faultlist,
         ] = run_goldenrun(
-            config_qemu, qemu_output, queue_output, faultlist, qemu_pre, qemu_post
+            config_qemu, engine_output, queue_output, faultlist, qemu_pre, qemu_post
         )
 
         create_backup(args, queue_output, config_qemu, faultlist)
@@ -780,6 +781,7 @@ def controller(
                         config_qemu,
                         faults["index"],
                         queue_output,
+                        engine_output,
                         pregoldenrun_data,
                         goldenrun_data,
                         True,
@@ -794,7 +796,7 @@ def controller(
                         config_qemu,
                         faults["index"],
                         queue_output,
-                        qemu_output,
+                        engine_output,
                         goldenrun_data,
                         True,
                         queue_ram_usage,
@@ -1142,6 +1144,7 @@ if __name__ == "__main__":
         parguments["compressionlevel"],  # compressionlevel
         parguments["missing_only"],  # missing_only flag
         parguments["goldenrun_only"],  # goldenrun_only flag
+        args.debug,  # engine_output
         parguments["goldenrun"],  # goldenrun
         hdf5collector,  # logger
         None,  # qemu_pre

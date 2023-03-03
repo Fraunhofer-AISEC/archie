@@ -173,7 +173,7 @@ impl ToPyObject for Logs {
 
         let endpoint = self.endpoint.read().unwrap();
         if endpoint.2 == 1 {
-            dict.set_item("end_reason", format!("{}/1", endpoint.1))
+            dict.set_item("end_reason", format!("endpoint {}/1", endpoint.1))
                 .unwrap();
         } else {
             dict.set_item("end_reason", "max tb").unwrap();
