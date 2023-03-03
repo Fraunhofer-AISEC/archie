@@ -1,3 +1,4 @@
+use capstone::{prelude::BuildsCapstone, prelude::BuildsCapstoneExtraMode, Capstone};
 use pyo3::types::PyDict;
 use std::collections::HashMap;
 use std::sync::RwLockWriteGuard;
@@ -71,6 +72,7 @@ pub enum Architecture {
 
 pub trait ArchitectureDependentOperations {
     fn initialize_unicorn(&self) -> Unicorn<'_, ()>;
+    fn initialize_cs_engine(&self) -> Capstone;
     fn initialize_registers(
         &self,
         uc: &mut Unicorn<()>,
@@ -124,6 +126,24 @@ impl ArchitectureDependentOperations for ArchitectureDependentOperator {
                 registerdump.get_item(*name).unwrap().extract().unwrap(),
             )
             .unwrap();
+        }
+    }
+
+    fn initialize_cs_engine(self: &ArchitectureDependentOperator) -> Capstone {
+        match self.architecture {
+            Architecture::Arm => Capstone::new()
+                .arm()
+                .mode(capstone::arch::arm::ArchMode::Thumb)
+                .build()
+                .unwrap(),
+            Architecture::Riscv => Capstone::new()
+                .riscv()
+                .mode(capstone::arch::riscv::ArchMode::RiscV64)
+                .extra_mode(std::iter::once(
+                    capstone::arch::riscv::ArchExtraMode::RiscVC,
+                ))
+                .build()
+                .unwrap(),
         }
     }
 

@@ -1,5 +1,6 @@
 use crate::structs::{TbExecEntry, TbInfoBlock};
 use crate::{Fault, FaultModel, FaultType, MemDump};
+use log::debug;
 use num::{BigUint, ToPrimitive};
 use priority_queue::PriorityQueue;
 use std::collections::HashMap;
@@ -85,7 +86,7 @@ pub fn undo_faults(
 
     let fault = faults.get(&address).unwrap();
 
-    println!("Undoing fault");
+    debug!("Undoing fault");
     match fault.r#type {
         FaultType::Register => {
             uc.reg_write(fault.address as i32, prefault_data.to_u64().unwrap())

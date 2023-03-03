@@ -788,7 +788,7 @@ def python_worker(
     config_qemu,
     index,
     queue_output,
-    qemu_output,
+    engine_output,
     goldenrun_data=None,
     change_nice=False,
     queue_ram_usage=None,
@@ -822,7 +822,7 @@ def python_worker(
                 paths["config"],
                 paths["data"],
                 config_qemu,
-                qemu_output,
+                engine_output,
                 index,
                 qemu_custom_paths,
             ),
@@ -888,6 +888,7 @@ def python_worker_unicorn(
     config_qemu,
     index,
     queue_output,
+    engine_output,
     pregoldenrun_data,
     goldenrun_data,
     change_nice=False,
@@ -896,8 +897,8 @@ def python_worker_unicorn(
     if change_nice:
         os.nice(19)
 
-    logs = run_unicorn(pregoldenrun_data, fault_list, config_qemu)
-    logger.info(f"Ended qemu for exp {index}! Took {time.time() - t0}")
+    logs = run_unicorn(pregoldenrun_data, fault_list, config_qemu, index, engine_output)
+    logger.info(f"Ended unicorn for exp {index}! Took {time.time() - t0}")
 
     output = {}
 
@@ -906,6 +907,7 @@ def python_worker_unicorn(
     output["endpoint"] = logs["endpoint"]
     output["end_reason"] = logs["end_reason"]
     output["memdumplist"] = logs["memdumplist"]
+    output["meminfo"] = logs["meminfo"]
 
     pdtbexeclist = pd.DataFrame(logs["tbexec"])
     [pdtbexeclist, tblist] = filter_tb(
