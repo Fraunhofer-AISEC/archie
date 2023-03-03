@@ -1,3 +1,4 @@
+use log::{debug, info};
 use num::{BigUint, ToPrimitive};
 use pyo3::types::{PyDict, PyList};
 use std::{collections::HashMap, io, sync::Arc};
@@ -71,15 +72,15 @@ fn end_hook_cb(
 
     let counter = endpoints.get_mut(&address).unwrap();
     if *counter > 1 {
-        println!(
-            "Decreasing endpoint counter for {:?} to {:?}",
+        debug!(
+            "Decreasing endpoint counter for 0x{:x} to {:?}",
             address, *counter
         );
         *counter -= 1;
     } else {
         let mut endpoint = state.logs.endpoint.write().unwrap();
         *endpoint = (address == first_endpoint, address, 1);
-        println!("Reached endpoint at {address:?}");
+        info!("Reached endpoint at 0x{address:x}");
 
         // Since this hook has been registered before the single step hook we need to call it
         // manullay to log the last instruction, since the callback would not be called otherwise
@@ -112,7 +113,7 @@ fn single_step_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, size: u32, state:
     );
 
     if let Some(fault) = undone_fault {
-        if matches!(fault.kind, FaultType::Register) {
+        if !matches!(fault.kind, FaultType::Register) {
             dump_memory(
                 uc,
                 address,
@@ -153,10 +154,10 @@ fn mem_hook_cb(
         meminfo.insert(
             (address, pc),
             MemInfo {
-                ins: address,
+                ins: pc,
                 counter: 1,
                 direction: if mem_type == MemType::READ { 0 } else { 1 },
-                address: pc,
+                address,
                 tbid: last_tbid,
                 size,
             },
@@ -177,7 +178,7 @@ fn fault_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, _size: u32, state: &Arc
         }
     }
 
-    println!("Executing fault at {address:?}");
+    info!("Executing fault at 0x{address:x}");
 
     let prefault_data;
 
@@ -190,8 +191,8 @@ fn fault_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, _size: u32, state: &Arc
                     .as_slice(),
             );
             prefault_data = data.clone();
-            println!(
-                "Overwriting {:?} with {:?}",
+            debug!(
+                "Overwriting 0x{:x} with 0x{:x}",
                 data,
                 apply_model(&data, fault)
             );

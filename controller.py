@@ -247,7 +247,7 @@ def controller(
     num_workers,
     queuedepth,
     compressionlevel,
-    qemu_output,
+    engine_output,
     goldenrun=True,
     logger=hdf5collector,
     qemu_pre=None,
@@ -283,7 +283,7 @@ def controller(
             goldenrun_data,
             faultlist,
         ] = run_goldenrun(
-            config_qemu, qemu_output, queue_output, faultlist, qemu_pre, qemu_post
+            config_qemu, engine_output, queue_output, faultlist, qemu_pre, qemu_post
         )
         pickle.dump(
             (
@@ -376,6 +376,7 @@ def controller(
                         config_qemu,
                         faults["index"],
                         queue_output,
+                        engine_output,
                         pregoldenrun_data,
                         goldenrun_data,
                         True,
@@ -390,7 +391,7 @@ def controller(
                         config_qemu,
                         faults["index"],
                         queue_output,
-                        qemu_output,
+                        engine_output,
                         goldenrun_data,
                         True,
                         queue_ram_usage,
@@ -673,7 +674,7 @@ if __name__ == "__main__":
         parguments["num_workers"],  # num_workers
         parguments["queuedepth"],  # queuedepth
         parguments["compressionlevel"],  # compressionlevel
-        args.debug,  # qemu_output
+        args.debug,  # engine_output
         parguments["goldenrun"],  # goldenrun
         hdf5collector,  # logger
         None,  # qemu_pre
