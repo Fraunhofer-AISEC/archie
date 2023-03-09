@@ -160,18 +160,23 @@ size_t get_tb_faulted_data_count(void)
 	return size;
 }
 
-void dump_tb_faulted_data(Archie__Data* protobuf_msg)
+int dump_tb_faulted_data(Archie__Data* protobuf_msg)
 {
 	if(tb_faulted_list == NULL)
 	{
 		qemu_plugin_outs("[TBFaulted]: Found no tb faulted list\n");
-		return;
+		return 0;
 	}
 
 	// Allocate and init a list of tb_faulted_data on protobuf
 	size_t size = get_tb_faulted_data_count();
 	Archie__FaultedData** faulted_data_list;
 	faulted_data_list = malloc(sizeof(Archie__FaultedData*) * size);
+	if(faulted_data_list == NULL)
+	{
+		qemu_plugin_outs("[ERROR]: Malloc for Archie__FaultedData failed\n");
+		return -1;
+	}
 
 	int counter = 0;
 	tb_faulted_t *item = tb_faulted_list;
@@ -180,6 +185,11 @@ void dump_tb_faulted_data(Archie__Data* protobuf_msg)
 		if(item->assembler != NULL)
 		{
 			faulted_data_list[counter] = malloc(sizeof(Archie__FaultedData));
+			if(faulted_data_list[counter] == NULL)
+			{
+				qemu_plugin_outs("[ERROR]: Malloc for Archie__FaultedData failed\n");
+				return -1;
+			}
 			archie__faulted_data__init(faulted_data_list[counter]);
 
 			faulted_data_list[counter]->trigger_address = item->trigger_address;
@@ -192,4 +202,5 @@ void dump_tb_faulted_data(Archie__Data* protobuf_msg)
 
 	protobuf_msg->n_faulted_datas = size;
 	protobuf_msg->faulted_datas = faulted_data_list;
+	return 0;
 }

@@ -68,7 +68,7 @@ int add_new_registerdump(uint64_t tbcount);
  *
  * Readout structs and write them to protobuf message
  */
-void read_register_module(Archie__Data* protobuf_msg);
+int read_register_module(Archie__Data* protobuf_msg);
 
 
 #endif

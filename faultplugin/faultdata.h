@@ -78,7 +78,7 @@ int insert_memorydump_config(uint64_t baseaddress, uint64_t len);
  *
  * Read all client memory regions defined by user.
  */
-void read_all_memory(void);
+int read_all_memory(void);
 
 
 /**
@@ -124,6 +124,6 @@ void readout_memorydump(uint64_t memorydump_position, Archie__MemDumpInfo* proto
  *
  * This function will write all memorydumps to protobuf message
  */
-void readout_all_memorydump(Archie__Data* protobuf_msg);
+int readout_all_memorydump(Archie__Data* protobuf_msg);
 
 #endif

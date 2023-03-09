@@ -172,12 +172,19 @@ int insert_memorydump_config(uint64_t baseaddress, uint64_t len)
 	return 1;
 }
 
-void read_all_memory(void)
+int read_all_memory(void)
 {
 	for(int i = 0; i < used_memdump; i++)
 	{
-		read_memoryregion( i);
+		int status = read_memoryregion( i);
+		if(status != 0)
+		{
+			qemu_plugin_outs("[ERROR]: read_memoryregion failed\n");
+			return -1;
+		}
 	}
+
+	return 0;
 }
 
 void read_specific_memoryregion(uint64_t baseaddress)
@@ -243,11 +250,21 @@ void readout_memorydump(uint64_t memorydump_position, Archie__MemDumpInfo* proto
 	// Allocate and init memory for memory dumps for a protobuf memdump object
 	Archie__MemDump** mem_dump_list;
 	mem_dump_list = malloc(sizeof(Archie__MemDump*) * current->used_dumps);
+	if(mem_dump_list == NULL)
+	{
+		qemu_plugin_outs("[ERROR]: Malloc for Archie__MemDump array failed\n");
+		exit(EXIT_FAILURE);
+	}
 	protobuf_mem_dump_info->n_dumps = current->used_dumps;
 
 	for(int i = 0; i < current->used_dumps; i++)
 	{
 		mem_dump_list[i] = malloc(sizeof(Archie__MemDump));
+		if(mem_dump_list[i] == NULL)
+		{
+			qemu_plugin_outs("[ERROR]: Malloc error Archie__MemDump failed\n");
+			exit(EXIT_FAILURE);
+		}
 		archie__mem_dump__init(mem_dump_list[i]);
 		
 		uint8_t *dump = *(current->buf + i);
@@ -260,25 +277,36 @@ void readout_memorydump(uint64_t memorydump_position, Archie__MemDumpInfo* proto
 }
 
 
-void readout_all_memorydump(Archie__Data* protobuf_msg)
+int readout_all_memorydump(Archie__Data* protobuf_msg)
 {
 	// Allocate and init memory for list of memory dump infos on protobuf message
 	if(used_memdump == 0)
 	{
-		return;
+		return 0;
 	}
 
 	Archie__MemDumpInfo** mem_dump_info_list;
 	mem_dump_info_list = malloc(sizeof(Archie__MemDumpInfo*) * used_memdump);
+	if(mem_dump_info_list == NULL)
+	{
+		qemu_plugin_outs("[ERROR]: Malloc for Archie__MemDumpInfo array failed\n");
+		return -1;
+	}
 	protobuf_msg->n_mem_dump_infos = used_memdump;
 
 	for(int i = 0; i < used_memdump; i++)
 	{
 		mem_dump_info_list[i] = malloc(sizeof(Archie__MemDumpInfo));
+		if(mem_dump_info_list[i] == NULL)
+		{
+			qemu_plugin_outs("[ERROR]: Malloc for Archie__MemDumpInfo failed\n");
+			return -1;
+		}
 		archie__mem_dump_info__init(mem_dump_info_list[i]);
 
 		readout_memorydump(i, mem_dump_info_list[i]);
 	}
 
 	protobuf_msg->mem_dump_infos = mem_dump_info_list;
+	return 0;
 }

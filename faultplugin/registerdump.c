@@ -151,6 +151,11 @@ int read_registers(Archie__RegisterInfo* protobuf_reg_info)
 	size_t n_register_dumps = get_register_dump_count();
 	Archie__RegisterDump** protobuf_reg_dump_list;
 	protobuf_reg_dump_list = malloc(sizeof(Archie__RegisterDump*) * n_register_dumps);
+	if(protobuf_reg_dump_list == NULL)
+	{
+		qemu_plugin_outs("[ERROR]: Malloc for Archie__RegisterDump array failed\n");
+		return -1;
+	}
 
 	uint64_t n_registers = 0;
 	if(arch == ARM)
@@ -180,6 +185,12 @@ int read_registers(Archie__RegisterInfo* protobuf_reg_info)
 	while(current != NULL)
 	{
 		protobuf_reg_dump_list[counter] = malloc(sizeof(Archie__RegisterDump));
+		if(protobuf_reg_dump_list[counter] == NULL)
+		{
+			qemu_plugin_outs("[ERROR]: Malloc for Archie__RegisterDump failed\n");
+			return -1;
+		}
+
 		archie__register_dump__init(protobuf_reg_dump_list[counter]);
 
 		// Copy register values into current protobuf register info dump
@@ -208,13 +219,23 @@ int read_registers(Archie__RegisterInfo* protobuf_reg_info)
 	return 0;
 }
 
-void read_register_module(Archie__Data* msg)
+int read_register_module(Archie__Data* msg)
 {
-	// Allocate and init register info of protobuf data message
+	// Allocate and init register info of protobuf data messages
 	Archie__RegisterInfo* reg = malloc(sizeof(Archie__RegisterInfo));
+	if(reg == NULL)
+	{
+		qemu_plugin_outs("[ERROR]: Malloc for Archie__RegisterInfo failed\n");
+		return -1;
+	}
 	archie__register_info__init(reg);
 
-    read_registers(reg);
-    msg->register_info = reg;
-}
+	if(read_registers(reg) != 0)
+	{
+		qemu_plugin_outs("[ERROR]: read_registers() failed\n");
+		return -1;
+	}
 
+	msg->register_info = reg;
+	return 0;
+}
