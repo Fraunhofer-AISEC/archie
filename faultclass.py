@@ -98,15 +98,21 @@ def write_fault_list_to_pipe(fault_list, fifo):
         new_fault.num_bytes = fault_instance.num_bytes
 
     message_size = fault_pack.ByteSize()
-    message_size_string = str(message_size)
-    fifo.write(message_size_string.encode())
-    fifo.write("\n".encode())
+    message_size_string = str(message_size) + "\n"
+
+    n_char_written = fifo.write(message_size_string.encode())
+    if n_char_written != len(message_size_string):
+        return -1
 
     out = fault_pack.SerializeToString()
-    tmp = fifo.write(out)
+
+    n_char_written = fifo.write(out)
+    if n_char_written != len(out):
+        return -1
 
     fifo.flush()
-    return tmp
+    return 0
+
 
 def run_qemu(
     control,
@@ -760,7 +766,9 @@ def python_worker(
 
         logger.debug("Started QEMU")
         """Write faults to config pipe"""
-        write_fault_list_to_pipe(fault_list, config_fifo)
+        res = write_fault_list_to_pipe(fault_list, config_fifo)
+        if res != 0:
+            logger.error("Fault message could not be written to the config pipe!")
         logger.debug("Wrote config to qemu")
         """
         From here Qemu has started execution. Now prepare for

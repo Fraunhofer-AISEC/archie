@@ -115,25 +115,36 @@ size_t get_tb_info_list_size(void)
  *
  *
  */
-void plugin_dump_tb_information(Archie__Data* protobuf_msg)
+int plugin_dump_tb_information(Archie__Data* protobuf_msg)
 {
-	if(tb_info_list == NULL)
-	{
-		return;
-	}
-
 	// Allocate and init list for protobuf tb information dumps
 	size_t size = get_tb_info_list_size();
+	if(size == 0)
+	{
+		qemu_plugin_outs("[DEBUG]: Tb information list is empty\n");
+		return 0;
+	}
+
 	Archie__TbInformation** tb_information_list;
 	tb_information_list = malloc(sizeof(Archie__TbInformation*) * size);
+	if(tb_information_list == NULL)
+	{
+		qemu_plugin_outs("[ERROR]: Malloc for Archie__TbInformation array failed\n");
+		return -1;
+	}
 	protobuf_msg->n_tb_informations = size;
-
 
 	tb_info_t *item = tb_info_list;
 	int counter = 0;
 	while(item != NULL)
 	{
 		tb_information_list[counter] = malloc(sizeof(Archie__TbInformation));
+		if(tb_information_list[counter] == NULL)
+		{
+			qemu_plugin_outs("[ERROR]: Malloc for Archie__TbInformation failed\n");
+			return -1;
+		}
+
 		archie__tb_information__init(tb_information_list[counter]);
 
 		tb_information_list[counter]->base_address = item->base_address;
@@ -148,6 +159,7 @@ void plugin_dump_tb_information(Archie__Data* protobuf_msg)
 	}
 
 	protobuf_msg->tb_informations = tb_information_list;
+	return 0;
 }
 
 tb_info_t * add_tb_info(struct qemu_plugin_tb *tb)

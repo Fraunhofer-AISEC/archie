@@ -84,7 +84,7 @@ int tb_comparison_func(const void *tbl_a, const void *tbl_b, void * tbl_param);
  *
  *
  */
-void plugin_dump_tb_information(Archie__Data* protobuf_msg);
+int plugin_dump_tb_information(Archie__Data* protobuf_msg);
 
 tb_info_t * add_tb_info(struct qemu_plugin_tb *tb);
 

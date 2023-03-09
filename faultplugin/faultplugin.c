@@ -706,7 +706,7 @@ int plugin_write_to_data_pipe(char *str, size_t len)
 	ssize_t ret = 0;
 	while(len != 0)
 	{
-		ret = write( pipes->data, str, len);
+		ret = write(pipes->data, str, len);
 		if(ret == -1)
 		{
 			g_string_append_printf(out, "[DEBUG]: Value is negative. Something happened in write: %s\n", strerror(errno));
@@ -739,17 +739,23 @@ size_t get_mem_info_list_size(void)
  *
  * Write collected information about the memory accesses to protobuf message
  */
-void plugin_dump_mem_information(Archie__Data* protobuf_msg)
+int plugin_dump_mem_information(Archie__Data* protobuf_msg)
 {
-	if(mem_info_list == NULL)
+	size_t size = get_mem_info_list_size();
+	if(size == 0)
 	{
-		return;
+		qemu_plugin_outs("[DEBUG]: mem_info_list is empty");
+		return 0;
 	}
 
 	// Allocate and init memory for mem dump info on protobuf
-	size_t size = get_mem_info_list_size();
 	Archie__MemInfo** mem_info_arr;
 	mem_info_arr = malloc(sizeof(Archie__MemInfo*) * size);
+	if(mem_info_arr == NULL)
+	{
+		qemu_plugin_outs("[ERROR]: Malloc for Archie__MemInfo array failed\n");
+		return -1;
+	}
 	protobuf_msg->n_mem_infos = size;
 
 	mem_info_t *item = mem_info_list;
@@ -757,6 +763,11 @@ void plugin_dump_mem_information(Archie__Data* protobuf_msg)
 	while(item != NULL)
 	{
 		mem_info_arr[counter] = malloc(sizeof(Archie__MemInfo));
+		if(mem_info_arr[counter] == NULL)
+		{
+			qemu_plugin_outs("[ERROR]: Malloc for Archie__MemInfo failed\n");
+			return -1;
+		}
 		archie__mem_info__init(mem_info_arr[counter]);
 		mem_info_arr[counter]->ins_address = item->ins_address;
 		mem_info_arr[counter]->size = item->size;
@@ -770,6 +781,7 @@ void plugin_dump_mem_information(Archie__Data* protobuf_msg)
 	}
 
 	protobuf_msg->mem_infos = mem_info_arr;
+	return 0;
 }
 
 void free_protobuf_message(Archie__Data* msg)
@@ -829,7 +841,14 @@ void free_protobuf_message(Archie__Data* msg)
  */
 void plugin_end_information_dump(GString *end_reason)
 {
+	int status = 0;
+
 	Archie__Data* msg = malloc(sizeof(Archie__Data));
+	if(msg == NULL)
+	{
+		qemu_plugin_outs("[ERROR]: Malloc for Archie__Data failed\n");
+		exit(EXIT_FAILURE);
+	}
 	archie__data__init(msg);
 
 	int *error = NULL;
@@ -847,44 +866,91 @@ void plugin_end_information_dump(GString *end_reason)
 	if(memory_module_configured())
 	{
 		qemu_plugin_outs("[DEBUG]: Read memory regions configured\n");
-		read_all_memory();
+
+		status  = read_all_memory();
+		if(status != 0)
+		{
+			qemu_plugin_outs("[ERROR]: read_all_memory() failed\n");
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	qemu_plugin_outs("[DEBUG]: Read registers\n");
-	add_new_registerdump(tb_counter);
+	status = add_new_registerdump(tb_counter);
+	if(status != 0)
+	{
+		qemu_plugin_outs("[ERROR]: add_new_registerdump() failed\n");
+		exit(EXIT_FAILURE);
+	}
+
 	qemu_plugin_outs("[DEBUG]: Start parsing tb information\n");
-	plugin_dump_tb_information(msg);
+	status = plugin_dump_tb_information(msg);
+	if(status != 0)
+	{
+		qemu_plugin_outs("[ERROR]: plugin_dump_tb_information() failed\n");
+		exit(EXIT_FAILURE);
+	}
+
 	if(tb_exec_order_enabled == 1)
 	{
 		qemu_plugin_outs("[DEBUG]: Start parsing tb exec\n");
-		plugin_dump_tb_exec_order(msg);
+		status = plugin_dump_tb_exec_order(msg);
+		if(status != 0)
+		{
+			qemu_plugin_outs("[ERROR]: plugin_dump_tb_exec_order() failed\n");
+			exit(EXIT_FAILURE);
+		}
 	}
+
 	qemu_plugin_outs("[DEBUG]: Start parsing tb mem\n");
-	plugin_dump_mem_information(msg);
+	status = plugin_dump_mem_information(msg);
+	if(status != 0)
+	{
+		qemu_plugin_outs("[ERROR]: plugin_dump_mem_information() failed\n");
+		exit(EXIT_FAILURE);
+	}
+
 	if(memory_module_configured())
 	{
 		qemu_plugin_outs("[DEBUG]: Start parsing memorydump\n");
-		readout_all_memorydump(msg);
+		if(readout_all_memorydump(msg) != 0)
+		{
+			qemu_plugin_outs("[ERROR]: readout_all_memorydump() failed\n");
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	qemu_plugin_outs("[DEBUG]: Start parsing registerdumps\n");
-	read_register_module(msg);
+	status = read_register_module(msg);
+	if(status != 0)
+	{
+		qemu_plugin_outs("[ERROR]: read_register_module() failed\n");
+		exit(EXIT_FAILURE);
+	}
+
 	qemu_plugin_outs("[DEBUG]: Start parsing tb faulted\n");
-	dump_tb_faulted_data(msg);
+	status = dump_tb_faulted_data(msg);
+	if(status != 0)
+	{
+		qemu_plugin_outs("[ERROR]: dump_tb_faulted_data() failed\n");
+		exit(EXIT_FAILURE);
+	}
 
 	qemu_plugin_outs("[DEBUG]: Writing to the data pipe\n");
 	size_t len = archie__data__get_packed_size(msg);
 	void *buf = malloc(len);
 	if(buf == NULL)
 	{
-		qemu_plugin_outs("[DEBUG]: Malloc for protobuf message failed!\n");
+		qemu_plugin_outs("[ERROR]: Malloc for protobuf message failed!\n");
+		exit(EXIT_FAILURE);
 	}
 
 	archie__data__pack(msg, buf);
-	int status = plugin_write_to_data_pipe(buf, len);
-	if(status < 0)
+	status = plugin_write_to_data_pipe(buf, len);
+	if(status != 0)
 	{
-		qemu_plugin_outs("[DEBUG]: Write to data pipe failed!\n");
+		qemu_plugin_outs("[ERROR]: Write to data pipe failed!\n");
+		exit(EXIT_FAILURE);
 	}
 
 	qemu_plugin_outs("[DEBUG]: Information now in pipe, start deleting information in memory\n");
@@ -903,7 +969,7 @@ void plugin_end_information_dump(GString *end_reason)
 	qemu_plugin_outs("[DEBUG]: Finished\n");
 
 	//Stop Qemu executing
-	exit(0);
+	exit(EXIT_SUCCESS);
 	*error = 0;
 }
 
@@ -1321,7 +1387,8 @@ int initialise_plugin(GString * out, int argc, char **argv, int architecture)
 	/* Initialisation of pipe struct */
 	pipes = malloc(sizeof(fifos_t));
 	if(pipes == NULL)
-	{	g_string_append(out, "[ERROR]: Pipe struct not malloced\n");
+	{
+		g_string_append(out, "[ERROR]: Pipe struct not malloced\n");
 		return -1;
 	}
 	pipes->control = -1;
