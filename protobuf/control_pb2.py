@@ -13,7 +13,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rcontrol.proto\x12\x06\x61rchie\"\xe6\x02\n\x07\x43ontrol\x12\x14\n\x0cmax_duration\x18\x01 \x01(\x03\x12\x12\n\nnum_faults\x18\x02 \x01(\x03\x12\x14\n\x0ctb_exec_list\x18\x03 \x01(\x08\x12\x0f\n\x07tb_info\x18\x04 \x01(\x08\x12\x10\n\x08mem_info\x18\x05 \x01(\x08\x12\x15\n\rstart_address\x18\x06 \x01(\x04\x12\x15\n\rstart_counter\x18\x07 \x01(\x04\x12$\n\nend_points\x18\x08 \x03(\x0b\x32\x10.archie.EndPoint\x12 \n\x18tb_exec_list_ring_buffer\x18\t \x01(\x08\x12\'\n\x0bmemorydumps\x18\n \x03(\x0b\x32\x12.archie.MemoryDump\x12\x18\n\x10has_tb_exec_list\x18\x0b \x01(\x08\x12\x13\n\x0bhas_tb_info\x18\x0c \x01(\x08\x12\x11\n\thas_start\x18\r \x01(\x08\x12\x17\n\x0fhas_ring_buffer\x18\x0e \x01(\x08\",\n\x08\x45ndPoint\x12\x0f\n\x07\x61\x64\x64ress\x18\x01 \x01(\x04\x12\x0f\n\x07\x63ounter\x18\x02 \x01(\x04\"-\n\nMemoryDump\x12\x0f\n\x07\x61\x64\x64ress\x18\x01 \x01(\x04\x12\x0e\n\x06length\x18\x02 \x01(\x04\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\rcontrol.proto\x12\x06\x61rchie\"\x9e\x02\n\x07\x43ontrol\x12\x14\n\x0cmax_duration\x18\x01 \x01(\x03\x12\x12\n\nnum_faults\x18\x02 \x01(\x03\x12\x14\n\x0ctb_exec_list\x18\x03 \x01(\x08\x12\x0f\n\x07tb_info\x18\x04 \x01(\x08\x12\x10\n\x08mem_info\x18\x05 \x01(\x08\x12\x15\n\rstart_address\x18\x06 \x01(\x04\x12\x15\n\rstart_counter\x18\x07 \x01(\x04\x12$\n\nend_points\x18\x08 \x03(\x0b\x32\x10.archie.EndPoint\x12 \n\x18tb_exec_list_ring_buffer\x18\t \x01(\x08\x12\'\n\x0bmemorydumps\x18\n \x03(\x0b\x32\x12.archie.MemoryDump\x12\x11\n\thas_start\x18\r \x01(\x08\",\n\x08\x45ndPoint\x12\x0f\n\x07\x61\x64\x64ress\x18\x01 \x01(\x04\x12\x0f\n\x07\x63ounter\x18\x02 \x01(\x04\"-\n\nMemoryDump\x12\x0f\n\x07\x61\x64\x64ress\x18\x01 \x01(\x04\x12\x0e\n\x06length\x18\x02 \x01(\x04\x62\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'control_pb2', globals())
@@ -21,9 +21,9 @@ if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
   _CONTROL._serialized_start=26
-  _CONTROL._serialized_end=384
-  _ENDPOINT._serialized_start=386
-  _ENDPOINT._serialized_end=430
-  _MEMORYDUMP._serialized_start=432
-  _MEMORYDUMP._serialized_end=477
+  _CONTROL._serialized_end=312
+  _ENDPOINT._serialized_start=314
+  _ENDPOINT._serialized_end=358
+  _MEMORYDUMP._serialized_start=360
+  _MEMORYDUMP._serialized_end=405
 # @@protoc_insertion_point(module_scope)
