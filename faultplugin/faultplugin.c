@@ -1278,22 +1278,11 @@ int readout_control_qemu(void)
 		cur->location.trignum = 3;
 		cur->next = NULL;
 	}
-	
+
 	mem_info_list_enabled = control_message->mem_info;
-
-	if(control_message->has_tb_info)
-	{
-		tb_info_enabled = control_message->tb_info;
-	}
-
-	if(control_message->has_tb_exec_list){
-		tb_exec_order_enabled = control_message->tb_exec_list;
-	}
-
-	if(control_message->has_ring_buffer)
-	{
-		tb_exec_order_ring_buffer = control_message->tb_exec_list_ring_buffer;
-	}
+	tb_info_enabled = control_message->tb_info;
+	tb_exec_order_enabled = control_message->tb_exec_list;
+	tb_exec_order_ring_buffer = control_message->tb_exec_list_ring_buffer;
 	// End of control config
 
 	// Parse memory config

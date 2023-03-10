@@ -651,12 +651,14 @@ def configure_qemu(control, config_qemu, num_faults, memorydump_list, goldenrun)
     control_message.num_faults = num_faults
 
     if "tb_exec_list" in config_qemu:
-        control_message.has_tb_exec_list = True
         control_message.tb_exec_list = config_qemu["tb_exec_list"]
+    else:
+        control_message.tb_exec_list = True
 
     if "tb_info" in config_qemu:
-        control_message.has_tb_info = True
         control_message.tb_info = config_qemu["tb_info"]
+    else:
+        control_message.tb_info = True
 
     if "mem_info" in config_qemu and config_qemu["mem_info"]:
         control_message.mem_info = True
@@ -677,8 +679,9 @@ def configure_qemu(control, config_qemu, num_faults, memorydump_list, goldenrun)
 
     # If enabled, use the ring buffer for all runs except for the goldenrun
     if config_qemu["ring_buffer"] is True and goldenrun is False:
-        control_message.has_ring_buffer = True
         control_message.tb_exec_list_ring_buffer = True
+    else:
+        control_message.tb_exec_list_ring_buffer = False
 
     if memorydump_list is not None:
         for memorydump in memorydump_list:

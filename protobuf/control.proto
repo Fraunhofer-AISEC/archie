@@ -13,10 +13,7 @@ message Control {
   repeated EndPoint end_points = 8;
   bool tb_exec_list_ring_buffer = 9;
   repeated MemoryDump memorydumps = 10;
-  bool has_tb_exec_list = 11;
-  bool has_tb_info = 12;
   bool has_start = 13;
-  bool has_ring_buffer = 14;
 }
 
 message EndPoint {

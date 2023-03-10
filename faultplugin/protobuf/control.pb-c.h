@@ -40,14 +40,11 @@ struct  Archie__Control
   protobuf_c_boolean tb_exec_list_ring_buffer;
   size_t n_memorydumps;
   Archie__MemoryDump **memorydumps;
-  protobuf_c_boolean has_tb_exec_list;
-  protobuf_c_boolean has_tb_info;
   protobuf_c_boolean has_start;
-  protobuf_c_boolean has_ring_buffer;
 };
 #define ARCHIE__CONTROL__INIT \
  { PROTOBUF_C_MESSAGE_INIT (&archie__control__descriptor) \
-    , 0, 0, 0, 0, 0, 0, 0, 0,NULL, 0, 0,NULL, 0, 0, 0, 0 }
+    , 0, 0, 0, 0, 0, 0, 0, 0,NULL, 0, 0,NULL, 0 }
 
 
 struct  Archie__EndPoint

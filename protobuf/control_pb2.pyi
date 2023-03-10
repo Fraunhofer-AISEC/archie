@@ -6,12 +6,9 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class Control(_message.Message):
-    __slots__ = ["end_points", "has_ring_buffer", "has_start", "has_tb_exec_list", "has_tb_info", "max_duration", "mem_info", "memorydumps", "num_faults", "start_address", "start_counter", "tb_exec_list", "tb_exec_list_ring_buffer", "tb_info"]
+    __slots__ = ["end_points", "has_start", "max_duration", "mem_info", "memorydumps", "num_faults", "start_address", "start_counter", "tb_exec_list", "tb_exec_list_ring_buffer", "tb_info"]
     END_POINTS_FIELD_NUMBER: _ClassVar[int]
-    HAS_RING_BUFFER_FIELD_NUMBER: _ClassVar[int]
     HAS_START_FIELD_NUMBER: _ClassVar[int]
-    HAS_TB_EXEC_LIST_FIELD_NUMBER: _ClassVar[int]
-    HAS_TB_INFO_FIELD_NUMBER: _ClassVar[int]
     MAX_DURATION_FIELD_NUMBER: _ClassVar[int]
     MEMORYDUMPS_FIELD_NUMBER: _ClassVar[int]
     MEM_INFO_FIELD_NUMBER: _ClassVar[int]
@@ -22,10 +19,7 @@ class Control(_message.Message):
     TB_EXEC_LIST_RING_BUFFER_FIELD_NUMBER: _ClassVar[int]
     TB_INFO_FIELD_NUMBER: _ClassVar[int]
     end_points: _containers.RepeatedCompositeFieldContainer[EndPoint]
-    has_ring_buffer: bool
     has_start: bool
-    has_tb_exec_list: bool
-    has_tb_info: bool
     max_duration: int
     mem_info: bool
     memorydumps: _containers.RepeatedCompositeFieldContainer[MemoryDump]
@@ -35,7 +29,7 @@ class Control(_message.Message):
     tb_exec_list: bool
     tb_exec_list_ring_buffer: bool
     tb_info: bool
-    def __init__(self, max_duration: _Optional[int] = ..., num_faults: _Optional[int] = ..., tb_exec_list: bool = ..., tb_info: bool = ..., mem_info: bool = ..., start_address: _Optional[int] = ..., start_counter: _Optional[int] = ..., end_points: _Optional[_Iterable[_Union[EndPoint, _Mapping]]] = ..., tb_exec_list_ring_buffer: bool = ..., memorydumps: _Optional[_Iterable[_Union[MemoryDump, _Mapping]]] = ..., has_tb_exec_list: bool = ..., has_tb_info: bool = ..., has_start: bool = ..., has_ring_buffer: bool = ...) -> None: ...
+    def __init__(self, max_duration: _Optional[int] = ..., num_faults: _Optional[int] = ..., tb_exec_list: bool = ..., tb_info: bool = ..., mem_info: bool = ..., start_address: _Optional[int] = ..., start_counter: _Optional[int] = ..., end_points: _Optional[_Iterable[_Union[EndPoint, _Mapping]]] = ..., tb_exec_list_ring_buffer: bool = ..., memorydumps: _Optional[_Iterable[_Union[MemoryDump, _Mapping]]] = ..., has_start: bool = ...) -> None: ...
 
 class EndPoint(_message.Message):
     __slots__ = ["address", "counter"]
