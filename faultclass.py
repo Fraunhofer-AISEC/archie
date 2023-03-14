@@ -5,6 +5,7 @@ import time
 import pandas as pd
 import prctl
 import shlex
+from emulation_worker import run_unicorn
 
 
 import logging
@@ -42,7 +43,7 @@ class Fault:
         """
         self.trigger = Trigger(trigger_address, trigger_hitcounter)
         self.address = fault_address
-        self.type = fault_type
+        self.kind = fault_type
         self.model = fault_model
         self.lifespan = fault_lifespan
         self.mask = fault_mask
@@ -53,7 +54,7 @@ class Fault:
         out = "\n$$[Fault]\n"
         out = out + "% {:d} | {:d} | {:d} | {:d} | {:d} | {:d} | ".format(
             self.address,
-            self.type,
+            self.kind,
             self.model,
             self.lifespan,
             self.trigger.address,
@@ -404,6 +405,14 @@ def readout_tb_faulted(line):
     return tbfaulted
 
 
+def readout_memmap(line):
+    split = line.split("|")
+    memmap = {}
+    memmap["address"] = int(split[0], 16)
+    memmap["length"] = int(split[1], 16)
+    return memmap
+
+
 def readout_data(
     pipe,
     index,
@@ -429,15 +438,18 @@ def readout_data(
     memdumptmp = []
     registerlist = []
     tbfaultedlist = []
+    memmaplist = []
     tbinfo = 0
     tbexec = 0
     meminfo = 0
     memdump = 0
+    memmap = 0
     endpoint = 0
     end_reason = ""
     max_ram_usage = 0
     regtype = None
     tbfaulted = 0
+    architecture = ""
 
     while 1:
         line = pipe.readline()
@@ -469,6 +481,14 @@ def readout_data(
             elif "[Memdump]" in line:
                 state = "memdump"
                 memdump = 1
+
+            elif "[Architecture]" in line:
+                split = line.split("]:")
+                architecture = split[1].strip()
+
+            elif "[Memory Map]" in line:
+                state = "memmap"
+                memmap = 1
 
             elif "[END]" in line:
                 state = "none"
@@ -530,6 +550,10 @@ def readout_data(
                 output["faultlist"] = faultlist
                 output["endpoint"] = endpoint
                 output["end_reason"] = end_reason
+                output["architecture"] = architecture
+
+                if memmap == 1:
+                    output["memmaplist"] = memmaplist
 
                 if memdump == 1:
                     output["memdumplist"] = memdumplist
@@ -538,6 +562,7 @@ def readout_data(
 
                 if callable(qemu_post):
                     output = qemu_post(qemu_pre_data, output)
+
                 queue_output.put(output)
 
                 max_ram_usage = gather_process_ram_usage(queue_ram_usage, max_ram_usage)
@@ -549,7 +574,7 @@ def readout_data(
                 regtype = "arm"
             elif "[RiscV Registers]" in line:
                 state = "riscvregisters"
-                regtype = "riscv"
+                regtype = "riscv64"
             elif "[TB Faulted]" in line:
                 state = "tbfaulted"
                 tbfaulted = 1
@@ -586,6 +611,8 @@ def readout_data(
                 registerlist.append(readout_riscv_registers(line))
             elif "tbfaulted" in state:
                 tbfaultedlist.append(readout_tb_faulted(line))
+            elif "memmap" in state:
+                memmaplist.append(readout_memmap(line))
             else:
                 logger.warning("In exp {} unknown state {}".format(index, line))
     return max_ram_usage
@@ -633,13 +660,20 @@ def delete_fifos():
     os.rmdir(path)
 
 
-def configure_qemu(control, config_qemu, num_faults, memorydump_list):
+def configure_qemu(control, config_qemu, num_faults, memorydump_list, index):
     """
     Function to write commands and configuration needed to start qemu plugin
     """
     out = "\n$$$[Config]\n"
     out = out + "$$ max_duration: {}\n".format(config_qemu["max_instruction_count"])
     out = out + "$$ num_faults: {}\n".format(num_faults)
+
+    if index is -2:
+        out = out + "$$enable_memmap_dump\n"
+        out = out + "$$enable_full_mem_dump\n"
+    else:
+        out = out + "$$disable_memmap_dump\n"
+        out = out + "$$disable_full_mem_dump\n"
 
     if "tb_exec_list" in config_qemu:
         if config_qemu["tb_exec_list"] is False:
@@ -668,7 +702,7 @@ def configure_qemu(control, config_qemu, num_faults, memorydump_list):
             out = out + "$$ end_address: {}\n".format(end_loc["address"])
             out = out + "$$ end_counter: {}\n".format(end_loc["counter"])
 
-    if memorydump_list is not None:
+    if index != -2 and memorydump_list is not None:
         out = out + "$$num_memregions: {}\n".format(len(memorydump_list))
         out = out + "$$$[Memory]\n"
         for memorydump in memorydump_list:
@@ -692,7 +726,7 @@ def python_worker(
     config_qemu,
     index,
     queue_output,
-    qemu_output,
+    engine_output,
     goldenrun_data=None,
     change_nice=False,
     queue_ram_usage=None,
@@ -726,7 +760,7 @@ def python_worker(
                 paths["config"],
                 paths["data"],
                 config_qemu,
-                qemu_output,
+                engine_output,
                 index,
                 qemu_custom_paths,
             ),
@@ -742,7 +776,7 @@ def python_worker(
         else:
             memorydump = None
         logger.debug("Start configuring")
-        configure_qemu(control_fifo, config_qemu, len(fault_list), memorydump)
+        configure_qemu(control_fifo, config_qemu, len(fault_list), memorydump, index)
         enable_qemu(control_fifo)
         logger.debug("Started QEMU")
         """Write faults to config pipe"""
@@ -776,3 +810,56 @@ def python_worker(
         p_qemu.terminate()
         p_qemu.join()
         logger.warning("Terminate Worker {}".format(index))
+
+
+def python_worker_unicorn(
+    fault_list,
+    config_qemu,
+    index,
+    queue_output,
+    engine_output,
+    pregoldenrun_data,
+    goldenrun_data,
+    change_nice=False,
+):
+    t0 = time.time()
+    if change_nice:
+        os.nice(19)
+
+    logs = run_unicorn(pregoldenrun_data, fault_list, config_qemu, index, engine_output)
+    logger.info(f"Ended unicorn for exp {index}! Took {time.time() - t0}")
+
+    output = {}
+
+    output["index"] = index
+    output["faultlist"] = fault_list
+    output["endpoint"] = logs["endpoint"]
+    output["end_reason"] = logs["end_reason"]
+    output["memdumplist"] = logs["memdumplist"]
+    output["meminfo"] = logs["meminfo"]
+
+    pdtbexeclist = pd.DataFrame(logs["tbexec"])
+    [pdtbexeclist, tblist] = filter_tb(
+        pdtbexeclist,
+        logs["tbinfo"],
+        goldenrun_data["tbexec"],
+        goldenrun_data["tbinfo"],
+        index,
+    )
+    output["tbexec"] = write_output_wrt_goldenrun(
+        "tbexec", pdtbexeclist, goldenrun_data
+    )
+    output["tbinfo"] = write_output_wrt_goldenrun("tbinfo", tblist, goldenrun_data)
+
+    regtype = pregoldenrun_data["architecture"]
+    output[f"{regtype}registers"] = pd.DataFrame(
+        logs["registerlist"], dtype="UInt64"
+    ).to_dict("records")
+
+    queue_output.put(output)
+
+    logger.info(
+        "Python worker for experiment {} done. Took {}s".format(index, time.time() - t0)
+    )
+
+    return

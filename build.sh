@@ -97,6 +97,12 @@ cd ../../../faultplugin/
 make clean && make
 cd ..
 
+echo "Building emulation worker"
+cd emulation_worker
+cargo build --release
+cp target/release/libemulation_worker.so ../emulation_worker.so
+cd -
+
 echo "Test ARCHIE"
 cd examples/stm32
 ./run.sh
@@ -112,4 +118,4 @@ select yn in "YES" "NO"; do
 	esac
 	echo "Please type the number corresponding to Yes or No"
 done
-echo "Archie was build and tested successfully"
+echo "Archie was built and tested successfully"

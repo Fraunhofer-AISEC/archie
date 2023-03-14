@@ -40,6 +40,7 @@
 #include "tb_info_data_collection.h"
 #include "tb_exec_data_collection.h"
 #include "tb_faulted_collection.h"
+#include "memmapdump.h"
 //DEBUG
 #include <errno.h>
 #include <string.h>
@@ -94,6 +95,11 @@ int tb_info_enabled;
 
 int tb_exec_order_enabled;
 
+
+int full_mem_dump_enabled;
+
+
+int memmap_dump_enabled;
 
 
 
@@ -811,6 +817,10 @@ void plugin_dump_mem_information()
 	}
 }
 
+void memmap_dump_register_page(void *key, void *value, void *user_data) {
+	insert_memorydump_config(*(uint64_t*)key, 0x1000);
+}
+
 /**
  * plugin_end_information_dump
  *
@@ -819,6 +829,26 @@ void plugin_dump_mem_information()
  */
 void plugin_end_information_dump(GString *end_reason)
 {
+	if (memmap_dump_enabled) {
+	    read_memmap_information_module();
+	}
+
+	if (full_mem_dump_enabled) {
+	    g_autoptr(GHashTable) accessed_pages = g_hash_table_new(g_int64_hash, g_int64_equal);
+
+	    struct mem_info_t *item = mem_info_list;
+	    while(item != NULL)
+	    {
+		if (item->direction == 1) {
+		    uint64_t page_address = item->memmory_address & 0xfffffffffffff000;
+		    g_hash_table_add(accessed_pages, &page_address);
+		}
+		item = item->next;
+	    }
+
+	    g_hash_table_foreach(accessed_pages, memmap_dump_register_page, NULL);
+	}
+
 	int *error = NULL;
 	if(end_point->location.trignum == 4)
 	{
@@ -1207,6 +1237,26 @@ int readout_control_config(GString *conf)
 		tb_info_enabled = 0;
 		return 1;
 	}
+	if(strstr(conf->str, "enable_memmap_dump"))
+	{
+		memmap_dump_enabled = 1;
+		return 1;
+	}
+	if(strstr(conf->str, "disable_memmap_dump"))
+	{
+		memmap_dump_enabled = 0;
+		return 1;
+	}
+	if(strstr(conf->str, "enable_full_mem_dump"))
+	{
+		full_mem_dump_enabled = 1;
+		return 1;
+	}
+	if(strstr(conf->str, "disable_full_mem_dump"))
+	{
+		full_mem_dump_enabled = 0;
+		return 1;
+	}
 	if(strstr(conf->str, "enable_tb_exec_list"))
 	{
 		tb_exec_order_enabled = 1;
@@ -1422,6 +1472,9 @@ QEMU_PLUGIN_EXPORT int qemu_plugin_install(qemu_plugin_id_t id,
 	g_string_append(out, "Done\n");
 	g_string_append_printf(out, "[Start]: Reached end of initialisation, starting guest now\n");
 	qemu_plugin_outs(out->str);
+
+	g_string_printf(out, "$$$[Architecture]:%s\n", info->target_name);
+	plugin_write_to_data_pipe(out->str, out->len);
 	return 0;
 ABORT:
 	if(mem_avl_root != NULL)
