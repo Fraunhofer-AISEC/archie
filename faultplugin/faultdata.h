@@ -24,7 +24,7 @@
 #include <inttypes.h>
 #include <stdlib.h>
 #include "faultplugin.h"
-#include "data.pb-c.h"
+#include "protobuf/data.pb-c.h"
 
 #include <glib.h>
 
