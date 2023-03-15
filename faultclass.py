@@ -25,9 +25,9 @@ import time
 import pandas as pd
 import prctl
 
-import control_pb2
-import data_pb2
-import fault_pb2
+import protobuf.control_pb2 as control_pb2
+import protobuf.data_pb2 as data_pb2
+import protobuf.fault_pb2 as fault_pb2
 from util import gather_process_ram_usage
 
 TB_EXEC_LIST_CHUNK_SIZE = 10000

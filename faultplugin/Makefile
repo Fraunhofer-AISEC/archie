@@ -64,24 +64,25 @@ tb_exec_data_collection.o: tb_exec_data_collection.c
 tb_faulted_collection.o : tb_faulted_collection.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-fault.pb-c.o: fault.pb-c.c
+protobuf/fault.pb-c.o: ./protobuf/fault.pb-c.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-control.pb-c.o: control.pb-c.c
+protobuf/control.pb-c.o: ./protobuf/control.pb-c.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-data.pb-c.o: data.pb-c.c
+protobuf/data.pb-c.o: ./protobuf/data.pb-c.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-lib%.so: %.o lib/avl.o faultdata.o registerdump.o singlestep.o fault_list.o fault_injection.o tb_info_data_collection.o tb_exec_data_collection.o tb_faulted_collection.o fault.pb-c.o control.pb-c.o data.pb-c.o
+lib%.so: %.o lib/avl.o faultdata.o registerdump.o singlestep.o fault_list.o fault_injection.o tb_info_data_collection.o tb_exec_data_collection.o tb_faulted_collection.o protobuf/fault.pb-c.o protobuf/control.pb-c.o protobuf/data.pb-c.o
 	$(CC) -shared -Wl,-soname,$@ -o $@ $^ $(LDLIBS)
 
 clean:
 	rm -f *.o *.so *.d
 	rm -f lib/*.o
+	rm -f protobuf/*.o
 	rm -Rf .libs
 
 .PHONY: all clean

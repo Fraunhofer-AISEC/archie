@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v2
       - run: pip3 install flake8
       - run: >
-            flake8 --exclude .git,__pycache__,"*_pb2.py","*_pb2.pyi"
+            flake8 --exclude .git,__pycache__,protobuf
             --max-line-length=88
             --ignore=E203,E266,E501,W503
 
@@ -23,4 +23,4 @@ jobs:
       - run: pip3 install black
       - run: |
           black --version
-          black --check --diff *.py analysis/*.py --force-exclude *_pb2.py *_pb2.pyi
+          black --check --diff *.py analysis/*.py

@@ -24,7 +24,7 @@
 #include "faultplugin.h"
 #include <qemu/qemu-plugin.h>
 
-#include "data.pb-c.h"
+#include "protobuf/data.pb-c.h"
 
 /**
  * This enum is the internal value for all available architectures supported

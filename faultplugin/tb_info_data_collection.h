@@ -25,7 +25,7 @@
 #include "qemu/osdep.h"
 #include <qemu/plugin.h>
 #include <qemu/qemu-plugin.h>
-#include "data.pb-c.h"
+#include "protobuf/data.pb-c.h"
 
 /* Output TB data structures */
 typedef struct tb_info_t tb_info_t;

@@ -44,9 +44,9 @@
 #include "tb_exec_data_collection.h"
 #include "tb_faulted_collection.h"
 
-#include "fault.pb-c.h"
-#include "control.pb-c.h"
-#include "data.pb-c.h"
+#include "protobuf/fault.pb-c.h"
+#include "protobuf/control.pb-c.h"
+#include "protobuf/data.pb-c.h"
 
 //DEBUG
 #include <errno.h>
