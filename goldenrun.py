@@ -43,8 +43,10 @@ def run_goldenrun(
     goldenrun_config["additional_qemu_args"] = config_qemu["additional_qemu_args"]
     goldenrun_config["bios"] = config_qemu["bios"]
     goldenrun_config["ring_buffer"] = config_qemu["ring_buffer"]
-    if "mem_info" in config_qemu:
-        goldenrun_config["mem_info"] = config_qemu["mem_info"]
+    goldenrun_config["tb_exec_list"] = True
+    goldenrun_config["tb_info"] = True
+    goldenrun_config["mem_info"] = config_qemu["mem_info"]
+
     if "max_instruction_count" in config_qemu:
         goldenrun_config["max_instruction_count"] = config_qemu["max_instruction_count"]
     if "memorydump" in config_qemu:

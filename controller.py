@@ -593,20 +593,16 @@ def process_arguments(args):
     else:
         print("WARNING: missing max_instruction_count in json")
         qemu_conf["max_instruction_count"] = 100
-    if "tb_exec_list" in faultlist:
-        qemu_conf["tb_exec_list"] = faultlist["tb_exec_list"]
-    if "tb_info" in faultlist:
-        qemu_conf["tb_info"] = faultlist["tb_info"]
-    if "mem_info" in faultlist:
-        qemu_conf["mem_info"] = faultlist["mem_info"]
+
+    # If value not specified use the default one
+    qemu_conf["tb_exec_list"] = faultlist.get("tb_exec_list", True)
+    qemu_conf["tb_info"] = faultlist.get("tb_info", True)
+    qemu_conf["mem_info"] = faultlist.get("mem_info", False)
+    qemu_conf["ring_buffer"] = faultlist.get("ring_buffer", True)
+
+    # Command line argument takes precedence
     if args.disable_ring_buffer:
-        # Command line argument takes precedence
         qemu_conf["ring_buffer"] = False
-    elif "ring_buffer" in faultlist:
-        qemu_conf["ring_buffer"] = faultlist["ring_buffer"]
-    else:
-        # Enabled by default
-        qemu_conf["ring_buffer"] = True
 
     parguments["qemu_conf"] = qemu_conf
 

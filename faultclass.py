@@ -649,21 +649,9 @@ def configure_qemu(control, config_qemu, num_faults, memorydump_list, goldenrun)
 
     control_message.max_duration = config_qemu["max_instruction_count"]
     control_message.num_faults = num_faults
-
-    if "tb_exec_list" in config_qemu:
-        control_message.tb_exec_list = config_qemu["tb_exec_list"]
-    else:
-        control_message.tb_exec_list = True
-
-    if "tb_info" in config_qemu:
-        control_message.tb_info = config_qemu["tb_info"]
-    else:
-        control_message.tb_info = True
-
-    if "mem_info" in config_qemu and config_qemu["mem_info"]:
-        control_message.mem_info = True
-    else:
-        control_message.mem_info = False
+    control_message.tb_exec_list = config_qemu["tb_exec_list"]
+    control_message.tb_info = config_qemu["tb_info"]
+    control_message.mem_info = config_qemu["mem_info"]
 
     if "start" in config_qemu:
         control_message.has_start = True
