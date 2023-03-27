@@ -209,6 +209,13 @@ def build_fault_list(conf_list, combined_faults, ret_faults):
     )
 
     for faddress in build_ranges(faultdev["fault_address"], wildcard_fault):
+        # At this time we can only filter "explicit" fault addresses (non-wildcard)
+        # Wildcard faults have to be filtered after the execution of the goldenrun
+        # to be aware of the executed instructions (within generate_wildcard_faults)
+        if any(faddress in region for region in faddress_exclude):
+            clogger.debug(f"Exclude {faddress_exclude} filtered {hex(faddress)}")
+            continue
+
         for flifespan in build_ranges(faultdev["fault_lifespan"]):
             for fmask in build_ranges(faultdev["fault_mask"]):
                 for taddress in build_ranges(faultdev["trigger_address"]):
