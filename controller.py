@@ -179,8 +179,16 @@ def build_fault_list(conf_list, combined_faults, ret_faults):
         wildcard_fault = True
     elif type(faultdev["fault_address"]) == list and "*" in faultdev["fault_address"]:
         wildcard_fault = True
+
     ftype = detect_type(faultdev["fault_type"])
     fmodel = detect_model(faultdev["fault_model"])
+
+    faddress_exclude = (
+        [build_ranges(lst) for lst in faultdev["fault_address_exclude"]]
+        if "fault_address_exclude" in faultdev
+        else []
+    )
+
     for faddress in build_ranges(faultdev["fault_address"], wildcard_fault):
         for flifespan in build_ranges(faultdev["fault_lifespan"]):
             for fmask in build_ranges(faultdev["fault_mask"]):
@@ -196,7 +204,7 @@ def build_fault_list(conf_list, combined_faults, ret_faults):
                             int_faults.append(
                                 Fault(
                                     faddress,
-                                    [],
+                                    faddress_exclude,
                                     ftype,
                                     fmodel,
                                     flifespan,
