@@ -63,71 +63,72 @@ def build_ranges_dict(fault_dict):
 
 def build_ranges(fault_range, wildcard=False):
     """
-    build a range, if three elements are provided in a list. Otherwise build
-    list with one element
+    Build a range based on fault_range which is either of type int, dict, or list
+
+    isinstance(fault_range, list):
+    ------------------------------
+    fault_range of type list can contain at most three elements. The parsing
+    depends on the element count similar to range. Three formats are supported:
+        len(fault_range) == 1:    range(start=fault_range[0], stop=fault_range[0] + 1)
+        len(fault_range) == 2:    range(start=fault_range[0], stop=fault_range[1])
+        len(fault_range) == 3:    range(start=fault_range[0],
+                                        stop=fault_range[1],
+                                        step=fault_range[2])
+
+    Be aware that for len(fault_range) == 1 this function behaves differently than range!
     """
-    if wildcard:
-        # Default wildcard fault range
-        wildcard_range = {"start": Trigger(0, 0), "end": Trigger(0, 0), "local": False}
 
-        assert len(fault_range) <= 3, "Invalid wildcard fault range format"
+    if isinstance(fault_range, int):
+        return range(fault_range, fault_range + 1)
 
-        if len(fault_range) > 1:
-            # Build wildcard range
-            range_element = "start"
-            for entry in fault_range:
-                if entry == "*":
-                    # Got wildcard element, parsing the range end element next
-                    range_element = "end"
-                    continue
-
-                if type(entry) == int:
-                    wildcard_range[range_element].address = entry
-                    # Default hitcounter if unspecified
-                    wildcard_range[range_element].hitcounter = 1
-                    continue
-
-                # Split "address/hitcounter" string
-                entry_expanded = entry.split("/")
-                assert len(entry_expanded) <= 2, "Invalid wildcard fault range element"
-
-                wildcard_range[range_element].address = int(entry_expanded[0], base=0)
-
-                if len(entry_expanded) == 2:
-                    wildcard_range[range_element].hitcounter = int(
-                        entry_expanded[1], base=0
-                    )
-                else:
-                    # Default hitcounter if unspecified
-                    wildcard_range[range_element].hitcounter = 1
-
-            # Check for local wildcard mode
-            if (
-                wildcard_range["start"].hitcounter == 0
-                and wildcard_range["end"].hitcounter == 0
-            ):
-                wildcard_range["local"] = True
-
-        return [wildcard_range]
     if isinstance(fault_range, dict):
         return build_ranges_dict(fault_range)
-    if type(fault_range) == int:
-        return range(fault_range, fault_range + 1, 1)
-    if len(fault_range) == 3:
-        return range(fault_range[0], fault_range[1], fault_range[2])
-    elif len(fault_range) == 1:
-        return range(fault_range[0], fault_range[0] + 1, 1)
-    else:
-        clogger.critical(
-            "A provided range in the json is not valid. It is either a list of 1 or 3 elements. Provided was {}".format(
-                fault_range
-            )
-        )
-        raise ValueError(
-            "Need 1 or 3 elements in list. Provided numbers were: {}".format(
-                fault_range
-            )
-        )  # Need 1 or 3 elements in list
+
+    assert isinstance(
+        fault_range, list
+    ), "Invalid fault_range type: {type(fault_range)}"
+    assert len(fault_range) in range(1, 4), f"Invalid fault_range length: {fault_range}"
+
+    if not wildcard:
+        start = fault_range[0]
+        stop = fault_range[1] if len(fault_range) >= 2 else fault_range[0] + 1
+        step = fault_range[2] if len(fault_range) == 3 else 1  # Default step is 1
+        return range(start, stop, step)
+
+    # Build wildcard_range
+    wildcard_range = {"start": Trigger(0, 0), "end": Trigger(0, 0)}
+
+    range_element = "start"
+    for entry in fault_range:
+        if entry == "*":
+            # Got wildcard element,
+            # either parsing the range end element next
+            # or return if fault_range does only contain an asterisk
+            range_element = "end"
+            continue
+
+        wildcard_range[range_element].hitcounter = 1  # Default hitcounter is 1
+
+        if isinstance(entry, int):
+            wildcard_range[range_element].address = entry
+            continue
+
+        # Split "address/hitcounter" string
+        entry_expanded = entry.split("/")
+        assert len(entry_expanded) <= 2, f"Invalid fault_range entry: {entry}"
+
+        wildcard_range[range_element].address = int(entry_expanded[0], base=0)
+        if len(entry_expanded) == 2:
+            wildcard_range[range_element].hitcounter = int(entry_expanded[1], base=0)
+
+    # Set local wildcard mode
+    wildcard_range["local"] = (
+        fault_range != ["*"]
+        and wildcard_range["start"].hitcounter == 0
+        and wildcard_range["end"].hitcounter == 0
+    )
+
+    return [wildcard_range]
 
 
 def detect_type(fault_type):
