@@ -262,6 +262,11 @@ def generate_wildcard_faults(fault, tbexec, tbinfo):
                 if instr == fault.address["end"].address:
                     wildcard_local_active = False
 
+            # Evaluate exclude ranges
+            if any(instr in region for region in fault.address_exclude):
+                logger.debug(f"Exclude {fault.address_exclude} filtered {hex(instr)}")
+                continue
+
             # Analyze TB to find TB and instruction specific adjustments to
             # the hitcounter of the expanded fault
 
