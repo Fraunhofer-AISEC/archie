@@ -215,6 +215,7 @@ def build_fault_list(conf_list, combined_faults, ret_faults):
                             int_faults.append(
                                 Fault(
                                     faddress,
+                                    [],
                                     ftype,
                                     fmodel,
                                     flifespan,

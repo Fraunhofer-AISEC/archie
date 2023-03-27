@@ -54,6 +54,7 @@ class Fault:
     def __init__(
         self,
         fault_address: int,
+        fault_address_exclude: list,
         fault_type: int,
         fault_model: int,
         fault_lifespan: int,
@@ -68,6 +69,7 @@ class Fault:
         """
         self.trigger = Trigger(trigger_address, trigger_hitcounter)
         self.address = fault_address
+        self.address_exclude = fault_address_exclude
         self.type = fault_type
         self.model = fault_model
         self.lifespan = fault_lifespan
