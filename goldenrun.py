@@ -87,9 +87,7 @@ def run_goldenrun(
             qemu_post,
         )
         experiment["data"] = queue_output.get()
-        if experiment["data"]["endpoint"] == 1:
-            logger.info(f"{experiment['type']} successfully finished.")
-        else:
+        if experiment["data"]["end_reason"] == "max tb":
             logger.critical(
                 f"{experiment['type']} not finished after "
                 f"{goldenrun_config['max_instruction_count']} tb counts."
@@ -98,6 +96,8 @@ def run_goldenrun(
                 f"{experiment['type']} not finished. Probably no valid instruction! "
                 f"If valid increase tb max for golden run"
             )
+
+        logger.info(f"{experiment['type']} successfully finished.")
         data_queue.put(experiment["data"])
 
         if experiment["type"] != "goldenrun":
