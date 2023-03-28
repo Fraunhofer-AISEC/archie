@@ -1,7 +1,7 @@
-#ifndef QEMU_FAULTPLUGIN_DATA
-#define QEMU_FAULTPLUGIN_DATA
 /*
  *   Copyright 2021 Florian Andreas Hauschild
+ *   Copyright (c) 2021 Fraunhofer AISEC
+ *   Fraunhofer-Gesellschaft zur Foerderung der angewandten Forschung e.V.
  *
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -18,7 +18,8 @@
  *   This File contains the headers for functions managing memory dumps
  */
 
-
+#ifndef QEMU_FAULTPLUGIN_DATA
+#define QEMU_FAULTPLUGIN_DATA
 
 #include <inttypes.h>
 #include <stdlib.h>

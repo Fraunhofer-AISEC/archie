@@ -1,5 +1,7 @@
 /*
  *   Copyright 2021 Florian Andreas Hauschild
+ *   Copyright (c) 2021 Fraunhofer AISEC
+ *   Fraunhofer-Gesellschaft zur Foerderung der angewandten Forschung e.V.
  * 
  *   Licensed under the Apache License, Version 2.0 (the "License");
  *   you may not use this file except in compliance with the License.
@@ -15,6 +17,7 @@
  *
  *   This file contains the functions needed to collect faulted instruction assembler.
  */
+
 #include "singlestep.h"
 #include "tb_info_data_collection.h"
 #include "tb_faulted_collection.h"
