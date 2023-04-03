@@ -177,6 +177,20 @@ def build_fault_list(conf_list, combined_faults, ret_faults):
                 for taddress in build_ranges(faultdev["trigger_address"]):
                     for tcounter in build_ranges(faultdev["trigger_counter"]):
                         for numbytes in build_ranges(faultdev["num_bytes"]):
+                            if isinstance(fmask, dict):
+                                assert (
+                                    wildcard_fault
+                                ), "only wildcard faults can be evaluated, if fault.mask is a dict"
+                                assert ftype == detect_type(
+                                    "instruction"
+                                ), "fault.type has to be 'instruction', if fault.mask is a dict"
+                                assert fmodel == detect_model(
+                                    "overwrite"
+                                ), "fault.model has to be 'overwrite', if fault.mask is a dict"
+                                assert (
+                                    numbytes == 0
+                                ), "numbytes is overwritten, if fault.mask is a dict"
+
                             int_faults = (
                                 combined_faults.copy()
                             )  # copy list, otherwise int fault referres to the same list as combined_faults
