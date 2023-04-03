@@ -58,6 +58,8 @@ def build_ranges_dict(fault_dict):
         for i in range(fault_dict["range"][1], fault_dict["range"][2], 1):
             ret.append(fault_dict["range"][0] << i)
         return ret
+    elif fault_dict["type"] == "dict":
+        return [fault_dict["dict"]]
     raise ValueError("No known type for this framework {}".format(fault_dict))
 
 
