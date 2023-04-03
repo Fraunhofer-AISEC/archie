@@ -231,11 +231,11 @@ def generate_wildcard_faults(fault, tbexec, tbinfo):
 
         # Iterate over instructions in the translation block
         tb_info_asm = tbinfo_tb_indexed.at[tb, "assembler"]
-        tb_info_asm = tb_info_asm.split("[ ")
+        tb_info_asm = [
+            int(instr.split("]")[0], 16) for instr in tb_info_asm.split("[")[1:]
+        ]
 
-        for i in range(1, len(tb_info_asm)):
-            instr = int(tb_info_asm[i].split("]")[0], 16)
-
+        for idx, instr in enumerate(tb_info_asm):
             # Evaluate start and stop conditions (global)
 
             # Detect range end address if specified (hitcounter != 0)
