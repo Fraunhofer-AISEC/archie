@@ -17,6 +17,7 @@
 import copy
 import logging
 from multiprocessing import Queue
+import numpy
 
 import pandas as pd
 from tqdm import tqdm
@@ -231,9 +232,15 @@ def generate_wildcard_faults(fault, tbexec, tbinfo):
 
         # Iterate over instructions in the translation block
         tb_info_asm = tbinfo_tb_indexed.at[tb, "assembler"]
+        tb_info_total_size = tbinfo_tb_indexed.at[tb, "size"]
+
         tb_info_asm = [
             int(instr.split("]")[0], 16) for instr in tb_info_asm.split("[")[1:]
         ]
+        tb_info_size = list(numpy.diff(tb_info_asm))
+        tb_info_size.append(
+            tb_info_total_size - sum(tb_info_size)
+        )  # calculate the last instr size
 
         for idx, instr in enumerate(tb_info_asm):
             # Evaluate start and stop conditions (global)
