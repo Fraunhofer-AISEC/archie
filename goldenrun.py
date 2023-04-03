@@ -341,6 +341,11 @@ def generate_wildcard_faults(fault, tbexec, tbinfo):
                 if instr >= instr_hitcounter["start_address"]:
                     instr_fault.trigger.hitcounter += instr_hitcounter["hitcounter"]
 
+            # Set instruction width specific faultmask
+            if isinstance(instr_fault.mask, dict):
+                instr_fault.mask = instr_fault.mask[str(tb_info_size[idx])]
+                instr_fault.num_bytes = tb_info_size[idx]
+
             wildcard_faults.append(instr_fault)
 
             if wildcard_range_end_reached:
