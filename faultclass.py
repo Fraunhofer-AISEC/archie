@@ -36,6 +36,52 @@ logger = logging.getLogger(__name__)
 qlogger = logging.getLogger("QEMU-" + __name__)
 
 
+def detect_type(fault_type):
+    """
+    Translate type to enum value used in qemu
+    """
+    if fault_type == "flash" or fault_type == "instruction":
+        return 1
+    if fault_type == "sram" or fault_type == "data":
+        return 0
+    if fault_type == "register":
+        return 2
+    logger.critical(
+        "Received wrong type. Expected instruction, data, or register. Got {}".format(
+            fault_type
+        )
+    )
+    raise ValueError(
+        "A type was not detected. Maybe misspelled? got {} , needed instruction, data, or register".format(
+            fault_type
+        )
+    )
+
+
+def detect_model(fault_model):
+    """
+    Translate model to enum value used in qemu
+    """
+    if fault_model == "set1":
+        return 1
+    if fault_model == "set0":
+        return 0
+    if fault_model == "toggle":
+        return 2
+    if fault_model == "overwrite":
+        return 3
+    logger.critical(
+        "Received wrong model. Expected set0, set1, toggle, or overwrite. Got {}".format(
+            fault_model
+        )
+    )
+    raise ValueError(
+        "A model was not detected. Maybe misspelled? got {} , needed set0 set1 toggle overwrite".format(
+            fault_model
+        )
+    )
+
+
 class Register(IntEnum):
     ARM = 0
     RISCV = 1
