@@ -219,17 +219,18 @@ def generate_wildcard_faults(fault, tbexec, tbinfo):
     wildcard_range_end_reached = False
     wildcard_local_active = False
 
+    tbinfo_tb_indexed = tbinfo.set_index("id")
     for tb in tbexec["tb"]:
         tb_hitcounters_analyzed = False
         # Instruction-specific hitcounters
         instr_hitcounters = []
 
         # Get and update TB-specific hitcounter
-        tb_hitcounter = tb_hitcounters.loc[tb, "hitcounter"]
-        tb_hitcounters.loc[tb, "hitcounter"] += 1
+        tb_hitcounter = tb_hitcounters.at[tb, "hitcounter"]
+        tb_hitcounters.at[tb, "hitcounter"] += 1
 
         # Iterate over instructions in the translation block
-        tb_info_asm = tbinfo.at[tbinfo.index[tbinfo["id"] == tb][0], "assembler"]
+        tb_info_asm = tbinfo_tb_indexed.at[tb, "assembler"]
         tb_info_asm = tb_info_asm.split("[ ")
 
         for i in range(1, len(tb_info_asm)):
