@@ -75,12 +75,13 @@ def calculate_lifespan_from_start(
 def find_fault(
     fault_address, goldenrun_tb_exec, goldenrun_tb_info, trigger_occurrences
 ):
-    idx = pandas.Index([])
-    for index, tb in goldenrun_tb_info.iterrows():
-        if fault_address < tb["id"] or fault_address >= (tb["id"] + tb["size"]):
-            continue
-        tmp = goldenrun_tb_exec.index[goldenrun_tb_exec["tb"] == tb["id"]]
-        idx = idx.union(tmp)
+    matching_tbs = goldenrun_tb_info.query(
+        f"id <= {fault_address} & id + size > {fault_address}"
+    )
+    matching_tb_ids = matching_tbs["id"]  # noqa: F841
+    matching_tbs_with_positions = goldenrun_tb_exec.query("tb in @matching_tb_ids")
+    idx = matching_tbs_with_positions.index
+
     """Identify desired occurrence"""
     if trigger_occurrences > len(idx):
         return [-1, 0]
