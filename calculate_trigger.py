@@ -104,6 +104,7 @@ def search_for_fault_location(
     fault_lifespan,
     goldenrun_tb_exec,
     goldenrun_tb_info,
+    tb_start_end,
 ):
     logger.debug(f"Search trigger to fault INSN at 0x{fault_address:08x}")
     [idx, ins] = find_fault(
@@ -164,19 +165,6 @@ def search_for_fault_location(
     tb_hitcounters = goldenrun_tb_exec.iloc[0 : idx + 1].tb.value_counts()
     trigger_hitcounter = tb_hitcounters[trigger_tb]
 
-    tb_start = goldenrun_tb_info["id"].copy()
-    tb_start.index = goldenrun_tb_info["id"]
-
-    tb_end = goldenrun_tb_info["id"] + goldenrun_tb_info["size"] - 1
-    tb_end.index = goldenrun_tb_info["id"]
-
-    tb_start_end = pandas.DataFrame(
-        {
-            "tb_start": tb_start,
-            "tb_end": tb_end,
-        }
-    )
-
     # Is the trigger TB a sub-TB?
     sub_tbs = tb_start_end[
         (trigger_tb > tb_start_end["tb_start"]) & (trigger_tb <= tb_start_end["tb_end"])
@@ -217,6 +205,20 @@ def search_for_fault_location(
 def calculate_trigger_addresses(fault_list, goldenrun_tb_exec, goldenrun_tb_info):
     """"""
     logger.info("Calculating trigger addresses")
+
+    # Create a dataframe with the start and end addresses of the tb's
+    tb_start = goldenrun_tb_info["id"].copy()
+    tb_start.index = goldenrun_tb_info["id"]
+
+    tb_end = goldenrun_tb_info["id"] + goldenrun_tb_info["size"] - 1
+    tb_end.index = goldenrun_tb_info["id"]
+
+    tb_start_end = pandas.DataFrame(
+        {
+            "tb_start": tb_start,
+            "tb_end": tb_end,
+        }
+    )
 
     "check every fault list"
     cachelist = []
@@ -260,6 +262,7 @@ def calculate_trigger_addresses(fault_list, goldenrun_tb_exec, goldenrun_tb_info
                     fault.lifespan,
                     goldenrun_tb_exec,
                     goldenrun_tb_info,
+                    tb_start_end,
                 )
             d = dict()
             d["faultaddress"] = fault.address
