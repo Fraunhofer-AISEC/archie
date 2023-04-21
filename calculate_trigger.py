@@ -135,8 +135,9 @@ def search_for_fault_location(
                     trigger_position - goldenrun_tb_info.at[idtbinfo, "ins_count"]
                 )
             else:
+                tb_id = goldenrun_tb_info.at[idtbinfo, "id"]
                 for filt in filter_lists:
-                    if filt[0] == goldenrun_tb_info.at[idtbinfo, "id"]:
+                    if filt[0] == tb_id:
                         ins = filt[len(filt) - trigger_position]
                         trigger_position = 0
                         break
