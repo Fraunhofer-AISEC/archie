@@ -221,7 +221,7 @@ def calculate_trigger_addresses(fault_list, goldenrun_tb_exec, goldenrun_tb_info
     )
 
     "check every fault list"
-    cachelist = []
+    cache_dict = dict()
     lists = build_filters(goldenrun_tb_info)
     for list in lists:
         list = list.reverse()
@@ -230,20 +230,16 @@ def calculate_trigger_addresses(fault_list, goldenrun_tb_exec, goldenrun_tb_info
             if fault.trigger.address >= 0 or fault.trigger.hitcounter == 0:
                 continue
 
-            found = False
-            for tdict in cachelist:
-                if (
-                    tdict["faultaddress"] == fault.address
-                    and tdict["faultlifespan"] == fault.lifespan
-                    and tdict["triggerhitcounter"] == fault.trigger.hitcounter
-                    and tdict["triggeraddress"] == fault.trigger.address
-                ):
-                    fault.trigger.address = tdict["answer"][0]
-                    fault.trigger.hitcounter = tdict["answer"][1]
-                    fault.lifespan = tdict["answer"][2]
-                    found = True
-                    break
-            if found is True:
+            tdict = cache_dict.get(fault.address)
+            if (
+                tdict is not None
+                and tdict["faultlifespan"] == fault.lifespan
+                and tdict["triggerhitcounter"] == fault.trigger.hitcounter
+                and tdict["triggeraddress"] == fault.trigger.address
+            ):
+                fault.trigger.address = tdict["answer"][0]
+                fault.trigger.hitcounter = tdict["answer"][1]
+                fault.lifespan = tdict["answer"][2]
                 continue
 
             if fault.lifespan != 0 and fault.trigger.address + fault.lifespan < 0:
@@ -270,7 +266,7 @@ def calculate_trigger_addresses(fault_list, goldenrun_tb_exec, goldenrun_tb_info
             d["triggeraddress"] = fault.trigger.address
             d["faultlifespan"] = fault.lifespan
             d["answer"] = tbs
-            cachelist.insert(0, d)
+            cache_dict[fault.address] = d
             fault.trigger.address = tbs[0]
             fault.trigger.hitcounter = tbs[1]
             fault.lifespan = tbs[2]
