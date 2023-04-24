@@ -19,6 +19,7 @@ import logging
 from multiprocessing import Queue
 
 import pandas as pd
+from tqdm import tqdm
 
 from calculate_trigger import calculate_trigger_addresses
 from faultclass import Fault
@@ -113,7 +114,7 @@ def run_goldenrun(
         if "end" in config_qemu:
             for tb in experiment["data"]["tbinfo"]:
                 config_qemu["max_instruction_count"] += tb["num_exec"] * tb["ins_count"]
-            logger.info(
+            logger.debug(
                 "Max instruction count is {}".format(
                     config_qemu["max_instruction_count"]
                 )
@@ -141,11 +142,12 @@ def checktriggers_in_tb(faultconfig, data):
     valid_triggers = []
     invalid_triggers = []
     for faultdescription in faultconfig:
-        logger.info(
+        logger.debug(
             "Check Fault {}/{} for valid trigger".format(
                 faultdescription["index"] + 1, len(faultconfig)
             )
         )
+
         for fault in faultdescription["faultlist"]:
             if fault.trigger.address in valid_triggers:
                 continue
@@ -362,7 +364,7 @@ def process_wildcard_faults(faultconfig, tbexec, tbinfo):
     index_base = faultconfig[-1]["index"] + 1
 
     wildcard_faults = []
-    for faultentry in faultconfig:
+    for faultentry in tqdm(faultconfig):
         expanded_faults = []
 
         for fault in faultentry["faultlist"]:
