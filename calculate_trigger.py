@@ -138,28 +138,31 @@ def search_for_fault_location(
             else:
                 tb_id = goldenrun_tb_info.at[idtbinfo, "id"]
                 for filt in filter_lists:
-                    if filt[0] == tb_id:
-                        ins = filt[len(filt) - trigger_position]
-                        trigger_position = 0
-                        break
+                    if filt[0] != tb_id:
+                        continue
+                    ins = filt[len(filt) - trigger_position]
+                    trigger_position = 0
+                    break
         else:
             tb_id = goldenrun_tb_exec.at[idx, "tb"]
             for filt in filter_lists:
                 """found matching filter"""
-                if filt[0] == tb_id:
-                    for i in range(0, len(filt), 1):
-                        if filt[i] == ins:
-                            """Case ins is in the current tb"""
-                            if i >= trigger_position:
-                                i -= trigger_position
-                                ins = filt[i]
-                                trigger_position = 0
-                            else:
-                                """Case ins is not in the current tb"""
-                                trigger_not_in_same_tb = 1
-                                trigger_position -= i
-                                idx -= 1
-                            break
+                if filt[0] != tb_id:
+                    continue
+                for i in range(0, len(filt), 1):
+                    if filt[i] != ins:
+                        continue
+                    """Case ins is in the current tb"""
+                    if i >= trigger_position:
+                        i -= trigger_position
+                        ins = filt[i]
+                        trigger_position = 0
+                    else:
+                        """Case ins is not in the current tb"""
+                        trigger_not_in_same_tb = 1
+                        trigger_position -= i
+                        idx -= 1
+                    break
     # Got trigger address, now calculate the trigger hitcounter
     trigger_tb = goldenrun_tb_exec.at[idx, "tb"]
     tb_hitcounters = goldenrun_tb_exec.iloc[0 : idx + 1].tb.value_counts()
