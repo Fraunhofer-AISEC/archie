@@ -37,7 +37,7 @@ install_python3_distro() {
 	if [ "${ID:-linux}" = "debian" ] || [ "${ID_LIKE#*debian*}" != "${ID_LIKE}" ]
 	then
 		echo "Looks like Debian!"
-		sudo apt-get install python3-tables python3-pandas python3-prctl python3-protobuf
+		sudo apt-get install python3-tables python3-pandas python3-prctl python3-protobuf python3-tqdm
 
 		echo "Rebuild protobuf files to support the installed package versions"
 		cd protobuf

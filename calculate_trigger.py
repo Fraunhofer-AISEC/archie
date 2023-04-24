@@ -17,6 +17,7 @@
 import logging
 
 import pandas
+from tqdm import tqdm
 
 from faultclass import build_filters
 
@@ -103,7 +104,7 @@ def search_for_fault_location(
     goldenrun_tb_exec,
     goldenrun_tb_info,
 ):
-    logger.info(f"Search trigger to fault INSN at 0x{fault_address:08x}")
+    logger.debug(f"Search trigger to fault INSN at 0x{fault_address:08x}")
     [idx, ins] = find_fault(
         fault_address, goldenrun_tb_exec, goldenrun_tb_info, trigger_occurrences
     )
@@ -204,7 +205,7 @@ def search_for_fault_location(
         if ins >= sub_tb_data["tb_start"]:
             trigger_hitcounter += tb_hitcounters[sub_tb]
 
-    logger.info(
+    logger.debug(
         "Found trigger for faulting instruction address {} at {} with "
         "hitcounter {}".format(fault_address, ins, trigger_hitcounter)
     )
@@ -213,12 +214,14 @@ def search_for_fault_location(
 
 def calculate_trigger_addresses(fault_list, goldenrun_tb_exec, goldenrun_tb_info):
     """"""
+    logger.info("Calculating trigger addresses")
+
     "check every fault list"
     cachelist = []
     lists = build_filters(goldenrun_tb_info)
     for list in lists:
         list = list.reverse()
-    for faults in fault_list:
+    for faults in tqdm(fault_list):
         for fault in faults["faultlist"]:
             if fault.trigger.address >= 0 or fault.trigger.hitcounter == 0:
                 continue

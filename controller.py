@@ -27,6 +27,7 @@ import time
 
 import pandas as pd
 import prctl
+from tqdm import tqdm
 
 try:
     import json5 as json
@@ -250,7 +251,7 @@ def get_system_ram():
     sp = str(tmp).split("kB")
     t = sp[0]
     mem = int(t.split(":")[1], 0)
-    clogger.info("system ram is {}kB".format(mem))
+    clogger.debug("system ram is {}kB".format(mem))
     return mem
 
 
@@ -342,10 +343,12 @@ def controller(
             continue
         goldenrun_data[keyword] = pd.DataFrame(goldenrun_data[keyword])
 
+    clogger.info("Simulating faults")
+    pbar = tqdm(total=len(faultlist))
     itter = 0
     while 1:
         if len(p_list) == 0 and itter == len(faultlist):
-            clogger.info("Done inserting qemu jobs")
+            clogger.debug("Done inserting qemu jobs")
             break
 
         if (
@@ -376,8 +379,7 @@ def controller(
             )
             p.start()
             p_list.append({"process": p, "start_time": time.time()})
-
-            clogger.info(f"Started worker {faults['index']}. Running: {len(p_list)}.")
+            clogger.debug(f"Started worker {faults['index']}. Running: {len(p_list)}.")
             clogger.debug(f"Fault address: {faults['faultlist'][0].address}")
             clogger.debug(
                 f"Fault trigger address: {faults['faultlist'][0].trigger.address}"
@@ -415,22 +417,24 @@ def controller(
             "Find finished processes"
             p["process"].join(timeout=0)
             if p["process"].is_alive() is False:
+                # Update the progress bar
+                pbar.update(1)
                 "Recalculate moving average"
                 p_time_list.append(current_time - p["start_time"])
                 len_p_time_list = len(p_time_list)
                 if len_p_time_list > num_workers + 2:
                     p_time_list.pop(0)
                 p_time_mean = sum(p_time_list) / len_p_time_list
-                clogger.info("Current running Average {}".format(p_time_mean))
+                clogger.debug("Current running Average {}".format(p_time_mean))
                 "Remove process from list"
                 p_list.pop(i)
                 break
 
-    clogger.info("{} experiments remaining in queue".format(queue_output.qsize()))
-
+    clogger.debug("{} experiments remaining in queue".format(queue_output.qsize()))
+    pbar.close()
     p_logger.join()
 
-    clogger.info("Done with qemu and logger")
+    clogger.debug("Done with qemu and logger")
 
     t1 = time.time()
     m, s = divmod(t1 - t0, 60)
@@ -439,14 +443,13 @@ def controller(
 
     tperindex = (t1 - t0) / len(faultlist)
     tperworker = tperindex / num_workers
-    clogger.info(
+    clogger.debug(
         "Took average of {}s per fault, python worker rough runtime is {}s".format(
             tperindex, tperworker
         )
     )
 
-    clogger.info("controller exit")
-
+    clogger.debug("controller exit")
     return config_qemu
 
 

@@ -50,7 +50,7 @@ jobs:
 
     - name: Install python Packages
       if: ${{matrix.language ==  'python'}}
-      run: sudo apt update; sudo apt upgrade -y; sudo apt install -y python3-tables python3-pandas python3-prctl libcap-dev python3-protobuf; pip install protobuf==4.21.12
+      run: sudo apt update; sudo apt upgrade -y; sudo apt install -y python3-tables python3-pandas python3-prctl libcap-dev python3-protobuf python3-tqdm; pip install protobuf==4.21.12
 
     - name: Build QEMU
       if: ${{ matrix.language == 'cpp'}}
