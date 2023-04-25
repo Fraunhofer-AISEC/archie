@@ -213,6 +213,12 @@ fn fault_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, _size: u32, state: &Arc
             fault_data.extend(std::iter::repeat(0).take(fault_size as usize - fault_data.len()));
             uc.mem_write(fault.address, fault_data.as_slice())
                 .expect("failed writing fault data to memory");
+            if matches!(fault.r#type, FaultType::Instruction) {
+                // We need to remove the tb containing the modified instructions from the cache
+                // since they might not have any effect otherwise
+                uc.ctl_remove_cache(fault.address, fault.address + fault_size as u64)
+                    .unwrap();
+            }
             dump_memory(
                 uc,
                 fault.address,
