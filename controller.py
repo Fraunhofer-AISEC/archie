@@ -23,6 +23,7 @@ from multiprocessing import Manager, Process
 from pathlib import Path
 import pickle
 import subprocess
+import sys
 import time
 
 import pandas as pd
@@ -627,6 +628,26 @@ def process_arguments(args):
     return parguments
 
 
+def init_logging():
+    logging_level = logging.INFO
+    handler_list = []
+
+    stream_handler = logging.StreamHandler(sys.stdout)
+    stream_handler.setLevel(logging.INFO)
+    handler_list.append(stream_handler)
+
+    if args.debug:
+        file_handler = logging.FileHandler("log.txt")
+        handler_list.append(file_handler)
+        logging_level = logging.DEBUG
+
+    logging.basicConfig(
+        format="%(asctime)s - %(name)s - %(levelname)s : %(message)s",
+        level=logging_level,
+        handlers=handler_list,
+    )
+
+
 if __name__ == "__main__":
     """
     Main function to programm
@@ -637,13 +658,7 @@ if __name__ == "__main__":
 
     parguments = process_arguments(args)
 
-    logging_level = logging.INFO
-    if args.debug:
-        logging_level = logging.DEBUG
-    logging.basicConfig(
-        format="%(asctime)s - %(name)s - %(levelname)s : %(message)s",
-        level=logging_level,
-    )
+    init_logging()
 
     controller(
         args.hdf5file,  # hdf5path
