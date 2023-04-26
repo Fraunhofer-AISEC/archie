@@ -440,7 +440,9 @@ def controller(
     t1 = time.time()
     m, s = divmod(t1 - t0, 60)
     h, m = divmod(m, 60)
-    clogger.info("Took {}:{}:{} to complete all experiments".format(h, m, s))
+    clogger.info(
+        "Took {}:{}:{} to complete all experiments".format(int(h), int(m), int(s))
+    )
 
     tperindex = (t1 - t0) / len(faultlist)
     tperworker = tperindex / num_workers
