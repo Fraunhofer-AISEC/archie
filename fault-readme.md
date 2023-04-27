@@ -78,6 +78,7 @@ In terms of register faults, the trigger can not be set automatically, i.e. trig
 #### faults dictionary
 The faults dictionary contains the following members
 * fault_address
+* fault_address_exclude
 * fault_type
 * fault_model
 * fault_lifespan
@@ -124,6 +125,18 @@ In this case, the first fault is inserted into "address1", and successively, the
 If the trigger_address is defined as "-1", the trigger address is set to one instruction ahead of the fault address. In this case, "-2", "-3" and so forth, lead to the trigger address being to set to two or three instructions ahead of the fault address.
 
 Currently, only addresses in decimal representation are accepted. 
+
+###### fault_exclude
+
+For the wildcard mode there is the possibility to exclude certain instructions.
+The fault_exclude address ranges are specified by start and end.
+No faults are generated for addresses within this range.
+It is evaluated similar to a pythonic range.
+Hence, a fault address equal to the end value is not excluded.
+The ranges are collected within a list in the fault config to allow for multiple exclude ranges.
+
+Example:
+``"fault_address_exclude" : [ ["start", "end"] ]``
 
 ###### fault_type
 Valid fault types are "instruction", "data" and "reg".
