@@ -178,11 +178,33 @@ The framework internally uses a bit mask of 128 bits, so any positive number fro
 
 Alternatively it is possible to use a dictionary instead of a range.
 In this case there exists at least the entry type. Other entries depend on the type.
+
 For example when you want to shift a bit mask, you can use the type "shift" as follows
 ```
 {"type" : "shift", "range" : [3, 7, 10]}
 ```
 The shift corresponds to a left shift. In the above case, the number 3 is subsequently shifted by 7, 8, 9 to the left (binary representation).
+
+Another example of a dictionary is the use of instruction width dependent fault masks.
+This only works in combination with the wildcard mode, the instruction fault type, and the overwrite fault model.
+Below is an example fault configuration.
+This example targets an ARM Cortex M4 processor.
+The scenario is to apply an instruction skip.
+Therefore, the fault_mask contains opcodes for a 16-bit and 32-bit NOP instruction.
+Note that the num_bytes must not be set as this changes depending on the targeted instruction.
+
+Example:
+```
+{
+  "fault_address"         : ["*"],
+  "fault_type"            : "instruction",
+  "fault_model"           : "overwrite",
+  "fault_lifespan"        : [1],
+  "fault_mask"            : {"type": "dict", "dict": {"2": 0xbf00, "4": 0x8000f3af}},
+  "trigger_address"       : [-1],
+  "trigger_counter"       : [1]
+}
+```
 
 
 ##### trigger_address
