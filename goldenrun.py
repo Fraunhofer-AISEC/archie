@@ -382,7 +382,18 @@ def process_wildcard_faults(faultconfig, tbexec, tbinfo):
     index_base = faultconfig[-1]["index"] + 1
 
     wildcard_faults = []
-    for faultentry in tqdm(faultconfig):
+    n_wildcard_faults = 0
+    for faultentry in faultconfig:
+        for fault in faultentry["faultlist"]:
+            if fault.wildcard:
+                n_wildcard_faults = n_wildcard_faults + 1
+
+    if n_wildcard_faults == 0:
+        logger.info("No wildcard fault")
+        return
+
+    pbar = tqdm(total=n_wildcard_faults)
+    for faultentry in faultconfig:
         expanded_faults = []
 
         for fault in faultentry["faultlist"]:
@@ -393,11 +404,15 @@ def process_wildcard_faults(faultconfig, tbexec, tbinfo):
                 # removal
                 expanded_faults.append(fault)
 
+                # Update the progress bar
+                pbar.update(1)
+
         # Remove expanded wildcard fault entries
         for fault in expanded_faults:
             faultentry["faultlist"].remove(fault)
         if len(faultentry["faultlist"]) == 0:
             faultentry["delete"] = True
+    pbar.close()
 
     # Add generated fault entries to faultconfig
     for i in range(len(wildcard_faults)):
