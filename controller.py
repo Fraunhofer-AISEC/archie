@@ -151,8 +151,8 @@ def build_fault_list(conf_list, combined_faults, ret_faults):
     if "num_bytes" not in faultdev:
         faultdev["num_bytes"] = [0]
     if faultdev["fault_address"] == "*":
-        wildcard_fault = True
-    elif type(faultdev["fault_address"]) == list and "*" in faultdev["fault_address"]:
+        faultdev["fault_address"] = ["*"]
+    if type(faultdev["fault_address"]) == list and "*" in faultdev["fault_address"]:
         wildcard_fault = True
 
     ftype = detect_type(faultdev["fault_type"])
