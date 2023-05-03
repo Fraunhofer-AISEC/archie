@@ -221,7 +221,7 @@ def generate_wildcard_faults(fault, tbexec, tbinfo):
     wildcard_local_active = False
 
     tbinfo_tb_indexed = tbinfo.set_index("id")
-    for tb in tbexec["tb"]:
+    for tb in tqdm(tbexec["tb"], leave=False):
         tb_hitcounters_analyzed = False
         # Instruction-specific hitcounters
         instr_hitcounters = []
