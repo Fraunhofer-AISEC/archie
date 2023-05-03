@@ -286,24 +286,24 @@ def build_filters(tbinfogolden):
     Build for each tb in tbinfo a filter
     """
     filter_return = []
-    """Each assembler string"""
+    # Each assembler string
     for tb in tbinfogolden["assembler"]:
         tb_filter = []
-        """remove first split, as it is empty"""
+        # remove first split, as it is empty
         split = tb.split("[ ")
-        """For each line"""
+        # For each line
         for sp in split[1:]:
-            """select address"""
+            # select address
             s = sp.split("]")
-            """Add to filter"""
+            # Add to filter
             tb_filter.append(int("0x" + s[0].strip(), 0))
-        """Sort addresses"""
+        # Sort addresses
         tb_filter.sort()
-        """Reverse list so that last element is first"""
+        # Reverse list so that last element is first
         tb_filter.reverse()
-        """Append to filter list"""
+        # Append to filter list
         filter_return.append(tb_filter)
-    """Filter list for length of filter, so that the longest one is tested first"""
+    # Filter list for length of filter, so that the longest one is tested first
     filter_return.sort(key=len)
     filter_return.reverse()
     return filter_return
@@ -313,34 +313,34 @@ def recursive_filter(tbexecpd, tbinfopd, index, filt):
     """
     Search if each element in filt exists in tbexec after index
     """
-    """Make sure we do not leave Pandas frame"""
+    # Make sure we do not leave Pandas frame
     if not ((index >= 0) and index < len(tbexecpd)):
         return [False, tbexecpd, tbinfopd]
-    """Select element to test"""
+    # Select element to test
     tb = tbexecpd.loc[index]
-    """Make sure it is part of filter"""
+    # Make sure it is part of filter
     if tb["tb"] == filt[0]:
         if len(filt) == 1:
-            """Reached start of original tb"""
+            # Reached start of original tb
             return [True, tbexecpd, tbinfopd]
         else:
-            """pop filter element and increase index in tbexec pandas frame"""
+            # pop filter element and increase index in tbexec pandas frame
             fi = filt.pop(0)
             index = index + 1
-            """Call recursively"""
+            # Call recursively
             [flag, tbexecpd, tbinfopd] = recursive_filter(
                 tbexecpd, tbinfopd, index, filt
             )
             index = index - 1
-            """If true, we have a match"""
+            # If true, we have a match
             if flag is True:
-                """Invalidate element in tb exec list"""
+                # Invalidate element in tb exec list
                 tbexecpd.at[index, "tb"] = -1
                 tbexecpd.at[index, "tb-1"] = -1
-                """Search tb in tb info"""
+                # Search tb in tb info
                 idx = tbinfopd.index[tbinfopd["id"] == fi]
                 for ind in idx:
-                    """Only invalidate if tb only contains one element, as these are artefacts of singlestep"""
+                    # Only invalidate if tb only contains one element, as these are artefacts of singlestep
                     if tbinfopd.at[ind, "ins_count"] == 1:
                         tbinfopd.at[ind, "num_exec"] = tbinfopd.at[ind, "num_exec"] - 1
             return [flag, tbexecpd, tbinfopd]
@@ -351,7 +351,7 @@ def recursive_filter(tbexecpd, tbinfopd, index, filt):
 def decrese_tb_info_element(tb_id, number, tbinfopd):
     """Find all matches to the tb id"""
     idx = tbinfopd.index[tbinfopd["id"] == tb_id]
-    """Decrement all matches by number of occurrence in tb exec"""
+    # Decrement all matches by number of occurrence in tb exec
     for i in idx:
         tbinfopd.at[i, "num_exec"] = tbinfopd.at[i, "num_exec"] - number
 
@@ -360,22 +360,22 @@ def filter_function(tbexecpd, filt, tbinfopd):
     """Find all possible matches for first element of filter"""
     idx = tbexecpd.index[(tbexecpd["tb"] == filt[0])]
     for f in filt[1:]:
-        """Increment to next possible match position"""
+        # Increment to next possible match position
         idx = idx + 1
-        """Find all possible matches for next filter value"""
+        # Find all possible matches for next filter value
         tmp = tbexecpd.index[(tbexecpd["tb"]) == f]
-        """Find matching indexes between both indexes"""
+        # Find matching indexes between both indexes
         idx = idx.intersection(tmp)
-    """We now will step through the filter backwards"""
+    # We now will step through the filter backwards
     filt.reverse()
     for f in filt[1:]:
-        """Decrement positions"""
+        # Decrement positions
         idx = idx - 1
         for i in idx:
-            """Invalidate all positions"""
+            # Invalidate all positions
             tbexecpd.at[i, "tb"] = -1
             tbexecpd.at[i, "tb-1"] = -1
-        """Decrement artefacts in tb info list"""
+        # Decrement artefacts in tb info list
         decrese_tb_info_element(f, len(idx), tbinfopd)
 
 
@@ -385,39 +385,39 @@ def filter_tb(tbexeclist, tbinfo, tbexecgolden, tbinfogolden, id_num):
     """
     filters = build_filters(tbinfogolden)
     tbexecpd = tbexeclist
-    """Sort and re-index tb exec list"""
+    # Sort and re-index tb exec list
     tbexecpd.sort_values(by=["pos"], ascending=False, inplace=True)
     tbexecpd.reset_index(drop=True, inplace=True)
     tbexecpd["tb-1"] = tbexecpd["tb"].shift(periods=-1, fill_value=0)
-    """Generate pandas frame for tbinfo"""
+    # Generate pandas frame for tbinfo
     tbinfopd = pd.DataFrame(tbinfo)
     for filt in filters:
-        """Only if filter has more than one element"""
+        # Only if filter has more than one element
         if len(filt) > 1:
-            """Perform search and invalidation of found matches"""
+            # Perform search and invalidation of found matches
             filter_function(tbexecpd, filt, tbinfopd)
 
     diff = len(tbexecpd)
-    """ Search found filter matches """
+    # Search found filter matches
     idx = tbexecpd.index[tbexecpd["tb-1"] == -1]
-    """Drop them from table"""
+    # Drop them from table
     tbexecpd.drop(idx, inplace=True)
-    """Drop temporary column"""
+    # Drop temporary column
     tbexecpd.drop(columns=["tb-1"], inplace=True)
-    """Reverse list, because it is given reversed from qemu"""
+    # Reverse list, because it is given reversed from qemu
     tbexecpd.sort_values(by=["pos"], inplace=True)
-    """ Fix broken position index"""
+    # Fix broken position index
     tbexecpd.reset_index(drop=True, inplace=True)
     tbexecpd["pos"] = tbexecpd.index
-    """Again reverse list to go back to original orientation"""
+    # Again reverse list to go back to original orientation
     tbexecpd = tbexecpd.iloc[::-1]
     logger.debug(
         "worker {} length diff of tbexec {}".format(id_num, diff - len(tbexecpd))
     )
     diff = len(tbinfopd)
-    """Search each tb info, that was completely removed from tbexec list"""
+    # Search each tb info, that was completely removed from tbexec list
     idx = tbinfopd.index[tbinfopd["num_exec"] <= 0]
-    """Drop the now not relevant tbinfo elements"""
+    # Drop the now not relevant tbinfo elements
     tbinfopd.drop(idx, inplace=True)
     logger.debug(
         "worker {} Length diff of tbinfo {}".format(id_num, diff - len(tbinfopd))
@@ -755,7 +755,7 @@ def python_worker(
     output of qemu
     """
 
-    """Setup qemu python part"""
+    # Setup qemu python part
     p_qemu = None
     try:
         if index >= 0:
@@ -804,15 +804,14 @@ def python_worker(
         )
 
         logger.debug("Started QEMU")
-        """Write faults to config pipe"""
+        # Write faults to config pipe
         res = write_fault_list_to_pipe(fault_list, config_fifo)
         if res != 0:
             logger.error("Fault message could not be written to the config pipe!")
         logger.debug("Wrote config to qemu")
-        """
-        From here Qemu has started execution. Now prepare for
-        data extraction
-        """
+
+        # From here Qemu has started execution. Now prepare for
+        # data extraction
         mem = readout_data(
             data_fifo,
             index,

@@ -161,10 +161,8 @@ def checktriggers_in_tb(faultconfig, data):
                 valid_triggers.append(fault.trigger.address)
                 continue
 
-            """
-            If Fault is instruction fault and hitcounter 0 let it pass independent
-            of the fault trigger address, as it is not used by the faultplugin
-            """
+            # If Fault is instruction fault and hitcounter 0 let it pass independent
+            # of the fault trigger address, as it is not used by the faultplugin
             if fault.trigger.hitcounter == 0 and fault.model == 3:
                 continue
 
