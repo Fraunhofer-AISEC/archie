@@ -383,38 +383,38 @@ def controller(
             del mem_list[0 : len(mem_list) - 6 * num_workers + 4]
         mem_max = max(mem_list)
 
-        "Calculate length of running processes"
+        # Calculate length of running processes
         times.clear()
         time_max = 0
         current_time = time.time()
         for i in range(len(p_list)):
             p = p_list[i]
             tmp = current_time - p["start_time"]
-            "If the current processing time is lower than moving average, do not punish the time "
+            # If the current processing time is lower than moving average, do not punish the time
             if tmp < p_time_mean:
                 times.append(0)
             else:
                 times.append(tmp - p_time_mean)
-        """Find max time in list (This list will show the longest running
-        process minus the moving average)"""
+        # Find max time in list (This list will show the longest running
+        # process minus the moving average)
         if len(times) > 0:
             time_max = max(times)
 
         for i in range(len(p_list)):
             p = p_list[i]
-            "Find finished processes"
+            # Find finished processes
             p["process"].join(timeout=0)
             if p["process"].is_alive() is False:
                 # Update the progress bar
                 pbar.update(1)
-                "Recalculate moving average"
+                # Recalculate moving average
                 p_time_list.append(current_time - p["start_time"])
                 len_p_time_list = len(p_time_list)
                 if len_p_time_list > num_workers + 2:
                     p_time_list.pop(0)
                 p_time_mean = sum(p_time_list) / len_p_time_list
                 clogger.debug("Current running Average {}".format(p_time_mean))
-                "Remove process from list"
+                # Remove process from list
                 p_list.pop(i)
                 break
 

@@ -31,12 +31,12 @@ def find_tb_info_row(tb_id, goldenrun_tb_info):
 
 def allign_fault_to_instruction(address, tbinfo_size, tbinfo_assembler, tbinfo_id):
     asm_addresses = []
-    "Start searching for instruction addresses"
+    # Start searching for instruction addresses
     split = tbinfo_assembler.split("[ ")
     for sp in split[1:]:
-        "Find end of address"
+        # Find end of address
         s = sp.split("]")
-        "Convert and append to list"
+        # Convert and append to list
         asm_addresses.append(int("0x" + s[0].strip(), 0))
     asm_addresses.append(tbinfo_id + tbinfo_size)
     for i in range(0, len(asm_addresses) - 1, 1):
@@ -82,7 +82,7 @@ def find_fault(
     matching_tbs_with_positions = goldenrun_tb_exec.query("tb in @matching_tb_ids")
     idx = matching_tbs_with_positions.index
 
-    """Identify desired occurrence"""
+    # Identify desired occurrence
     if trigger_occurrences > len(idx):
         return [-1, 0]
     idx = idx[trigger_occurrences - 1]
@@ -129,7 +129,7 @@ def search_for_fault_location(
             return [fault_address, 0, fault_lifespan]
         idtbinfo = find_tb_info_row(goldenrun_tb_exec.at[idx, "tb"], goldenrun_tb_info)
         if trigger_not_in_same_tb == 1:
-            """Is current tb to short for trigger position"""
+            # Is current tb to short for trigger position
             if trigger_position > goldenrun_tb_info.at[idtbinfo, "ins_count"]:
                 idx = idx - 1
                 trigger_position = (
@@ -146,19 +146,19 @@ def search_for_fault_location(
         else:
             tb_id = goldenrun_tb_exec.at[idx, "tb"]
             for filt in filter_lists:
-                """found matching filter"""
+                # found matching filter
                 if filt[0] != tb_id:
                     continue
                 for i in range(0, len(filt), 1):
                     if filt[i] != ins:
                         continue
-                    """Case ins is in the current tb"""
+                    # Case ins is in the current tb
                     if i >= trigger_position:
                         i -= trigger_position
                         ins = filt[i]
                         trigger_position = 0
                     else:
-                        """Case ins is not in the current tb"""
+                        # Case ins is not in the current tb
                         trigger_not_in_same_tb = 1
                         trigger_position -= i
                         idx -= 1
@@ -223,7 +223,7 @@ def calculate_trigger_addresses(fault_list, goldenrun_tb_exec, goldenrun_tb_info
         }
     )
 
-    "check every fault list"
+    # check every fault list
     cache_dict = dict()
     lists = build_filters(goldenrun_tb_info)
     for list in lists:
