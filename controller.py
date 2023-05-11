@@ -344,7 +344,9 @@ def controller(
             continue
         goldenrun_data[keyword] = pd.DataFrame(goldenrun_data[keyword])
 
-    clogger.info("Simulating faults")
+    if len(faultlist) != 0:
+        clogger.info("Simulating faults")
+
     pbar = tqdm(total=len(faultlist))
     itter = 0
     while 1:
@@ -444,7 +446,11 @@ def controller(
         "Took {}:{}:{} to complete all experiments".format(int(h), int(m), int(s))
     )
 
-    tperindex = (t1 - t0) / len(faultlist)
+    if len(faultlist) != 0:
+        tperindex = (t1 - t0) / len(faultlist)
+    else:
+        tperindex = (t1 - t0)
+
     tperworker = tperindex / num_workers
     clogger.debug(
         "Took average of {}s per fault, python worker rough runtime is {}s".format(

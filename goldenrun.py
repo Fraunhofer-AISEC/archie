@@ -90,6 +90,7 @@ def run_goldenrun(
             qemu_post,
         )
         experiment["data"] = queue_output.get()
+
         if experiment["data"]["end_reason"] == "max tb":
             logger.critical(
                 f"{experiment['type']} not finished after "
@@ -122,7 +123,6 @@ def run_goldenrun(
             )
 
     return [config_qemu["max_instruction_count"], experiment["data"], faultconfig]
-
 
 def find_insn_addresses_in_tb(insn_address, data):
     tb_list_found = []
