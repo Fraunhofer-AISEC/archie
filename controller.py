@@ -278,6 +278,9 @@ def controller(
     prctl.set_name("Controller")
     prctl.set_proctitle("Python_Controller")
 
+    # Write flags to HDF5
+    queue_output.put(config_qemu)
+
     # Storing and restoring goldenrun_data with pickle is a temporary fix
     # A better solution is to parse the goldenrun_data from the existing hdf5 file
     goldenrun_data = {}

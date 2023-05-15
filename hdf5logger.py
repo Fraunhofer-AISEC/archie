@@ -130,6 +130,24 @@ class riscv_registers_table(tables.IsDescription):
     x31 = tables.UInt64Col()
     x32 = tables.UInt64Col()
 
+class flags_table(tables.IsDescription):
+    qemu = tables.StringCol(1000)
+    kernel = tables.StringCol(1000)
+    plugin = tables.StringCol(1000)
+    machine = tables.StringCol(1000)
+    additional_qemu_args = tables.StringCol(1000)
+    bios = tables.StringCol(1000)
+    ring_buffer = tables.BoolCol()
+    tb_exec_list = tables.BoolCol()
+    tb_info = tables.BoolCol()
+    mem_info = tables.BoolCol()
+    max_instruction_count = tables.UInt64Col()
+    memory_dump = tables.BoolCol()
+
+class address_table(tables.IsDescription):
+    address = tables.Int64Col()
+    counter = tables.Int64Col()
+
 
 binary_atom = tables.UInt8Atom()
 
@@ -312,6 +330,74 @@ def process_memory_info(f, group, meminfolist, myfilter):
     meminfotable.close()
 
 
+def process_config(f, group, config, myfilter):
+    configgroup = f.create_group(group, "config")
+    configtable = f.create_table(
+        configgroup,
+        "flags",
+        flags_table,
+        "",
+        expectedrows=(len(config)),
+        filters=myfilter,
+    )
+
+    config_row = configtable.row
+    config_row["qemu"] = config["qemu"]
+    config_row["kernel"] = config["kernel"]
+    config_row["plugin"] = config["plugin"]
+    config_row["machine"] = config["machine"]
+    config_row["additional_qemu_args"] = config["additional_qemu_args"]
+    config_row["bios"] = config["bios"]
+    config_row["ring_buffer"] = config["ring_buffer"]
+    config_row["tb_exec_list"] = config["tb_exec_list"]
+    config_row["tb_info"] = config["tb_info"]
+    config_row["mem_info"] = config["mem_info"]
+    config_row["max_instruction_count"] = config["max_instruction_count"]
+
+    config_row.append()
+
+    configtable.flush()
+    configtable.close()
+
+    starttable = f.create_table(
+        configgroup,
+        "start_addresses",
+        address_table,
+        "",
+        expectedrows=(len(config['start'])),
+        filters=myfilter,
+    )
+
+    start_row = starttable.row
+    start_row["address"] = config['start']["address"]
+    start_row["counter"] = config['start']["counter"]
+
+    start_row.append()
+
+    starttable.flush()
+    starttable.close()
+
+    endtable = f.create_table(
+        configgroup,
+        "end_addresses",
+        address_table,
+        "",
+        expectedrows=(len(config['end'])),
+        filters=myfilter,
+    )
+
+    end_row = endtable.row
+    for endpoint in config["end"]:
+        end_row["address"] = endpoint["address"]
+        end_row["counter"] = endpoint["counter"]
+
+        end_row.append()
+
+    endtable.flush()
+    endtable.close()
+
+
+
 def hdf5collector(
     hdf5path, mode, queue_output, num_exp, compressionlevel, logger_postprocess=None
 ):
@@ -329,6 +415,12 @@ def hdf5collector(
     while num_exp > 0:
         # readout queue and get next output from qemu. Will block
         exp = queue_output.get()
+
+        # Flags do not have a index
+        if "index" not in exp:
+            process_config(f, f.root, exp, myfilter)
+            continue
+
         t1 = time.time()
         logger.debug(
             "got exp {}, {} still need to be performed. Took {}s. Elements in queu: {}".format(
