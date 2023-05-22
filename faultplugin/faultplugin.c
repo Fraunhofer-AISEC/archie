@@ -851,7 +851,6 @@ void plugin_end_information_dump(GString *end_reason)
 	}
 	archie__data__init(msg);
 
-	int *error = NULL;
 	if(end_point->location.trignum == 4)
 	{
 		msg->end_point = 1;
@@ -967,12 +966,21 @@ void plugin_end_information_dump(GString *end_reason)
 	free(buf);
 	free_protobuf_message(msg);
 	qemu_plugin_outs("[DEBUG]: Finished\n");
-
-	//Stop Qemu executing
-	exit(EXIT_SUCCESS);
-	*error = 0;
 }
 
+
+/**
+ * plugin_end_information_dump_and_exit
+ *
+ * This function first writes all collected data to data pipe, then deletes all information structs
+ * Then it will cause a segfault to crash qemu to end it for the moment
+ */
+void plugin_end_information_dump_and_exit(GString *end_reason)
+{
+	plugin_end_information_dump(end_reason);
+	//Stop Qemu executing
+	exit(EXIT_SUCCESS);
+}
 
 void tb_exec_end_max_event(unsigned int vcpu_index, void *vcurrent)
 {
@@ -984,7 +992,7 @@ void tb_exec_end_max_event(unsigned int vcpu_index, void *vcurrent)
 			qemu_plugin_outs("[Max tb]: max tb counter reached");
 
 			g_autoptr(GString) reason = g_string_new("max tb");
-			plugin_end_information_dump(reason);
+			plugin_end_information_dump_and_exit(reason);
 		}
 		tb_counter = tb_counter + ins;
 	}
@@ -1007,7 +1015,7 @@ void tb_exec_end_cb(unsigned int vcpu_index, void *vcurrent)
 							end_point->location.address,
 							end_point->location.hitcounter);
 
-			plugin_end_information_dump(reason);
+			plugin_end_information_dump_and_exit(reason);
 		}
 		end_point->location.hitcounter--;
 	}
@@ -1327,6 +1335,44 @@ int readout_control_qemu(void)
 	return 0;
 }
 
+static struct sigaction old_abort_action;
+
+static void handle_abort(int no, siginfo_t * info, void *context)
+{
+	qemu_plugin_outs("[DEBUG]: Abort handler called\n");
+	g_autoptr(GString) end_reason = g_string_new("QEMU aborted");
+	plugin_end_information_dump(end_reason);
+	if (old_abort_action.sa_handler != SIG_DFL && old_abort_action.sa_handler != SIG_IGN) 
+	{
+		if (old_abort_action.sa_flags & SA_SIGINFO == SA_SIGINFO && old_abort_action.sa_sigaction != NULL)
+		{
+			qemu_plugin_outs("[DEBUG]: Calling old ABORT sigaction\n");
+			old_abort_action.sa_sigaction(no, info, context);
+		}
+		else if (old_abort_action.sa_handler != NULL)
+		{
+			qemu_plugin_outs("[DEBUG]: Calling old ABORT handler\n");
+			old_abort_action.sa_handler(no);
+		}
+	}
+}
+
+static int initialise_signal_handlers(GString * out)
+{
+	struct sigaction abort_action;
+	memset(&abort_action, 0, sizeof(abort_action));
+	abort_action.sa_sigaction = &handle_abort;
+	sigemptyset(&abort_action.sa_mask);
+	abort_action.sa_flags = SA_SIGINFO | SA_RESTART;
+	if (sigaction(SIGABRT, &abort_action, &old_abort_action) < 0)
+	{
+		g_string_append(out, "ERROR\n[ERROR] failed to set abort handler");
+		return -1;
+	}
+	return 0;
+}
+
+
 int initialise_plugin(GString * out, int argc, char **argv, int architecture)
 {
 	// Global FIFO data structure for control, data and config
@@ -1466,6 +1512,11 @@ QEMU_PLUGIN_EXPORT int qemu_plugin_install(qemu_plugin_id_t id,
 	if(mem_avl_root == NULL)
 	{
 		g_string_append(out, "ERROR\n[ERROR] mem avl tree initialisation failed");
+		goto ABORT;
+	}
+	if (initialise_signal_handlers(out) < 0)
+	{
+		g_string_append(out, "ERROR\n[ERROR] failed to initialise signal handlers");
 		goto ABORT;
 	}
 	g_string_append(out, "Done\n");
