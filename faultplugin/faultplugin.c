@@ -836,8 +836,8 @@ void free_protobuf_message(Archie__Data* msg)
 /**
  * plugin_end_information_dump
  *
- * This function first writes all collected data to data pipe, then deletes all information structs
- * Then it will cause a segfault to crash qemu to end it for the moment
+ * This function first writes all collected data to data pipe,
+ * then deletes all information structs.
  */
 void plugin_end_information_dump(GString *end_reason)
 {
@@ -972,8 +972,9 @@ void plugin_end_information_dump(GString *end_reason)
 /**
  * plugin_end_information_dump_and_exit
  *
- * This function first writes all collected data to data pipe, then deletes all information structs
- * Then it will cause a segfault to crash qemu to end it for the moment
+ * This function first writes all collected data to data pipe,
+ * then deletes all information structs. It will then call
+ * exit to exit the QEMU process.
  */
 void plugin_end_information_dump_and_exit(GString *end_reason)
 {
