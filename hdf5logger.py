@@ -132,6 +132,7 @@ class riscv_registers_table(tables.IsDescription):
 
 class flags_table(tables.IsDescription):
     qemu = tables.StringCol(1000)
+    arch = tables.StringCol(20)
     kernel = tables.StringCol(1000)
     plugin = tables.StringCol(1000)
     machine = tables.StringCol(1000)
@@ -354,6 +355,11 @@ def process_config(f, group, config, myfilter):
     config_row["mem_info"] = config["mem_info"]
     config_row["max_instruction_count"] = config["max_instruction_count"]
 
+    if "riscv" in config["qemu"]:
+        config_row["arch"] = "riscv"
+    elif "arm" in config["qemu"]:
+        config_row["arch"] = "arm"
+
     config_row.append()
 
     configtable.flush()
@@ -399,7 +405,7 @@ def process_config(f, group, config, myfilter):
 
 
 def hdf5collector(
-    hdf5path, mode, queue_output, num_exp, compressionlevel, logger_postprocess=None
+    hdf5path, mode, queue_output, num_elements, compressionlevel, logger_postprocess=None
 ):
     prctl.set_name("logger")
     prctl.set_proctitle("logger")
@@ -410,21 +416,22 @@ def hdf5collector(
         fault_group = f.create_group("/", "fault", "Group containing fault results")
     myfilter = tables.Filters(complevel=compressionlevel, complib="zlib")
     t0 = time.time()
-    tmp = "{}".format(num_exp)
+    tmp = "{}".format(num_elements)
     groupname = "experiment{:0" + "{}".format(len(tmp)) + "d}"
-    while num_exp > 0:
+
+    while num_elements > 0:
         # readout queue and get next output from qemu. Will block
         exp = queue_output.get()
-
         # Flags do not have a index
         if "index" not in exp:
             process_config(f, f.root, exp, myfilter)
+            num_elements = num_elements - 1
             continue
 
         t1 = time.time()
         logger.debug(
             "got exp {}, {} still need to be performed. Took {}s. Elements in queu: {}".format(
-                exp["index"], num_exp, t1 - t0, queue_output.qsize()
+                exp["index"], num_elements, t1 - t0, queue_output.qsize()
             )
         )
         t0 = t1
@@ -440,7 +447,7 @@ def hdf5collector(
                         index
                     )
                 )
-            num_exp = num_exp - 1
+            num_elements = num_elements - 1
         elif exp["index"] == -2:
             if "Pregoldenrun" in f.root:
                 raise ValueError("Pregoldenrun already exists!")
@@ -449,12 +456,14 @@ def hdf5collector(
                 "Pregoldenrun",
                 "Group containing all information regarding firmware running before start point is reached",
             )
+            num_elements = num_elements - 1
         elif exp["index"] == -1:
             if "Goldenrun" in f.root:
                 raise ValueError("Goldenrun already exists!")
             exp_group = f.create_group(
                 "/", "Goldenrun", "Group containing all information about goldenrun"
             )
+            num_elements = num_elements - 1
         else:
             raise ValueError("Index is not supposed to be negative")
 

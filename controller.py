@@ -24,6 +24,7 @@ from pathlib import Path
 import pickle
 import subprocess
 import sys
+import tables
 import time
 
 import pandas as pd
@@ -40,7 +41,7 @@ except ModuleNotFoundError:
     pass
 
 from faultclass import detect_type, detect_model, Fault, Trigger
-from faultclass import python_worker
+from faultclass import python_worker, Register
 from hdf5logger import hdf5collector
 from goldenrun import run_goldenrun
 
@@ -243,6 +244,149 @@ def get_system_ram():
     return mem
 
 
+def load_backup(hdf5_file):
+    hdf5_faultlist = []
+    with tables.open_file(hdf5_file, "r") as f_in:
+        # Process experiments
+        for index, experiments in enumerate(f_in.iter_nodes("/fault")):
+            # Process faults
+            for fault in experiments["faults"].iterrows():
+                new_fault = Fault(fault["fault_address"],
+                                  [],
+                                  fault["fault_type"],
+                                  fault["fault_model"],
+                                  fault["fault_lifespan"],
+                                  fault["fault_mask"],
+                                  fault["trigger_address"],
+                                  fault["trigger_hitcounter"],
+                                  fault["fault_num_bytes"],
+                                  False)
+                hdf5_faultlist.append({'delete': False, 'faultlist': [new_fault], 'index': index})
+
+        # Process start points
+        startpoints = []
+        for startpoint in f_in.root.config.start_addresses:
+            startpoints.append({"address": startpoint["address"], "counter": startpoint["counter"]})
+
+        # Process end points
+        endpoints = []
+        for endpoint in f_in.root.config.end_addresses:
+            endpoints.append({"address": endpoint["address"], "counter": endpoint["counter"]})
+
+        # Process flags
+        assert len(f_in.root.config.flags) == 1
+        hdf5_flags = f_in.root.config.flags.read()
+        hdf5_config = {"qemu": hdf5_flags["qemu"][0].decode('utf-8'),
+                 "kernel": hdf5_flags["kernel"][0].decode('utf-8'),
+                 "plugin": hdf5_flags["plugin"][0].decode('utf-8'),
+                 "machine": hdf5_flags["machine"][0].decode('utf-8'),
+                 "additional_qemu_args": hdf5_flags["additional_qemu_args"][0].decode('utf-8'),
+                 "bios": hdf5_flags["bios"][0].decode('utf-8'),
+                 "ring_buffer": bool(hdf5_flags["ring_buffer"][0]),
+                 "tb_exec_list": bool(hdf5_flags["tb_exec_list"][0]),
+                 "tb_info": bool(hdf5_flags["tb_info"][0]),
+                 "mem_info": bool(hdf5_flags["mem_info"][0]),
+                 "max_instruction_count": hdf5_flags["max_instruction_count"][0],
+                 "start": startpoints[0],
+                 "end": endpoints,
+                 "arch": hdf5_flags["arch"][0].decode('utf-8')}
+
+        # Process goldenrun data
+        hdf5_goldenrun = {"index": -1}
+
+        goldenrun_faultlist = []
+        for fault in f_in.root.Goldenrun.faults.iterrows():
+            new_fault = Fault(fault["fault_address"],
+                              [],
+                              fault["fault_type"],
+                              fault["fault_model"],
+                              fault["fault_lifespan"],
+                              fault["fault_mask"],
+                              fault["trigger_address"],
+                              fault["trigger_hitcounter"],
+                              fault["fault_num_bytes"],
+                              False)
+            goldenrun_faultlist.append(new_fault)
+        hdf5_goldenrun["faultlist"] = goldenrun_faultlist
+
+        tb_info_list = []
+        for tb_info in f_in.root.Goldenrun.tbinfo.iterrows():
+            tb_info_list.append({"assembler": tb_info["assembler"].decode("utf-8"),
+                                 "identity": tb_info["identity"],
+                                 "ins_count": tb_info["ins_count"],
+                                 "num_exec": tb_info["num_exec"],
+                                 "size": tb_info["size"]})
+        hdf5_goldenrun["tbinfo"] = tb_info_list
+
+        tb_exec_list = []
+        for tb_exec in f_in.root.Goldenrun.tbexeclist.iterrows():
+            tb_exec_list.append({"pos": tb_exec["pos"],
+                                 "tb": tb_exec["tb"]})
+        hdf5_goldenrun["tbexec"] = tb_exec_list
+
+        mem_info = []
+        for mem in f_in.root.Goldenrun.meminfo.iterrows():
+            mem_info.append({"address": mem["address"],
+                             "counter": mem["counter"],
+                             "direction": mem["direction"],
+                             "insaddr": mem["insaddr"],
+                             "size": mem["size"],
+                             "tbid": mem["tbid"]})
+        hdf5_goldenrun["meminfo"] = mem_info
+
+        # Process goldenrun registers
+        register_list = []
+
+        if hdf5_config["arch"] == "riscv":
+            register_type = Register.RISCV
+            reg_size = 32
+            reg_name = "x"
+            rows = f_in.root.Goldenrun.riscvregisters.iterrows()
+        elif hdf5_config["arch"] == "arm":
+            register_type = Register.ARM
+            reg_size = 16
+            reg_name = "r"
+            rows = f_in.root.Goldenrun.armregisters.iterrows()
+
+        for reg in rows:
+            registers = {"pc": reg["pc"],
+                         "tbcounter": reg["tbcounter"]}
+            for i in range(0, reg_size):
+                registers[f"{reg_name}{i}"] = reg[f"{reg_name}{i}"]
+
+            # Last element of register_values is XPSR for Arm, PC for RISCV
+            if register_type == Register.ARM:
+                registers["xpsr"] = reg[f"{reg_name}{reg_size}"]
+            elif register_type == Register.RISCV:
+                registers[f"{reg_name}{reg_size}"] = reg[f"{reg_name}{reg_size}"]
+
+            register_list.append(registers)
+
+        hdf5_goldenrun["riscvregisters"] = register_list
+
+    return hdf5_faultlist, hdf5_config, hdf5_goldenrun
+
+
+def compare_configs(config_qemu, backup_config):
+    try:
+        assert config_qemu["qemu"] == backup_config["qemu"]
+        assert config_qemu["kernel"] == backup_config["kernel"]
+        assert config_qemu["plugin"] == backup_config["plugin"]
+        assert config_qemu["machine"] == backup_config["machine"]
+        assert config_qemu["additional_qemu_args"] == backup_config["additional_qemu_args"]
+        assert config_qemu["bios"] == backup_config["bios"]
+        assert config_qemu["ring_buffer"] == backup_config["ring_buffer"]
+        assert config_qemu["tb_exec_list"] == backup_config["tb_exec_list"]
+        assert config_qemu["tb_info"] == backup_config["tb_info"]
+        assert config_qemu["mem_info"] == backup_config["mem_info"]
+        assert config_qemu["max_instruction_count"] == backup_config["max_instruction_count"]
+    except AssertionError:
+        clogger.info("Backup config does not match")
+        return False
+
+    clogger.info("Backup config match")
+    return True
+
 def controller(
     hdf5path,
     hdf5mode,
@@ -275,16 +419,36 @@ def controller(
     queue_output = m.Queue()
     queue_ram_usage = m2.Queue()
 
+    # Number of config elements to write to HDF
+    # 1. Config Flags
+    # 2. Pre-goldenrun data
+    # 3. Goldenrun data
+    num_config_elements = 0
+
     prctl.set_name("Controller")
     prctl.set_proctitle("Python_Controller")
 
-    # Write flags to HDF5
-    queue_output.put(config_qemu)
-
-    # Storing and restoring goldenrun_data with pickle is a temporary fix
-    # A better solution is to parse the goldenrun_data from the existing hdf5 file
     goldenrun_data = {}
+
+    hdf5_file = Path(hdf5path)
+    if hdf5_file.is_file():
+        clogger.info(f"HDF5 file already exits")
+        [
+            backup_faultlist,
+            backup_config,
+            backup_goldenrun_data
+        ] = load_backup(hdf5_file)
+        configs_equal = compare_configs(backup_config, config_qemu)
+        if not configs_equal:
+            return
+        else:
+            hdf5mode = "a"
+            goldenrun = False
+            goldenrun_data = backup_goldenrun_data
+
     if goldenrun:
+        # Write flags to HDF5
+        queue_output.put(config_qemu)
         [
             config_qemu["max_instruction_count"],
             goldenrun_data,
@@ -292,20 +456,13 @@ def controller(
         ] = run_goldenrun(
             config_qemu, qemu_output, queue_output, faultlist, qemu_pre, qemu_post
         )
-        pickle.dump(
-            (config_qemu["max_instruction_count"], goldenrun_data, faultlist),
-            lzma.open("bkup_goldenrun_results.xz", "wb"),
-        )
+
+        num_config_elements = 3
 
         clogger.info(f"Got {len(faultlist)} fault entries")
-        if goldenrun_only:
-            return config_qemu
-    else:
-        (
-            config_qemu["max_instruction_count"],
-            goldenrun_data,
-            faultlist,
-        ) = pickle.load(lzma.open("bkup_goldenrun_results.xz", "rb"))
+
+    if goldenrun_only:
+        faultlist = []
 
     if iend != -1:
         faultlist = faultlist[: iend + 1]
@@ -313,13 +470,75 @@ def controller(
     if istart != -1:
         faultlist = faultlist[istart:]
 
+    # Remove already simulated faults
+    clogger.info("Identifying already simulated faults")
+
+    hdf5_file = Path(hdf5path)
+    if not hdf5_file.is_file():
+        clogger.info(
+            f"Identified no already simulated faults, {len(faultlist)} remain"
+        )
+    else:
+        # Collect list of simulated faults
+        existing_faults = []
+
+        with tables.open_file(hdf5path, "r") as f_in:
+            for group in f_in.walk_groups("/fault"):
+                if group._v_depth != 2:
+                    continue
+
+                fault_entry = group.faults
+
+                assert len(fault_entry) == 1
+
+                fault = fault_entry[0]
+                fault_str = f"{fault['fault_address']:x}_" \
+                            f"{fault['fault_lifespan']:x}_" \
+                            f"{fault['fault_mask']:x}_" \
+                            f"{fault['fault_model']:x}_" \
+                            f"{fault['fault_num_bytes']}_" \
+                            f"{fault['fault_type']}_" \
+                            f"{fault['trigger_address']:x}_" \
+                            f"{fault['trigger_hitcounter']}"
+
+                if fault_str not in existing_faults:
+                    existing_faults.append(fault_str)
+
+        clogger.info(f"Found {len(existing_faults)} unique existing faults")
+
+        # Filter faultlist to remove already simulated faults
+        new_faultlist = []
+
+        for fault_entry in faultlist:
+            assert len(fault_entry["faultlist"]) == 1
+
+            fault = fault_entry["faultlist"][0]
+            fault_str = f"{fault.address:x}_" \
+                        f"{fault.lifespan:x}_" \
+                        f"{fault.mask:x}_" \
+                        f"{fault.model:x}_" \
+                        f"{fault.num_bytes}_" \
+                        f"{fault.type}_" \
+                        f"{fault.trigger.address:x}_" \
+                        f"{fault.trigger.hitcounter}"
+
+            if fault_str not in existing_faults:
+                new_faultlist.append(fault_entry)
+
+        clogger.info(
+            f"Identified {len(faultlist) - len(new_faultlist)} already "
+            f"simulated faults, {len(new_faultlist)} remain"
+        )
+
+        faultlist = new_faultlist
+
     p_logger = Process(
         target=logger,
         args=(
             hdf5path,
             hdf5mode,
             queue_output,
-            len(faultlist),
+            len(faultlist) + num_config_elements,
             compressionlevel,
             logger_postprocess,
         ),
