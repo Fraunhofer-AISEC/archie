@@ -324,15 +324,16 @@ def load_backup(hdf5_file):
                                  "tb": tb_exec["tb"]})
         hdf5_goldenrun["tbexec"] = tb_exec_list
 
-        mem_info = []
-        for mem in f_in.root.Goldenrun.meminfo.iterrows():
-            mem_info.append({"address": mem["address"],
-                             "counter": mem["counter"],
-                             "direction": mem["direction"],
-                             "insaddr": mem["insaddr"],
-                             "size": mem["size"],
-                             "tbid": mem["tbid"]})
-        hdf5_goldenrun["meminfo"] = mem_info
+        if hdf5_config["mem_info"]:
+            mem_info = []
+            for mem in f_in.root.Goldenrun.meminfo.iterrows():
+                mem_info.append({"address": mem["address"],
+                                 "counter": mem["counter"],
+                                 "direction": mem["direction"],
+                                 "insaddr": mem["insaddr"],
+                                 "size": mem["size"],
+                                 "tbid": mem["tbid"]})
+            hdf5_goldenrun["meminfo"] = mem_info
 
         # Process goldenrun registers
         register_list = []
