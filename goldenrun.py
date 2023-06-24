@@ -26,7 +26,6 @@ from calculate_trigger import calculate_trigger_addresses
 from faultclass import Fault
 from faultclass import python_worker
 
-
 logger = logging.getLogger(__name__)
 
 
