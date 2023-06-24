@@ -50,6 +50,7 @@ class fault_table(tables.IsDescription):
     fault_mask_upper = tables.UInt64Col()
     fault_mask = tables.UInt64Col()
     fault_num_bytes = tables.UInt8Col()
+    fault_wildcard = tables.BoolCol()
 
 
 class memory_dump_table(tables.IsDescription):
@@ -116,6 +117,34 @@ class riscv_registers_table(tables.IsDescription):
     x30 = tables.UInt64Col()
     x31 = tables.UInt64Col()
     x32 = tables.UInt64Col()
+
+
+class config_table(tables.IsDescription):
+    qemu = tables.StringCol(1000)
+    kernel = tables.StringCol(1000)
+    plugin = tables.StringCol(1000)
+    machine = tables.StringCol(1000)
+    additional_qemu_args = tables.StringCol(1000)
+    bios = tables.StringCol(1000)
+    ring_buffer = tables.BoolCol()
+    tb_exec_list = tables.BoolCol()
+    tb_info = tables.BoolCol()
+    mem_info = tables.BoolCol()
+    max_instruction_count = tables.UInt64Col()
+    memory_dump = tables.BoolCol()
+
+
+class hash_table(tables.IsDescription):
+    qemu_hash = tables.StringCol(32)
+    fault_hash = tables.StringCol(32)
+    kernel_hash = tables.StringCol(32)
+    bios_hash = tables.StringCol(32)
+    hash_function = tables.StringCol(16)
+
+
+class address_table(tables.IsDescription):
+    address = tables.UInt64Col()
+    counter = tables.UInt64Col()
 
 
 binary_atom = tables.UInt8Atom()
@@ -218,11 +247,11 @@ def process_dumps(f, group, memdumplist, myfilter):
     memdumpstable.close()
 
 
-def process_faults(f, group, faultlist, endpoint, end_reason, myfilter):
+def process_faults(f, group, faultlist, endpoint, end_reason, myfilter, name="faults"):
     # create table
     faulttable = f.create_table(
         group,
-        "faults",
+        name,
         fault_table,
         "Fault list table that contains the fault configuration used for this experiment",
         expectedrows=(len(faultlist)),
@@ -241,6 +270,7 @@ def process_faults(f, group, faultlist, endpoint, end_reason, myfilter):
         faultrow["fault_mask_upper"] = (fault.mask >> 64) & (pow(2, 64) - 1)
         faultrow["fault_mask"] = fault.mask & (pow(2, 64) - 1)
         faultrow["fault_num_bytes"] = fault.num_bytes
+        faultrow["fault_wildcard"] = fault.wildcard
         faultrow.append()
     faulttable.flush()
     faulttable.close()
@@ -316,8 +346,126 @@ def process_memory_info(f, group, meminfolist, myfilter):
     meminfotable.close()
 
 
+def process_config(f, configgroup, exp, myfilter):
+    hashtable = f.create_table(
+        configgroup,
+        "hash",
+        hash_table,
+        "",
+        expectedrows=1,
+        filters=myfilter,
+    )
+
+    hash_table_row = hashtable.row
+    for file, f_hash in exp["hash"].items():
+        hash_table_row[file] = f_hash
+    hash_table_row["hash_function"] = exp["hash_function"]
+
+    hash_table_row.append()
+
+    hashtable.flush()
+    hashtable.close()
+
+    configtable = f.create_table(
+        configgroup,
+        "parameters",
+        config_table,
+        "",
+        expectedrows=1,
+        filters=myfilter,
+    )
+
+    config_row = configtable.row
+    config_row["qemu"] = exp["qemu"]
+    config_row["kernel"] = exp["kernel"]
+    config_row["plugin"] = exp["plugin"]
+    config_row["machine"] = exp["machine"]
+    config_row["additional_qemu_args"] = exp["additional_qemu_args"]
+    config_row["bios"] = exp["bios"]
+    config_row["ring_buffer"] = exp["ring_buffer"]
+    config_row["tb_exec_list"] = exp["tb_exec_list"]
+    config_row["tb_info"] = exp["tb_info"]
+    config_row["mem_info"] = exp["mem_info"]
+    config_row["max_instruction_count"] = exp["max_instruction_count"]
+
+    config_row.append()
+
+    configtable.flush()
+    configtable.close()
+
+    starttable = f.create_table(
+        configgroup,
+        "start_address",
+        address_table,
+        "",
+        expectedrows=(len(exp["start"])),
+        filters=myfilter,
+    )
+
+    start_row = starttable.row
+    start_row["address"] = exp["start"]["address"]
+    start_row["counter"] = exp["start"]["counter"]
+
+    start_row.append()
+
+    starttable.flush()
+    starttable.close()
+
+    endtable = f.create_table(
+        configgroup,
+        "end_addresses",
+        address_table,
+        "",
+        expectedrows=(len(exp["end"])),
+        filters=myfilter,
+    )
+
+    end_row = endtable.row
+    for endpoint in exp["end"]:
+        end_row["address"] = endpoint["address"]
+        end_row["counter"] = endpoint["counter"]
+
+        end_row.append()
+
+    endtable.flush()
+    endtable.close()
+
+
+def process_backup(f, configgroup, exp, myfilter):
+    process_config(f, configgroup, exp["config"], myfilter)
+
+    fault_expanded_group = f.create_group(
+        configgroup, "expanded_faults", "Group containing expanded input faults"
+    )
+
+    tmp = "{}".format(len(exp["expanded_faultlist"]))
+    exp_name = "experiment{:0" + "{}".format(len(tmp)) + "d}"
+
+    for exp_number in range(0, len(exp["expanded_faultlist"])):
+        exp_group = f.create_group(
+            fault_expanded_group, exp_name.format(exp_number), "Group containing faults"
+        )
+
+        process_faults(
+            f,
+            exp_group,
+            exp["expanded_faultlist"][exp_number]["faultlist"],
+            0,
+            "not executed",
+            myfilter,
+        )
+
+
 def hdf5collector(
-    hdf5path, mode, queue_output, num_exp, compressionlevel, logger_postprocess=None
+    hdf5path,
+    mode,
+    queue_output,
+    num_exp,
+    compressionlevel,
+    logger_postprocess=None,
+    log_goldenrun=True,
+    log_config=False,
+    overwrite_faults=False,
 ):
     prctl.set_name("logger")
     prctl.set_proctitle("logger")
@@ -330,7 +478,14 @@ def hdf5collector(
     t0 = time.time()
     tmp = "{}".format(num_exp)
     groupname = "experiment{:0" + "{}".format(len(tmp)) + "d}"
-    while num_exp > 0:
+
+    log_pregoldenrun = log_goldenrun
+
+    if overwrite_faults:
+        for n in f.root.fault._f_iter_nodes():
+            n._f_remove(recursive=True)
+
+    while num_exp > 0 or log_goldenrun or log_pregoldenrun or log_config:
         # readout queue and get next output from qemu. Will block
         exp = queue_output.get()
         t1 = time.time()
@@ -353,7 +508,7 @@ def hdf5collector(
                     )
                 )
             num_exp = num_exp - 1
-        elif exp["index"] == -2:
+        elif exp["index"] == -2 and log_pregoldenrun:
             if "Pregoldenrun" in f.root:
                 raise ValueError("Pregoldenrun already exists!")
             exp_group = f.create_group(
@@ -361,14 +516,26 @@ def hdf5collector(
                 "Pregoldenrun",
                 "Group containing all information regarding firmware running before start point is reached",
             )
-        elif exp["index"] == -1:
+            log_pregoldenrun = False
+        elif exp["index"] == -1 and log_goldenrun:
             if "Goldenrun" in f.root:
                 raise ValueError("Goldenrun already exists!")
             exp_group = f.create_group(
                 "/", "Goldenrun", "Group containing all information about goldenrun"
             )
+            log_goldenrun = False
+        elif exp["index"] == -3 and log_config:
+            if "backup" in f.root:
+                raise ValueError("Backup already exists!")
+            exp_group = f.create_group(
+                "/", "Backup", "Group containing backup and run information"
+            )
+
+            process_backup(f, exp_group, exp, myfilter)
+            log_config = False
+            continue
         else:
-            raise ValueError("Index is not supposed to be negative")
+            continue
 
         datasets = []
         datasets.append((process_tbinfo, "tbinfo"))
