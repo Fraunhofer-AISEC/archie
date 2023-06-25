@@ -228,7 +228,7 @@ def calculate_trigger_addresses(fault_list, goldenrun_tb_exec, goldenrun_tb_info
     lists = build_filters(goldenrun_tb_info)
     for list in lists:
         list = list.reverse()
-    for faults in tqdm(fault_list):
+    for faults in tqdm(fault_list, desc="Calculating trigger addresses"):
         for fault in faults["faultlist"]:
             if fault.trigger.address >= 0 or fault.trigger.hitcounter == 0:
                 continue

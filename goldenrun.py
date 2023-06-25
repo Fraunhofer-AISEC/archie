@@ -389,7 +389,7 @@ def process_wildcard_faults(faultconfig, tbexec, tbinfo):
         logger.info("No wildcard fault")
         return
 
-    pbar = tqdm(total=n_wildcard_faults)
+    pbar = tqdm(total=n_wildcard_faults, desc="Processing wildcards")
     for faultentry in faultconfig:
         expanded_faults = []
 
