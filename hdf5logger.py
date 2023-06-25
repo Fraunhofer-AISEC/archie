@@ -20,7 +20,7 @@ import time
 import numpy
 import prctl
 import tables
-
+from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -441,7 +441,9 @@ def process_backup(f, configgroup, exp, myfilter):
     tmp = "{}".format(len(exp["expanded_faultlist"]))
     exp_name = "experiment{:0" + "{}".format(len(tmp)) + "d}"
 
-    for exp_number in range(0, len(exp["expanded_faultlist"])):
+    for exp_number in tqdm(
+        range(len(exp["expanded_faultlist"])), desc="Creating backup"
+    ):
         exp_group = f.create_group(
             fault_expanded_group, exp_name.format(exp_number), "Group containing faults"
         )
@@ -482,7 +484,11 @@ def hdf5collector(
     log_pregoldenrun = log_goldenrun
 
     if overwrite_faults:
-        for n in f.root.fault._f_iter_nodes():
+        for n in tqdm(
+            f.root.fault._f_iter_nodes(),
+            desc="Clearing old faults",
+            total=f.root.fault._v_nchildren,
+        ):
             n._f_remove(recursive=True)
 
     while num_exp > 0 or log_goldenrun or log_pregoldenrun or log_config:

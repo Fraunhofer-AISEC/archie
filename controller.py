@@ -438,7 +438,12 @@ def read_backup(hdf5_file):
         # Process expanded faults
         backup_expanded_faults = []
         exp_n = 0
-        for exp in f_in.root.Backup.expanded_faults:
+
+        for exp in tqdm(
+            f_in.root.Backup.expanded_faults,
+            total=f_in.root.Backup.expanded_faults._v_nchildren,
+            desc="Reading backup",
+        ):
             backup_exp = {
                 "index": exp_n,
                 "faultlist": [
@@ -589,8 +594,7 @@ def controller(
             continue
         goldenrun_data[keyword] = pd.DataFrame(goldenrun_data[keyword])
 
-    clogger.info("Simulating faults")
-    pbar = tqdm(total=len(faultlist))
+    pbar = tqdm(total=len(faultlist), desc="Simulating faults")
     itter = 0
     while 1:
         if len(p_list) == 0 and itter == len(faultlist):
