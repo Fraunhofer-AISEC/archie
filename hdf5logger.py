@@ -471,7 +471,7 @@ def hdf5collector(
 ):
     prctl.set_name("logger")
     prctl.set_proctitle("logger")
-    f = tables.open_file(hdf5path, mode)
+    f = tables.open_file(hdf5path, mode, max_group_width=65536)
     if "fault" in f.root:
         fault_group = f.root.fault
     else:
