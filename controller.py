@@ -509,7 +509,7 @@ def controller(
     goldenrun_data = {}
 
     hdf5_file = Path(hdf5path)
-    if hdf5_file.is_file():
+    if hdf5_file.is_file() and not args.overwrite:
         clogger.info("HDF5 file already exits")
         try:
             [
@@ -518,7 +518,9 @@ def controller(
                 backup_goldenrun_data,
             ] = read_backup(hdf5_file)
         except NameError:
-            clogger.warning("Backup could not be found in the HDF5 file")
+            clogger.warning(
+                "Backup could not be found in the HDF5 file, run with the overwrite flag to overwrite!"
+            )
             return config_qemu
         except tables.NoSuchNodeError:
             clogger.warning(
@@ -528,7 +530,9 @@ def controller(
 
         clogger.info("Checking the backup")
         if not check_backup(args, config_qemu, backup_config):
-            clogger.warning("Backup does not match, ending the execution!")
+            clogger.warning(
+                "Backup does not match, run with the overwrite flag to overwrite!"
+            )
             return config_qemu
 
         clogger.info("Backup matched and will be used")
@@ -773,6 +777,13 @@ def get_argument_parser():
     parser.add_argument(
         "--disable-ring-buffer",
         help="Disable use of the ring buffer for storing TB execution order information",
+        action="store_true",
+        required=False,
+    )
+    parser.add_argument(
+        "--overwrite",
+        "-o",
+        help="Overwrite the existing file",
         action="store_true",
         required=False,
     )
