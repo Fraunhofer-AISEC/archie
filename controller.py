@@ -152,7 +152,7 @@ def build_fault_list(conf_list, combined_faults, ret_faults):
         faultdev["num_bytes"] = [0]
     if faultdev["fault_address"] == "*":
         faultdev["fault_address"] = ["*"]
-    if type(faultdev["fault_address"]) == list and "*" in faultdev["fault_address"]:
+    if isinstance(faultdev["fault_address"], list) and "*" in faultdev["fault_address"]:
         wildcard_fault = True
 
     ftype = detect_type(faultdev["fault_type"])
@@ -570,7 +570,7 @@ def process_arguments(args):
 
         qemu_conf["start"] = faultlist["start"]
     if "end" in faultlist:
-        if type(faultlist["end"]) == dict:
+        if isinstance(faultlist["end"], dict):
             faultlist["end"] = [faultlist["end"]]
         for endpoint in faultlist["end"]:
             if endpoint["counter"] == 0:
