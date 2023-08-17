@@ -26,19 +26,6 @@ logger = logging.getLogger(__name__)
 
 
 # Tables for storing the elements from queue
-class translation_block_table(tables.IsDescription):
-    identity = tables.UInt64Col()
-    size = tables.UInt64Col()
-    ins_count = tables.UInt64Col()
-    num_exec = tables.UInt64Col()
-    assembler = tables.StringCol(1000)
-
-
-class translation_block_faulted_table(tables.IsDescription):
-    faultaddress = tables.UInt64Col()
-    assembler = tables.StringCol(1000)
-
-
 class translation_block_exec_table(tables.IsDescription):
     tb = tables.UInt64Col()
     pos = tables.UInt64Col()
@@ -135,6 +122,14 @@ binary_atom = tables.UInt8Atom()
 
 
 def process_tb_faulted(f, group, tbfaulted_list, myfilter):
+    assembler_size = max(
+        (len(tbfaulted["assembly"]) for tbfaulted in tbfaulted_list), default=1
+    )
+
+    class translation_block_faulted_table(tables.IsDescription):
+        faultaddress = tables.UInt64Col()
+        assembler = tables.StringCol(assembler_size)
+
     tbfaultedtable = f.create_table(
         group,
         "tbfaulted",
@@ -252,6 +247,15 @@ def process_faults(f, group, faultlist, endpoint, end_reason, myfilter):
 
 
 def process_tbinfo(f, group, tbinfolist, myfilter):
+    assembler_size = max((len(tbinfo["assembler"]) for tbinfo in tbinfolist), default=1)
+
+    class translation_block_table(tables.IsDescription):
+        identity = tables.UInt64Col()
+        size = tables.UInt64Col()
+        ins_count = tables.UInt64Col()
+        num_exec = tables.UInt64Col()
+        assembler = tables.StringCol(assembler_size)
+
     tbinfotable = f.create_table(
         group,
         "tbinfo",
