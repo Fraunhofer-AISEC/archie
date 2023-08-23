@@ -476,6 +476,7 @@ def controller(
     num_workers,
     queuedepth,
     compressionlevel,
+    goldenrun_only,
     goldenrun=True,
     logger=hdf5collector,
     qemu_pre=None,
@@ -535,7 +536,10 @@ def controller(
             )
             return config_qemu
 
-        clogger.info("Backup matched and will be used")
+        clogger.info("Backup matched")
+
+        if goldenrun_only:
+            return config_qemu
 
         faultlist = backup_expanded_faultlist
         config_qemu["max_instruction_count"] = backup_config["max_instruction_count"]
@@ -560,6 +564,13 @@ def controller(
     else:
         log_config = False
         log_goldenrun = False
+
+    if goldenrun_only:
+        faultlist = []
+        overwrite_faults = False
+
+        log_config = True
+        log_goldenrun = True
 
     p_logger = Process(
         target=logger,
@@ -598,7 +609,7 @@ def controller(
             continue
         goldenrun_data[keyword] = pd.DataFrame(goldenrun_data[keyword])
 
-    pbar = tqdm(total=len(faultlist), desc="Simulating faults")
+    pbar = tqdm(total=len(faultlist), desc="Simulating faults", disable=not len(faultlist))
     itter = 0
     while 1:
         if len(p_list) == 0 and itter == len(faultlist):
@@ -697,7 +708,11 @@ def controller(
         "Took {}:{}:{} to complete all experiments".format(int(h), int(m), int(s))
     )
 
-    tperindex = (t1 - t0) / len(faultlist)
+    if faultlist:
+        tperindex = (t1 - t0) / len(faultlist)
+    else:
+        tperindex = (t1 - t0)
+
     tperworker = tperindex / num_workers
     clogger.debug(
         "Took average of {}s per fault, python worker rough runtime is {}s".format(
@@ -787,6 +802,12 @@ def get_argument_parser():
         action="store_true",
         required=False,
     )
+    parser.add_argument(
+        "--goldenrun-only",
+        help="Only run goldenrun",
+        action="store_true",
+        required=False,
+    )
     return parser
 
 
@@ -822,6 +843,12 @@ def process_arguments(args):
             f"{hdf5file.parent}"
         )
         exit(1)
+
+    if args.goldenrun_only:
+        parguments["goldenrun_only"] = True
+        parguments["goldenrun"] = True
+    else:
+        parguments["goldenrun_only"] = False
 
     qemu_conf = json.load(args.qemu)
     args.qemu.close()
@@ -930,6 +957,7 @@ if __name__ == "__main__":
         parguments["num_workers"],  # num_workers
         parguments["queuedepth"],  # queuedepth
         parguments["compressionlevel"],  # compressionlevel
+        parguments["goldenrun_only"],
         parguments["goldenrun"],  # goldenrun
         hdf5collector,  # logger
         None,  # qemu_pre
