@@ -506,6 +506,7 @@ def hdf5collector(
         ):
             n._f_remove(recursive=True)
 
+    pbar = tqdm(total=num_exp, desc="Simulating faults", disable=not num_exp)
     while num_exp > 0 or log_goldenrun or log_pregoldenrun or log_config:
         if stop_signal.value == 1:
             break
@@ -531,6 +532,7 @@ def hdf5collector(
                     )
                 )
             num_exp = num_exp - 1
+            pbar.update(1)
         elif exp["index"] == -2 and log_pregoldenrun:
             if "Pregoldenrun" in f.root:
                 raise ValueError("Pregoldenrun already exists!")
@@ -584,5 +586,6 @@ def hdf5collector(
 
         del exp
 
+    pbar.close()
     f.close()
     logger.debug("Data Logging done")

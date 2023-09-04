@@ -701,9 +701,6 @@ def controller(
     # Handlers are used for a graceful exit, in case of a signal
     register_signal_handlers()
 
-    pbar = tqdm(
-        total=len(faultlist), desc="Simulating faults", disable=not len(faultlist)
-    )
     itter = 0
     while 1:
         if stop_signal_received.value == 1:
@@ -788,8 +785,6 @@ def controller(
             # Find finished processes
             p["process"].join(timeout=0)
             if p["process"].is_alive() is False:
-                # Update the progress bar
-                pbar.update(1)
                 # Recalculate moving average
                 p_time_list.append(current_time - p["start_time"])
                 len_p_time_list = len(p_time_list)
@@ -802,7 +797,6 @@ def controller(
                 break
 
     clogger.debug("{} experiments remaining in queue".format(queue_output.qsize()))
-    pbar.close()
     p_logger.join()
 
     clogger.debug("Done with qemu and logger")
