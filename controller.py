@@ -487,6 +487,60 @@ def read_backup(hdf5_file):
     return [backup_expanded_faults, backup_config, backup_goldenrun]
 
 
+def read_simulated_faults(hdf5_file):
+    with tables.open_file(hdf5_file, "r") as f_in:
+        # Process simulated faults
+        simulated_faults_hash = set()
+        exp_n = 0
+
+        for exp in tqdm(
+            f_in.root.fault,
+            total=f_in.root.fault._v_nchildren,
+            desc="Reading simulated faults",
+        ):
+            simulated_exp = {
+                "index": exp_n,
+                "faultlist": [
+                    Fault(
+                        fault["fault_address"],
+                        [],
+                        fault["fault_type"],
+                        fault["fault_model"],
+                        fault["fault_lifespan"],
+                        fault["fault_mask"],
+                        fault["trigger_address"],
+                        fault["trigger_hitcounter"],
+                        fault["fault_num_bytes"],
+                        fault["fault_wildcard"],
+                    )
+                    for fault in exp.faults.iterrows()
+                ],
+            }
+
+            config_string = ""
+            for fault in simulated_exp["faultlist"]:
+                config_string += str(fault)
+            simulated_faults_hash.add(config_string)
+
+            exp_n = exp_n + 1
+
+        return simulated_faults_hash
+
+
+def get_not_simulated_faults(faultlist, simulated_faults):
+    missing_faultlist = []
+
+    for faultconfig in faultlist:
+        config_string = ""
+        for fault in faultconfig["faultlist"]:
+            config_string += str(fault)
+
+        if config_string not in simulated_faults:
+            missing_faultlist.append(faultconfig)
+
+    return missing_faultlist
+
+
 def controller(
     args,
     hdf5mode,
@@ -495,6 +549,7 @@ def controller(
     num_workers,
     queuedepth,
     compressionlevel,
+    missing_only,
     goldenrun_only,
     goldenrun=True,
     logger=hdf5collector,
@@ -590,6 +645,20 @@ def controller(
 
         log_config = True
         log_goldenrun = True
+
+    if missing_only:
+        simulated_faults = read_simulated_faults(hdf5_file)
+        faultlist = get_not_simulated_faults(faultlist, simulated_faults)
+
+        log_config = False
+        log_goldenrun = False
+
+        overwrite_faults = False
+
+        if faultlist:
+            clogger.info(f"{len(faultlist)} faults are missing and will be simulated")
+        else:
+            clogger.info("All faults are already simulated")
 
     p_logger = Process(
         target=logger,
@@ -748,7 +817,7 @@ def controller(
     if faultlist:
         tperindex = (t1 - t0) / len(faultlist)
     else:
-        tperindex = (t1 - t0)
+        tperindex = t1 - t0
 
     tperworker = tperindex / num_workers
     clogger.debug(
@@ -845,6 +914,13 @@ def get_argument_parser():
         action="store_true",
         required=False,
     )
+    parser.add_argument(
+        "--missing-only",
+        "-m",
+        help="Only run missing experiments",
+        action="store_true",
+        required=False,
+    )
     return parser
 
 
@@ -886,6 +962,13 @@ def process_arguments(args):
         parguments["goldenrun"] = True
     else:
         parguments["goldenrun_only"] = False
+
+    if args.missing_only and hdf5file.is_file():
+        parguments["missing_only"] = True
+        parguments["hdf5mode"] = "a"
+        parguments["goldenrun"] = False
+    else:
+        parguments["missing_only"] = False
 
     qemu_conf = json.load(args.qemu)
     args.qemu.close()
@@ -994,7 +1077,8 @@ if __name__ == "__main__":
         parguments["num_workers"],  # num_workers
         parguments["queuedepth"],  # queuedepth
         parguments["compressionlevel"],  # compressionlevel
-        parguments["goldenrun_only"],
+        parguments["missing_only"],  # missing_only flag
+        parguments["goldenrun_only"],  # goldenrun_only flag
         parguments["goldenrun"],  # goldenrun
         hdf5collector,  # logger
         None,  # qemu_pre
