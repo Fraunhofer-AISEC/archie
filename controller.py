@@ -19,8 +19,9 @@
 import argparse
 import hashlib
 import logging
-from multiprocessing import Manager, Process
+from multiprocessing import Manager, Process, Value
 from pathlib import Path
+import signal
 import subprocess
 import sys
 import tables
@@ -46,6 +47,24 @@ from hdf5logger import hdf5collector
 from goldenrun import run_goldenrun
 
 clogger = logging.getLogger(__name__)
+
+stop_signal_received = Value("i", 0)
+
+
+def signal_handler(signum, frame):
+    global stop_signal_received
+    stop_signal_received.value = 1
+
+
+def register_signal_handlers():
+    signal.signal(
+        signal.SIGTERM,
+        signal_handler,
+    )
+    signal.signal(
+        signal.SIGINT,
+        signal_handler,
+    )
 
 
 def build_ranges_dict(fault_dict):
@@ -579,6 +598,7 @@ def controller(
             hdf5mode,
             queue_output,
             len(faultlist),
+            stop_signal_received,
             compressionlevel,
             logger_postprocess,
             log_config,
@@ -609,9 +629,26 @@ def controller(
             continue
         goldenrun_data[keyword] = pd.DataFrame(goldenrun_data[keyword])
 
-    pbar = tqdm(total=len(faultlist), desc="Simulating faults", disable=not len(faultlist))
+    # Handlers are used for a graceful exit, in case of a signal
+    register_signal_handlers()
+
+    pbar = tqdm(
+        total=len(faultlist), desc="Simulating faults", disable=not len(faultlist)
+    )
     itter = 0
     while 1:
+        if stop_signal_received.value == 1:
+            clogger.info(
+                "Stop signal received, finishing the current write operation..."
+            )
+
+            p_logger.join()
+
+            for p in p_list:
+                p["process"].kill()
+
+            break
+
         if len(p_list) == 0 and itter == len(faultlist):
             clogger.debug("Done inserting qemu jobs")
             break

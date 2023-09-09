@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import signal
 import logging
 import time
 
@@ -23,6 +24,14 @@ import tables
 from tqdm import tqdm
 
 logger = logging.getLogger(__name__)
+
+
+def register_signal_handlers():
+    """
+    Ignore signals, they will be handled by the controller.py anyway
+    """
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
 # Tables for storing the elements from queue
@@ -431,7 +440,7 @@ def process_config(f, configgroup, exp, myfilter):
     endtable.close()
 
 
-def process_backup(f, configgroup, exp, myfilter):
+def process_backup(f, configgroup, exp, myfilter, stop_signal):
     process_config(f, configgroup, exp["config"], myfilter)
 
     fault_expanded_group = f.create_group(
@@ -444,6 +453,9 @@ def process_backup(f, configgroup, exp, myfilter):
     for exp_number in tqdm(
         range(len(exp["expanded_faultlist"])), desc="Creating backup"
     ):
+        if stop_signal.value == 1:
+            break
+
         exp_group = f.create_group(
             fault_expanded_group, exp_name.format(exp_number), "Group containing faults"
         )
@@ -463,12 +475,15 @@ def hdf5collector(
     mode,
     queue_output,
     num_exp,
+    stop_signal,
     compressionlevel,
     logger_postprocess=None,
     log_goldenrun=True,
     log_config=False,
     overwrite_faults=False,
 ):
+    register_signal_handlers()
+
     prctl.set_name("logger")
     prctl.set_proctitle("logger")
     f = tables.open_file(hdf5path, mode, max_group_width=65536)
@@ -492,6 +507,8 @@ def hdf5collector(
             n._f_remove(recursive=True)
 
     while num_exp > 0 or log_goldenrun or log_pregoldenrun or log_config:
+        if stop_signal.value == 1:
+            break
         # readout queue and get next output from qemu. Will block
         exp = queue_output.get()
         t1 = time.time()
@@ -537,7 +554,7 @@ def hdf5collector(
                 "/", "Backup", "Group containing backup and run information"
             )
 
-            process_backup(f, exp_group, exp, myfilter)
+            process_backup(f, exp_group, exp, myfilter, stop_signal)
             log_config = False
             continue
         else:
