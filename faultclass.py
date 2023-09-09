@@ -123,6 +123,19 @@ class Fault:
         self.num_bytes = num_bytes
         self.wildcard = wildcard
 
+    def __str__(self):
+        return (
+            f"{self.trigger.address}"
+            f"{self.trigger.hitcounter}"
+            f"{self.address}"
+            f"{self.type}"
+            f"{self.model}"
+            f"{self.lifespan}"
+            f"{self.mask}"
+            f"{self.num_bytes}"
+            f"{self.wildcard}"
+        )
+
 
 def write_fault_list_to_pipe(fault_list, fifo):
     fault_pack = fault_pb2.FaultPack()
