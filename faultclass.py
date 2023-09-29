@@ -19,6 +19,7 @@ import logging
 from multiprocessing import Process
 import os
 import shlex
+import signal
 import subprocess
 import time
 
@@ -80,6 +81,18 @@ def detect_model(fault_model):
             fault_model
         )
     )
+
+
+class Timeout:
+    raised = False
+
+    def __init__(self):
+        signal.signal(signal.SIGINT, self.raise_timeout)
+        signal.signal(signal.SIGTERM, self.raise_timeout)
+
+    def raise_timeout(self, *args):
+        self.raised = True
+        raise KeyboardInterrupt
 
 
 class Register(IntEnum):
@@ -562,6 +575,8 @@ def readout_data(
     max_ram_usage = 0
     regtype = None
 
+    timeout = Timeout()
+
     # Load data from the pipe
     data_protobuf = data_pb2.Data()
     data_protobuf.ParseFromString(pipe.read())
@@ -655,7 +670,7 @@ def readout_data(
 
     max_ram_usage = gather_process_ram_usage(queue_ram_usage, max_ram_usage)
 
-    return max_ram_usage
+    return (max_ram_usage, timeout.raised)
 
 
 def create_fifos():
@@ -825,7 +840,7 @@ def python_worker(
 
         # From here Qemu has started execution. Now prepare for
         # data extraction
-        mem = readout_data(
+        (mem, timeout_raised) = readout_data(
             data_fifo,
             index,
             queue_output,
@@ -836,6 +851,11 @@ def python_worker(
             qemu_post=qemu_post,
             qemu_pre_data=qemu_pre_data,
         )
+
+        if timeout_raised:
+            logger.error(f"Terminate process {index}")
+            p_qemu.terminate()
+
         p_qemu.join()
         delete_fifos()
 
