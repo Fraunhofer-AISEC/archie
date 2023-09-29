@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import queue
 import signal
 import logging
 import time
@@ -511,7 +512,11 @@ def hdf5collector(
         if stop_signal.value == 1:
             break
         # readout queue and get next output from qemu. Will block
-        exp = queue_output.get()
+        try:
+            exp = queue_output.get_nowait()
+        except queue.Empty:
+            continue
+
         t1 = time.time()
         logger.debug(
             "got exp {}, {} still need to be performed. Took {}s. Elements in queu: {}".format(

@@ -784,6 +784,19 @@ def controller(
             p = p_list[i]
             # Find finished processes
             p["process"].join(timeout=0)
+
+            # Kill process if timeout exceeded and gdb is not used
+            if (
+                p["process"].is_alive()
+                and (time.time() - p["start_time"]) > config_qemu["timeout"]
+                and not config_qemu.get("gdb", False)
+            ):
+                clogger.error(
+                    f"Process {p['process'].name} ran into timeout and was killed!"
+                )
+                p["process"].terminate()
+                p["process"].join()
+
             if p["process"].is_alive() is False:
                 # Recalculate moving average
                 p_time_list.append(current_time - p["start_time"])
@@ -1006,6 +1019,7 @@ def process_arguments(args):
     qemu_conf["tb_info"] = faultlist.get("tb_info", True)
     qemu_conf["mem_info"] = faultlist.get("mem_info", False)
     qemu_conf["ring_buffer"] = faultlist.get("ring_buffer", True)
+    qemu_conf["timeout"] = faultlist.get("timeout", 1200)
 
     # Command line argument takes precedence
     if args.disable_ring_buffer:
