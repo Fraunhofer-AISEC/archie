@@ -231,3 +231,6 @@ Use of the ring buffer implementation to store the list of executed translation 
 
 ### mem_info
 Enable collection of data on all memory accesses. The configuration property expects to be passed a boolean value. If unspecified, it will default to `false`.
+
+### timeout
+Maximum execution duration in seconds for a single experiment. If exceeded, ARCHIE will be stopped. If unspecified, it will default to `1200` seconds.
