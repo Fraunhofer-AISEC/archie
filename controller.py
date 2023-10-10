@@ -357,6 +357,7 @@ def read_backup(hdf5_file):
             "tb_info": bool(hdf5_flags["tb_info"][0]),
             "mem_info": bool(hdf5_flags["mem_info"][0]),
             "max_instruction_count": int(hdf5_flags["max_instruction_count"][0]),
+            "fault_count": int(hdf5_flags["fault_count"][0]),
             "start": {
                 "address": int(hdf5_start_address["address"][0]),
                 "counter": int(hdf5_start_address["counter"][0]),
@@ -436,7 +437,7 @@ def read_backup(hdf5_file):
             rows = f_in.root.Goldenrun.armregisters.iterrows()
         else:
             raise tables.NoSuchNodeError(
-                "No supported register architecture could be found in the HDF5 file"
+                "No supported register architecture could be found in the HDF5 file, run with the overwrite flag to overwrite"
             )
 
         backup_goldenrun[register_backup_name] = []
@@ -455,6 +456,14 @@ def read_backup(hdf5_file):
             backup_goldenrun[register_backup_name].append(registers)
 
         # Process expanded faults
+        if (
+            f_in.root.Backup.expanded_faults._v_nchildren
+            != backup_config["fault_count"]
+        ):
+            raise tables.NoSuchNodeError(
+                f"Out of {backup_config['fault_count']} faults, only {f_in.root.Backup.expanded_faults._v_nchildren} are available in the backup. Run with the overwrite flag to overwrite"
+            )
+
         backup_expanded_faults = []
         exp_n = 0
 
@@ -597,10 +606,8 @@ def controller(
                 "Backup could not be found in the HDF5 file, run with the overwrite flag to overwrite!"
             )
             return config_qemu
-        except tables.NoSuchNodeError:
-            clogger.warning(
-                "Invalid/unsupported backup file, run with the overwrite flag to overwrite!"
-            )
+        except tables.NoSuchNodeError as e:
+            clogger.warning(e)
             return config_qemu
 
         clogger.info("Checking the backup")

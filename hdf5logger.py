@@ -142,6 +142,7 @@ class config_table(tables.IsDescription):
     mem_info = tables.BoolCol()
     max_instruction_count = tables.UInt64Col()
     memory_dump = tables.BoolCol()
+    fault_count = tables.UInt64Col()
 
 
 class hash_table(tables.IsDescription):
@@ -397,6 +398,7 @@ def process_config(f, configgroup, exp, myfilter):
     config_row["tb_info"] = exp["tb_info"]
     config_row["mem_info"] = exp["mem_info"]
     config_row["max_instruction_count"] = exp["max_instruction_count"]
+    config_row["fault_count"] = exp["fault_count"]
 
     config_row.append()
 
@@ -442,6 +444,8 @@ def process_config(f, configgroup, exp, myfilter):
 
 
 def process_backup(f, configgroup, exp, myfilter, stop_signal):
+    exp["config"]["fault_count"] = len(exp["expanded_faultlist"])
+
     process_config(f, configgroup, exp["config"], myfilter)
 
     fault_expanded_group = f.create_group(
