@@ -22,6 +22,7 @@ import logging
 from multiprocessing import Manager, Process, Value
 from pathlib import Path
 import signal
+from statistics import mean
 import subprocess
 import sys
 import tables
@@ -806,12 +807,10 @@ def controller(
 
             if p["process"].is_alive() is False:
                 # Recalculate moving average
-                p_time_list.append(current_time - p["start_time"])
-                len_p_time_list = len(p_time_list)
-                if len_p_time_list > num_workers + 2:
-                    p_time_list.pop(0)
-                p_time_mean = sum(p_time_list) / len_p_time_list
-                clogger.debug("Current running Average {}".format(p_time_mean))
+                p_time_list.append(time.time() - p["start_time"])
+                p_time_list = p_time_list[-(num_workers + 2) :]  # remove old entries
+                p_time_mean = mean(p_time_list)
+                clogger.debug(f"Process time running mean: {p_time_mean:.3f}s")
                 # Remove process from list
                 p_list.pop(i)
                 break
