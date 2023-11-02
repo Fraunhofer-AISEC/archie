@@ -21,6 +21,7 @@ import hashlib
 import logging
 from multiprocessing import Manager, Process, Value
 from pathlib import Path
+import psutil
 import signal
 from statistics import mean
 import subprocess
@@ -788,21 +789,33 @@ def controller(
         if len(times) > 0:
             time_max = max(times)
 
-        for i in range(len(p_list)):
-            p = p_list[i]
+        for i, p in enumerate(p_list):
             # Find finished processes
             p["process"].join(timeout=0)
 
-            # Kill process if timeout exceeded and gdb is not used
+            # Halt experiment if timeout duration exceeded
+            # If gdb is used the timeout is not applicable
             if (
                 p["process"].is_alive()
                 and (time.time() - p["start_time"]) > config_qemu["timeout"]
                 and not config_qemu.get("gdb", False)
             ):
-                clogger.error(
-                    f"Process {p['process'].name} ran into timeout and was killed!"
-                )
-                p["process"].terminate()
+                clogger.warning(f"Experiment {p['faults']['index']} ran into timeout")
+                # Search for qemu thread and kill qemu process if found
+                # qemu process is a child process of qemu thread
+                qemu_thread_name = f"qemu{p['faults']['index']}"
+                for process in psutil.process_iter():
+                    if process.name() != qemu_thread_name:
+                        continue
+                    clogger.debug(f"{process.name()} killed")
+                    assert (
+                        len(process.children()) == 1
+                    ), "qemu thread should only have qemu child process"
+                    process.children()[0].terminate()
+                    break
+                else:
+                    clogger.debug(f"{qemu_thread_name} not found to kill")
+                # Wait for worker process terminates
                 p["process"].join()
 
             if p["process"].is_alive() is False:
