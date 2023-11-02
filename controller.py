@@ -575,7 +575,7 @@ def controller(
     """
     clogger.info("Controller start")
 
-    t0 = time.time()
+    total_start_time = time.time()
 
     hdf5path = args.hdf5file
     qemu_output = args.debug
@@ -773,21 +773,10 @@ def controller(
         mem_max = max(mem_list)
 
         # Calculate length of running processes
-        times.clear()
-        time_max = 0
-        current_time = time.time()
-        for i in range(len(p_list)):
-            p = p_list[i]
-            tmp = current_time - p["start_time"]
-            # If the current processing time is lower than moving average, do not punish the time
-            if tmp < p_time_mean:
-                times.append(0)
-            else:
-                times.append(tmp - p_time_mean)
-        # Find max time in list (This list will show the longest running
-        # process minus the moving average)
-        if len(times) > 0:
-            time_max = max(times)
+        times = [time.time() - p["start_time"] for p in p_list]
+        # If the current processing time is lower than moving average, do not punish the time
+        times = [max(0, time - p_time_mean) for time in times]
+        time_max = max(times) if times else 0
 
         for i, p in enumerate(p_list):
             # Find finished processes
@@ -829,29 +818,15 @@ def controller(
 
     clogger.debug("{} experiments remaining in queue".format(queue_output.qsize()))
     p_logger.join()
+    clogger.debug("Done with qemu and logger, controller exit")
 
-    clogger.debug("Done with qemu and logger")
+    total_runtime = time.time() - total_start_time
+    total_runtime_hh_mm_ss = time.strftime("%H:%M:%S", time.gmtime(total_runtime))
+    clogger.info(f"Took {total_runtime_hh_mm_ss} to complete all experiments")
 
-    t1 = time.time()
-    m, s = divmod(t1 - t0, 60)
-    h, m = divmod(m, 60)
-    clogger.info(
-        "Took {}:{}:{} to complete all experiments".format(int(h), int(m), int(s))
-    )
+    time_per_experiment = total_runtime / len(faultlist) if faultlist else total_runtime
+    clogger.debug(f"Average runtimes\n" f"\tper fault:\t{time_per_experiment:.3f}s")
 
-    if faultlist:
-        tperindex = (t1 - t0) / len(faultlist)
-    else:
-        tperindex = t1 - t0
-
-    tperworker = tperindex / num_workers
-    clogger.debug(
-        "Took average of {}s per fault, python worker rough runtime is {}s".format(
-            tperindex, tperworker
-        )
-    )
-
-    clogger.debug("controller exit")
     return config_qemu
 
 
