@@ -754,7 +754,7 @@ def controller(
                 ),
             )
             p.start()
-            p_list.append({"process": p, "start_time": time.time()})
+            p_list.append({"process": p, "start_time": time.time(), "faults": faults})
             clogger.debug(f"Started worker {faults['index']}. Running: {len(p_list)}.")
             clogger.debug(f"Fault address: {faults['faultlist'][0].address}")
             clogger.debug(
