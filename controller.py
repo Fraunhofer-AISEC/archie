@@ -729,8 +729,11 @@ def controller(
             break
 
         if (
-            mem_limit_calc(mem_max, len(p_list), queue_output.qsize(), time_max)
-            < max_ram
+            (
+                not args.enable_ram_mgmt
+                or mem_limit_calc(mem_max, len(p_list), queue_output.qsize(), time_max)
+                < max_ram
+            )
             and len(p_list) < num_workers
             and itter < len(faultlist)
             and queue_output.qsize() < queuedepth
@@ -918,6 +921,12 @@ def get_argument_parser():
         "--missing-only",
         "-m",
         help="Only run missing experiments",
+        action="store_true",
+        required=False,
+    )
+    parser.add_argument(
+        "--enable-ram-mgmt",
+        help="Use with caution, may lead to drastic performance decrease",
         action="store_true",
         required=False,
     )
