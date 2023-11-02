@@ -826,7 +826,6 @@ def controller(
                 clogger.debug(f"Process time running mean: {p_time_mean:.3f}s")
                 # Remove process from list
                 p_list.pop(i)
-                break
 
     clogger.debug("{} experiments remaining in queue".format(queue_output.qsize()))
     p_logger.join()
