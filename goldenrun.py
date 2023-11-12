@@ -232,7 +232,7 @@ def generate_wildcard_faults(fault, tbexec, tbinfo):
         tb_info_total_size = tbinfo_tb_indexed.at[tb, "size"]
 
         tb_info_asm = [
-            int(instr.split("]")[0], 16) for instr in tb_info_asm.split("[")[1:]
+            int(instr.split("]")[0], 16) for instr in tb_info_asm.split("[ ")[1:]
         ]
         tb_info_size = list(numpy.diff(tb_info_asm))
         tb_info_size.append(
