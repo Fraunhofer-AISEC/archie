@@ -186,14 +186,14 @@ For example when you want to shift a bit mask, you can use the type "shift" as f
 The shift corresponds to a left shift. In the above case, the number 3 is subsequently shifted by 7, 8, 9 to the left (binary representation).
 
 Another example of a dictionary is the use of instruction width dependent fault masks.
-This only works in combination with the wildcard mode, the instruction fault type, and the overwrite fault model.
+This only works in combination with the instruction fault type and the overwrite fault model.
 Below is an example fault configuration.
 This example targets an ARM Cortex M4 processor.
 The scenario is to apply an instruction skip.
 Therefore, the fault_mask contains opcodes for a 16-bit and 32-bit NOP instruction.
 Note that the num_bytes must not be set as this changes depending on the targeted instruction.
 
-Example:
+Example 1:
 ```
 {
   "fault_address"         : ["*"],
@@ -206,6 +206,18 @@ Example:
 }
 ```
 
+Example 2:
+```
+{
+  "fault_address"         : [0x08000056],
+  "fault_type"            : "instruction",
+  "fault_model"           : "overwrite",
+  "fault_lifespan"        : [100],
+  "fault_mask"            : {"type": "dict", "dict": {"2": 0xbf00, "4": 0x8000f3af}},
+  "trigger_address"       : [0x08000040],
+  "trigger_counter"       : [1]
+}
+```
 
 ##### trigger_address
 Defines the trigger instruction, i.e., when this instruction has been executed, the faults (defined in fault mask) are inserted into the respective fault address. The trigger_address must be an executed instruction! For every fault address, there is a separate test, i.e., experiment. 
