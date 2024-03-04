@@ -108,6 +108,7 @@ def run_goldenrun(
         tbexec = pd.DataFrame(experiment["data"]["tbexec"])
         tbinfo = pd.DataFrame(experiment["data"]["tbinfo"])
         process_wildcard_faults(faultconfig, tbexec, tbinfo)
+        process_single_faults(faultconfig, tbexec, tbinfo)
         calculate_trigger_addresses(faultconfig, tbexec, tbinfo)
         faultconfig = checktriggers_in_tb(faultconfig, experiment["data"])
 
@@ -418,3 +419,45 @@ def process_wildcard_faults(faultconfig, tbexec, tbinfo):
         new_fault_entry["faultlist"] = [wildcard_faults[i]]
         new_fault_entry["delete"] = False
         faultconfig.append(new_fault_entry)
+
+
+def process_single_faults(faultconfig, tbexec, tbinfo):
+    remove_list = []
+    for faultentry in faultconfig:
+        for fault in faultentry["faultlist"]:
+            if not isinstance(fault.mask, dict):
+                continue
+
+            tbinfo_tb_indexed = tbinfo.set_index("id")
+            for tb in tqdm(tbexec["tb"], leave=False):
+                tb_info_asm = tbinfo_tb_indexed.at[tb, "assembler"]
+                tb_info_total_size = tbinfo_tb_indexed.at[tb, "size"]
+
+                tb_info_asm = [
+                    int(instr.split("]")[0], 16)
+                    for instr in tb_info_asm.split("[ ")[1:]
+                ]
+                if fault.address not in tb_info_asm:
+                    continue
+
+                tb_info_size = list(numpy.diff(tb_info_asm))
+                tb_info_size.append(
+                    tb_info_total_size - sum(tb_info_size)
+                )  # calculate the last instr size
+
+                fault_idx = tb_info_asm.index(fault.address)
+
+                try:
+                    fault.mask = fault.mask[str(tb_info_size[fault_idx])]
+                    fault.num_bytes = tb_info_size[fault_idx]
+                except (ValueError, KeyError):
+                    logger.info(
+                        f"No matching fault mask could be found for fault entry {faultentry['index']}, "
+                        f"removing the fault entry..."
+                    )
+                    remove_list.append(faultentry)
+
+                break
+
+    for faultentry in remove_list:
+        faultconfig.remove(faultentry)
