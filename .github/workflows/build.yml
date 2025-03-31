@@ -34,3 +34,23 @@ jobs:
 
     - name: Run ARCHIE
       run: cd examples/stm32; ./run.sh; cd ../riscv64; ./run.sh
+
+  build_with_script:
+    name: Test build.sh Script
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Clone Repository
+      uses: actions/checkout@v4
+
+    - name: test bash build script
+      run: |
+        (cat <<END
+        1
+        y
+        1
+        2
+        y
+        1
+        END
+        ) | bash build.sh
