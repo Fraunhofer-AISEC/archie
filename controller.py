@@ -54,7 +54,6 @@ stop_signal_received = Value("i", 0)
 
 
 def signal_handler(signum, frame):
-    global stop_signal_received
     stop_signal_received.value = 1
 
 
