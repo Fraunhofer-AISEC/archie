@@ -28,18 +28,25 @@ Alternatively, the build instructions are provided in the following sections.
 ARCHIE was tested with QEMU 6.0, which is available in [archie-qemu](https://github.com/Fraunhofer-AISEC/archie-qemu).
 First make sure the basic requirements for QEMU are installed. See the wiki for required libraries (https://wiki.qemu.org/Hosts/Linux).
 On Ubuntu systems, you can install the minimum required packages with:
-```
+
+```sh
 sudo apt install git build-essential ninja-build libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev
+```
+
+Additionally, the faultplugin requires the following package:
+
+```sh
+sudo apt install libprotobuf-c-dev
 ```
 
 Checkout git submodule qemu, which should checkout tcg_plugin_dev of the git. See code segment below.
 
-```
+```sh
 git submodule update --init
 mkdir -p qemu/build/debug
 cd qemu/build/debug
 ./../../configure --target-list=arm-softmmu --enable-debug --enable-plugins --disable-sdl --disable-gtk --disable-curses --disable-vnc
-make -j {CPUCORENUMBER}
+make -j $(nproc)
 cd ../../../faultplugin/
 make
 ```
@@ -79,7 +86,7 @@ The program output will be stored in an HDF5 file. For a description of how to i
 ### Running the program
 
 To run the python3 program, type:
-```
+```sh
 python3 controller.py --debug --fault fault.json --qemu qemuconf.json output.hdf5
 ```
 Replace *fault.json* and *qemuconf.json* with the corresponding files.
@@ -87,7 +94,7 @@ Replace *fault.json* and *qemuconf.json* with the corresponding files.
 The *--debug flag* creates a log file for each experiment. The name of the log file has the following format: ``log_experiment-id.txt``, e.g., ``log_4.txt`` for the experiment with ID 4.
 
 To obtain further information on the input parameters, type:
-```
+```sh
 python3 controller.py --help
 ```
 
@@ -96,7 +103,7 @@ python3 controller.py --help
 It is possible to connect to a running QEMU instance with GDB. To use this feature in the framework and observe introduced faults the *--gdb* flag can be set.
 ARCHIE will start the internal QEMU process with GDB enabled and halts at the startup of the simulated system. To connect to QEMU from GDB use port 1234.
 It also will force the framework to only spawn one worker and it will step through all faults configured in *fault.json*. If one specific fault is required, the JSON file needs to be edited to only contain this specific fault.
-```
+```sh
 python3 controller.py --gdb --fault fault.json --qemu qemuconf.json output.hdf5
 ```
 To connect from GDB to the QEMU session use
@@ -104,4 +111,3 @@ To connect from GDB to the QEMU session use
 targ rem:localhost:1234
 ```
 QEMU will wait unil the GDB session is attached. The debugging mode is only suitable for the analysis of a low number of faults. Stepping through a large amount of faults is cumbersome. This should be considered when adjusting the JSON files.
-

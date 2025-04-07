@@ -1,7 +1,7 @@
-pandas~=1.5
+pandas==2.1.4
 python-prctl==1.8.1
-tables==3.7.0
+tables==3.9.2
 json5==0.9.10
 protobuf==4.21.12
 tqdm==4.65.0
-psutil==5.9.6
+psutil==5.9.8
