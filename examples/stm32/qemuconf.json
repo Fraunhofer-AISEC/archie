@@ -1,5 +1,5 @@
 {
-	"qemu" : "../../qemu/build/debug/arm-softmmu/qemu-system-arm",
+	"qemu" : "../../qemu/build/debug/qemu-system-arm",
 	"bios" : "",
 	"kernel" : "minimal.elf",
 	"plugin" : "../../faultplugin/libfaultplugin.so",
