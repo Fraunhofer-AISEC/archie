@@ -7,11 +7,8 @@
 #
 
 #BUILD_DIR := $(CURDIR)/../../../build/release
-BUILD_DIR := $(CURDIR)/../qemu/build/debug
-
-include $(BUILD_DIR)/config-host.mak
-
-VPATH += $(SRC_PATH)/tests/plugin/develop
+SRC_PATH := $(CURDIR)/../qemu
+BUILD_DIR := $(SRC_PATH)/build/debug
 
 NAMES :=
 #NAMES += bb
@@ -27,14 +24,14 @@ SONAMES := $(addsuffix .so,$(addprefix lib,$(NAMES)))
 
 # The main QEMU uses Glib extensively so it's perfectly fine to use it
 # in plugins (which many example do).
-CFLAGS = $(GLIB_CFLAGS)
+CFLAGS = $(shell pkg-config --cflags glib-2.0)
 CFLAGS += -fPIC
-CFLAGS += $(if $(findstring no-psabi,$(QEMU_CFLAGS)),-Wpsabi)
 CFLAGS += -I$(SRC_PATH)/include
 #CFLAGS += -I$(SRC_PATH)/include/hw/core
 CFLAGS += -I$(BUILD_DIR)
 # Used for protobuf
 LDLIBS = -lprotobuf-c
+LDLIBS += $(shell pkg-config --libs glib-2.0)
 all: $(SONAMES)
 
 lib/avl.o: lib/avl.c
