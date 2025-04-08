@@ -329,10 +329,10 @@ void print_assembler(struct qemu_plugin_tb *tb)
 	g_autoptr(GString) out = g_string_new("");
 	g_string_printf(out, "\n");
 
-	for(int i = 0; i < tb->n; i++)
+	for(int i = 0; i < qemu_plugin_tb_n_insns(tb); i++)
 	{
 		struct qemu_plugin_insn *insn = qemu_plugin_tb_get_insn(tb, i);
-		g_string_append_printf(out, "%8lx ", insn->vaddr);
+		g_string_append_printf(out, "%8lx ", qemu_plugin_insn_vaddr(insn));
 		g_string_append_printf(out, "%s\n", qemu_plugin_insn_disas( insn));
 	}
 	qemu_plugin_outs(out->str);
@@ -628,7 +628,7 @@ void evaluate_trigger(struct qemu_plugin_tb *tb,int trigger_address_number)
 		return;
 	}
 	/* Trigger tb met, now registering callback for exec to see, if we need to inject fault */
-	for(int i = 0; i < tb->n; i++)
+	for(int i = 0; i < qemu_plugin_tb_n_insns(tb); i++)
 	{
 		struct qemu_plugin_insn *insn = qemu_plugin_tb_get_insn(tb, i);
 		if((current->fault.trigger.address >= qemu_plugin_insn_vaddr(insn))&&(current->fault.trigger.address < qemu_plugin_insn_vaddr(insn) + qemu_plugin_insn_size(insn)))
@@ -680,7 +680,7 @@ void eval_live_fault_callback(struct qemu_plugin_tb *tb, int live_fault_callback
 	else
 	{
 		/* Register exec callback */
-		for(int i = 0; i < tb->n; i++)
+		for(int i = 0; i < qemu_plugin_tb_n_insns(tb); i++)
 		{
 			struct qemu_plugin_insn *insn = qemu_plugin_tb_get_insn(tb, i);
 			qemu_plugin_outs("[TB Exec]: Register exec callback function\n");
@@ -1042,11 +1042,12 @@ void tb_exec_start_cb(unsigned int vcpu_index, void *vcurrent)
 void handle_tb_translate_event(struct qemu_plugin_tb *tb)
 {
 	size_t tb_size = calculate_bytesize_instructions(tb);
+	uint64_t tb_vaddr = qemu_plugin_tb_vaddr(tb);
 	qemu_plugin_outs("Reached tb handle function\n");
 	/**Verify, that no trigger is called*/
 	for( int i = 0; i < fault_number; i++)
 	{
-		if((tb->vaddr <= *(fault_trigger_addresses + i))&&((tb->vaddr + tb_size) > *(fault_trigger_addresses + i)))
+		if((tb_vaddr <= *(fault_trigger_addresses + i))&&((tb_vaddr + tb_size) > *(fault_trigger_addresses + i)))
 		{
 			g_autoptr(GString) out = g_string_new("");
 			g_string_printf(out, "Met trigger address: %lx\n", *(fault_trigger_addresses + i) );
@@ -1081,6 +1082,7 @@ void handle_tb_translate_data(struct qemu_plugin_tb *tb)
 {
 	g_autoptr(GString) out = g_string_new("");
 	tb_info_t *tb_information = NULL;
+	size_t n_insns = qemu_plugin_tb_n_insns(tb);
 	if(tb_info_enabled == 1)
 	{
 		tb_information = add_tb_info(tb);
@@ -1090,10 +1092,10 @@ void handle_tb_translate_data(struct qemu_plugin_tb *tb)
 		qemu_plugin_register_vcpu_tb_exec_cb(tb, tb_exec_data_event, QEMU_PLUGIN_CB_RW_REGS, tb_information);
 	}
 	// inject counter
-	qemu_plugin_register_vcpu_tb_exec_cb(tb, tb_exec_end_max_event, QEMU_PLUGIN_CB_RW_REGS, (void *) tb->n);
+	qemu_plugin_register_vcpu_tb_exec_cb(tb, tb_exec_end_max_event, QEMU_PLUGIN_CB_RW_REGS, (void *) n_insns);
 	if( mem_info_list_enabled == 1)
 	{
-		for(int i = 0; i < tb->n; i++)
+		for(int i = 0; i < n_insns; i++)
 		{
 			struct qemu_plugin_insn *insn = qemu_plugin_tb_get_insn(tb, i);
 			qemu_plugin_register_vcpu_mem_cb( insn, memaccess_data_cb, QEMU_PLUGIN_CB_RW_REGS, QEMU_PLUGIN_MEM_RW, (void *) insn->vaddr);
@@ -1101,7 +1103,8 @@ void handle_tb_translate_data(struct qemu_plugin_tb *tb)
 	}
 	// DEBUG
 	GString *assembler = decode_assembler(tb);
-	g_string_append_printf(out, "[TB Info] tb id: %8lx\n[TB Info] tb size: %li\n[TB Info] Assembler:\n%s\n", tb->vaddr, tb->n, assembler->str);
+	g_string_append_printf(out, "[TB Info] tb id: %8lx\n[TB Info] tb size: %li\n[TB Info] Assembler:\n%s\n",
+						   qemu_plugin_tb_vaddr(tb), n_insns, assembler->str);
 	g_string_free(assembler, TRUE);
 
 
@@ -1117,6 +1120,8 @@ void handle_tb_translate_data(struct qemu_plugin_tb *tb)
  */
 static void vcpu_translateblock_translation_event(qemu_plugin_id_t id, struct qemu_plugin_tb *tb)
 {
+	uint64_t tb_vaddr = qemu_plugin_tb_vaddr(tb);
+
 	g_autoptr(GString) out = g_string_new("");
 	g_string_printf(out, "\n");
 
@@ -1147,9 +1152,9 @@ static void vcpu_translateblock_translation_event(qemu_plugin_id_t id, struct qe
 			{
 				size_t tb_size = calculate_bytesize_instructions(tb);
 				qemu_plugin_outs("[End]: Check endpoint\n");
-				if((tb->vaddr <= cur->location.address)&&((tb->vaddr + tb_size) > cur->location.address))
+				if((tb_vaddr <= cur->location.address)&&((tb_vaddr + tb_size) > cur->location.address))
 				{
-					for(int i = 0; i < tb->n; i++)
+					for(int i = 0; i < qemu_plugin_tb_n_insns(tb); i++)
 					{
 						struct qemu_plugin_insn *insn = qemu_plugin_tb_get_insn(tb, i);
 						if((cur->location.address >= qemu_plugin_insn_vaddr(insn))&&(cur->location.address < qemu_plugin_insn_vaddr(insn) + qemu_plugin_insn_size(insn)))
@@ -1166,7 +1171,7 @@ static void vcpu_translateblock_translation_event(qemu_plugin_id_t id, struct qe
 	else
 	{
 		size_t tb_size = calculate_bytesize_instructions(tb);
-		if((tb->vaddr <= start_point.address)&&((tb->vaddr + tb_size) > start_point.address))
+		if((tb_vaddr <= start_point.address)&&((tb_vaddr + tb_size) > start_point.address))
 		{
 			qemu_plugin_register_vcpu_tb_exec_cb(tb, tb_exec_start_cb, QEMU_PLUGIN_CB_RW_REGS, NULL);
 		}

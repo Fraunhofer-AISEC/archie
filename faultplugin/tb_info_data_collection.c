@@ -167,7 +167,7 @@ tb_info_t * add_tb_info(struct qemu_plugin_tb *tb)
 	g_autoptr(GString) out = g_string_new("");
 	g_string_printf(out, "\n");
 	tb_info_t tmp;
-	tmp.base_address = tb->vaddr;
+	tmp.base_address = qemu_plugin_tb_vaddr(tb);
 	g_string_append_printf(out, "[TB Info]: Search TB......");
 	tb_info_t * tb_information = (tb_info_t *) avl_find(tb_avl_root, &tmp); 	
 	if(tb_information == NULL)
@@ -177,8 +177,8 @@ tb_info_t * add_tb_info(struct qemu_plugin_tb *tb)
 		{
 			return NULL;
 		}
-		tb_information->base_address = tb->vaddr;
-		tb_information->instruction_count = tb->n;
+		tb_information->base_address = qemu_plugin_tb_vaddr(tb);
+		tb_information->instruction_count = qemu_plugin_tb_n_insns(tb);
 		tb_information->assembler = decode_assembler(tb);
 		tb_information->num_of_exec = 0;
 		tb_information->size = calculate_bytesize_instructions(tb);
@@ -221,10 +221,12 @@ GString* decode_assembler(struct qemu_plugin_tb *tb)
 {
 	GString* out = g_string_new("");
 
-	for(int i = 0; i < tb->n; i++)
+	for(int i = 0; i < qemu_plugin_tb_n_insns(tb); i++)
 	{
 		struct qemu_plugin_insn * insn = qemu_plugin_tb_get_insn(tb, i);
-		g_string_append_printf(out, "[ %8lx ]: %s !!", insn->vaddr, qemu_plugin_insn_disas(insn));
+		g_string_append_printf(out, "[ %8lx ]: %s !!",
+							   qemu_plugin_insn_vaddr(insn),
+							   qemu_plugin_insn_disas(insn));
 	}
 	return out;
 }
@@ -237,7 +239,9 @@ GString* decode_assembler(struct qemu_plugin_tb *tb)
 size_t calculate_bytesize_instructions(struct qemu_plugin_tb *tb)
 {
 	struct qemu_plugin_insn * insn_first = qemu_plugin_tb_get_insn(tb, 0);
-	struct qemu_plugin_insn * insn_last = qemu_plugin_tb_get_insn(tb, tb->n -1);
-	uint64_t size = (insn_last->vaddr - insn_first->vaddr) + insn_last->data->len;
+	size_t last_insn = qemu_plugin_tb_n_insns(tb) - 1;
+	struct qemu_plugin_insn * insn_last = qemu_plugin_tb_get_insn(tb, last_insn);
+	uint64_t size = qemu_plugin_insn_vaddr(insn_last) - qemu_plugin_insn_vaddr(insn_first)
+					+ qemu_plugin_insn_size(insn_last);
 	return (size_t) size;
 }
