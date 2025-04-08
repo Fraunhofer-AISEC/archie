@@ -128,10 +128,13 @@ void check_tb_faulted(struct qemu_plugin_tb *tb)
 	{
 		return;
 	}
+
 	size_t tb_size = calculate_bytesize_instructions(tb);
+	uint64_t tb_vaddr = qemu_plugin_tb_vaddr(tb);
+
 	for(int i = 0; i < current_triggers; i++)
 	{
-		if((*(active_triggers + i) >= tb->vaddr) && (*(active_triggers + i) <= tb->vaddr + tb_size) )
+		if((*(active_triggers + i) >= tb_vaddr) && (*(active_triggers + i) <= tb_vaddr + tb_size) )
 		{
 			g_autoptr(GString) out = g_string_new("");
 			g_string_printf(out, "[TBFaulted]: %lx\n", *(active_triggers + i));
