@@ -35,6 +35,18 @@ jobs:
     - name: Run ARCHIE
       run: cd examples/stm32; ./run.sh; cd ../riscv64; ./run.sh; cd ../stm32-timeout-wfi; ./run.sh
 
+    - name: Upload test artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-artifacts
+        path: |
+          examples/riscv64/*.txt
+          examples/riscv64/*.hdf5
+          examples/stm32/*.txt
+          examples/stm32/*.hdf5
+          examples/stm32-timeout-wfi/*.txt
+          examples/stm32-timeout-wfi/*.hdf5
+
   build_with_script:
     name: Test build.sh Script
     runs-on: ubuntu-latest
@@ -54,3 +66,63 @@ jobs:
         1
         END
         ) | bash build.sh
+
+  verify_stm32:
+    name: Verify results of stm32 experiment
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download test artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: test-artifacts
+          path : .
+
+      - name: Verify stm32 results
+        run: |
+          cat stm32/log_-2.txt | grep -A8 800006a | tail -8 | grep 'Reached end point'
+          cat stm32/log_-1.txt | grep -A8 8000056 | tail -8 | grep 'Reached end point'
+          cat stm32/log_0.txt | grep -A8 8000070 | tail -8 | grep 'Reached end point'
+          cat stm32/log_1.txt | grep -A8 8000070 | tail -8 | grep 'Reached end point'
+          cat stm32/log_2.txt | grep -A8 8000070 | tail -8 | grep 'Reached end point'
+
+  verify_stm32-timeout-wfi:
+    name: Verify results of stm32-timeout-wfi experiment
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download test artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: test-artifacts
+          path : .
+
+      - name: Verify stm32-timeout-wfi results
+        run: |
+          cat stm32-timeout-wfi/log_-2.txt | grep -A8 800006a | tail -8 | grep 'Reached end point'
+          cat stm32-timeout-wfi/log_-1.txt | grep -A8 8000056 | tail -8 | grep 'Reached end point'
+          cat stm32-timeout-wfi/log.txt | grep 'Experiment 0 ran into timeout'
+          cat stm32-timeout-wfi/log.txt | grep 'Experiment 1 ran into timeout'
+          cat stm32-timeout-wfi/log.txt | grep 'Experiment 2 ran into timeout'
+
+  verify_riscv64:
+    name: Verify results of riscv64 experiment
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download test artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: test-artifacts
+          path : .
+
+      - name: Verify riscv64 results
+        run: |
+          cat riscv64/log_-2.txt | grep -A8 80000014 | tail -8 | grep 'Reached end point'
+          cat riscv64/log_-1.txt | grep -A8 8000002a | tail -8 | grep 'Reached end point'
+          cat riscv64/log_0.txt | grep -A8 8000003c| tail -8 | grep 'Reached end point'
+          cat riscv64/log_1.txt | grep -A8 8000003c | tail -8 | grep 'Reached end point'
+          cat riscv64/log_2.txt | grep -A8 8000003c | tail -8 | grep 'Reached end point'
