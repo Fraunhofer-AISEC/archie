@@ -33,7 +33,7 @@ jobs:
       run: cd faultplugin; make -j; echo "done"
 
     - name: Run ARCHIE
-      run: cd examples/stm32; ./run.sh; cd ../riscv64; ./run.sh
+      run: cd examples/stm32; ./run.sh; cd ../riscv64; ./run.sh; cd ../stm32-timeout-wfi; ./run.sh
 
   build_with_script:
     name: Test build.sh Script

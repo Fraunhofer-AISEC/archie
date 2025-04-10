@@ -105,6 +105,8 @@ cd ..
 echo "Test ARCHIE"
 cd examples/stm32
 ./run.sh
+cd - && cd examples/stm32-timeout-wfi
+./run.sh
 cd - && cd examples/riscv64
 ./run.sh
 cd -
