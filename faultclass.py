@@ -237,8 +237,8 @@ def run_qemu(
         while ps.poll() is None:
             tmp = ps.stdout.read()
             if qemu_output is True:
-                f = open(f"log_{index}.txt", "wt", encoding="utf-8")
-                f.write(tmp.decode("utf-8"))
+                with open(f"log_{index}.txt", "wt", encoding="utf-8") as f:
+                    f.write(tmp.decode("utf-8"))
                 qlogger.debug(tmp.decode("utf-8"))
         qlogger.debug(f"Ended qemu for exp {index}! Took {time.time() - t0}")
     except KeyboardInterrupt:
