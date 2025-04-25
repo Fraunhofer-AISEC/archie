@@ -25,7 +25,7 @@ Alternatively, the build instructions are provided in the following sections.
 
 ## In [archie-qemu](https://github.com/Fraunhofer-AISEC/archie-qemu)
 
-ARCHIE was tested with QEMU 6.0, which is available in [archie-qemu](https://github.com/Fraunhofer-AISEC/archie-qemu).
+ARCHIE uses a modified version of QEMU 10.0, which is available in [archie-qemu](https://github.com/Fraunhofer-AISEC/archie-qemu).
 First make sure the basic requirements for QEMU are installed. See the wiki for required libraries (https://wiki.qemu.org/Hosts/Linux).
 On Ubuntu systems, you can install the minimum required packages with:
 
