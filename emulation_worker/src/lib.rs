@@ -5,7 +5,8 @@ use pyo3::{
     types::{PyDict, PyList},
 };
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::rc::Rc;
+use std::sync::RwLock;
 use time::macros::format_description;
 
 use unicorn_engine::unicorn_const::Permission;
@@ -92,15 +93,15 @@ fn run_unicorn(
     for obj in memmaplist.iter() {
         let memmap: &PyDict = obj.extract()?;
         let address: u64 = memmap.get_item("address").unwrap().extract()?;
-        let length: usize = memmap.get_item("length").unwrap().extract()?;
+        let size: usize = memmap.get_item("size").unwrap().extract()?;
         debug!(
             "Mapping memory at 0x{:x} size 0x{:x}",
             address & (u64::MAX ^ 0xfff),
-            usize::max(length, 0x1000)
+            usize::max(size, 0x1000)
         );
         match emu.mem_map(
             address & (u64::MAX ^ 0xfff),
-            usize::max(length, 0x1000),
+            usize::max(size, 0x1000),
             Permission::ALL,
         ) {
             Ok(()) => {}
@@ -151,8 +152,8 @@ fn run_unicorn(
         logs,
     };
 
-    let state_arc: Arc<State> = Arc::new(state);
-    initialize_hooks(emu, &state_arc, &faults, &memorydump, config)
+    let state_rc: Rc<State> = Rc::new(state);
+    initialize_hooks(emu, &state_rc, &faults, &memorydump, config)
         .expect("failed initializing hooks");
 
     let max_instruction_count: usize = config
@@ -165,7 +166,7 @@ fn run_unicorn(
         .unwrap_or_else(|_| error!("failed to emulate code at 0x{:x}", emu.pc_read().unwrap()));
 
     {
-        let state = Arc::clone(&state_arc);
+        let state = Rc::clone(&state_rc);
         state.arch_operator.dump_registers(
             emu,
             state.logs.registerlist.write().unwrap(),
@@ -174,7 +175,7 @@ fn run_unicorn(
     }
     info!("Finished emulation");
 
-    Python::with_gil(|py| Ok(state_arc.logs.to_object(py)))
+    Python::with_gil(|py| Ok(state_rc.logs.to_object(py)))
 }
 
 #[pymodule]
