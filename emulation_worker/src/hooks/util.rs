@@ -71,7 +71,7 @@ pub fn undo_faults(
     faults: RwLockReadGuard<HashMap<u64, Fault>>,
     mut live_faults: RwLockWriteGuard<PriorityQueue<(u64, BigUint), u64>>,
 ) -> Option<Fault> {
-    if live_faults.len() == 0 {
+    if live_faults.is_empty() {
         return None;
     }
 

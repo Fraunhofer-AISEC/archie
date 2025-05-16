@@ -1,7 +1,7 @@
 use log::{debug, info};
 use num::{BigUint, ToPrimitive};
 use pyo3::types::{PyDict, PyList};
-use std::{collections::HashMap, io, sync::Arc};
+use std::{collections::HashMap, io, rc::Rc};
 use unicorn_engine::unicorn_const::{HookType, MemType};
 use unicorn_engine::Unicorn;
 
@@ -10,7 +10,7 @@ use crate::{ArchitectureDependentOperations, Fault, FaultType, MemInfo, State};
 mod util;
 use util::{apply_model, calculate_fault_size, dump_memory, log_tb_exec, log_tb_info, undo_faults};
 
-fn block_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, size: u32, state: &Arc<State>) {
+fn block_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, size: u32, state: &Rc<State>) {
     // Save current tbid for meminfo logs
     let mut last_tbid = state.last_tbid.write().unwrap();
     *last_tbid = address;
@@ -20,7 +20,7 @@ fn block_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, size: u32, state: &Arc<
     let mut single_step_hook_handle = state.single_step_hook_handle.write().unwrap();
 
     // Remove single step hook if no more faults are live
-    if live_faults.len() == 0 && single_step_hook_handle.is_some() {
+    if live_faults.is_empty() && single_step_hook_handle.is_some() {
         uc.remove_hook(single_step_hook_handle.unwrap())
             .expect("failed removing single step hook");
         *single_step_hook_handle = None;
@@ -42,10 +42,10 @@ fn block_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, size: u32, state: &Arc<
             && fault.trigger.address >= address
             && fault.trigger.address <= (address + size as u64)
         {
-            let state_arc = Arc::clone(state);
+            let state_rc = Rc::clone(state);
             let single_step_hook_closure =
                 move |uc: &mut Unicorn<'_, ()>, address: u64, size: u32| {
-                    single_step_hook_cb(uc, address, size, &state_arc);
+                    single_step_hook_cb(uc, address, size, &state_rc);
                 };
             *single_step_hook_handle = Some(
                 uc.add_code_hook(u64::MIN, u64::MAX, single_step_hook_closure)
@@ -65,7 +65,7 @@ fn end_hook_cb(
     uc: &mut Unicorn<'_, ()>,
     address: u64,
     size: u32,
-    state: &Arc<State>,
+    state: &Rc<State>,
     first_endpoint: u64,
     memorydump: &Vec<HashMap<&str, u64>>,
 ) {
@@ -104,7 +104,7 @@ fn end_hook_cb(
     }
 }
 
-fn single_step_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, size: u32, state: &Arc<State>) {
+fn single_step_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, size: u32, state: &Rc<State>) {
     debug!(
         "Single step\taddr 0x{:x}\tinstructions {:?}",
         address,
@@ -147,13 +147,13 @@ fn mem_hook_cb(
     address: u64,
     size: usize,
     _value: i64,
-    state: &Arc<State>,
+    state: &Rc<State>,
 ) -> bool {
     let pc = uc.pc_read().unwrap();
 
     let mut meminfo = state.logs.meminfo.write().unwrap();
 
-    if let Some(mut element) = meminfo.get_mut(&(address, pc)) {
+    if let Some(element) = meminfo.get_mut(&(address, pc)) {
         element.counter += 1;
     } else {
         let last_tbid = *state.last_tbid.read().unwrap();
@@ -173,7 +173,7 @@ fn mem_hook_cb(
     true
 }
 
-fn fault_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, _size: u32, state: &Arc<State>) {
+fn fault_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, _size: u32, state: &Rc<State>) {
     let mut faults = state.faults.write().unwrap();
 
     let fault = faults.get_mut(&address).unwrap();
@@ -210,7 +210,10 @@ fn fault_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, _size: u32, state: &Arc
                 state.logs.memdumps.write().unwrap(),
             );
             let mut fault_data = apply_model(&data, fault).to_bytes_le();
-            fault_data.extend(std::iter::repeat(0).take(fault_size as usize - fault_data.len()));
+            fault_data.extend(std::iter::repeat_n(
+                0,
+                fault_size as usize - fault_data.len(),
+            ));
             uc.mem_write(fault.address, fault_data.as_slice())
                 .expect("failed writing fault data to memory");
             if matches!(fault.r#type, FaultType::Instruction) {
@@ -258,15 +261,15 @@ fn fault_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, _size: u32, state: &Arc
     );
 }
 
-fn initialize_mem_hook(emu: &mut Unicorn<()>, state_arc: &Arc<State>) -> io::Result<()> {
-    let state_arc = Arc::clone(state_arc);
+fn initialize_mem_hook(emu: &mut Unicorn<()>, state_rc: &Rc<State>) -> io::Result<()> {
+    let state_rc = Rc::clone(state_rc);
     let mem_hook_closure =
         move |uc: &mut Unicorn<'_, ()>,
               mem_type: MemType,
               address: u64,
               size: usize,
               value: i64|
-              -> bool { mem_hook_cb(uc, mem_type, address, size, value, &state_arc) };
+              -> bool { mem_hook_cb(uc, mem_type, address, size, value, &state_rc) };
     emu.add_mem_hook(
         HookType::MEM_READ | HookType::MEM_WRITE,
         0,
@@ -278,12 +281,12 @@ fn initialize_mem_hook(emu: &mut Unicorn<()>, state_arc: &Arc<State>) -> io::Res
     Ok(())
 }
 
-fn initialize_block_hook(emu: &mut Unicorn<()>, state_arc: &Arc<State>) -> io::Result<()> {
-    let state_arc = Arc::clone(state_arc);
+fn initialize_block_hook(emu: &mut Unicorn<()>, state_rc: &Rc<State>) -> io::Result<()> {
+    let state_rc = Rc::clone(state_rc);
     let block_hook_closure = move |uc: &mut Unicorn<'_, ()>, address: u64, size: u32| {
-        block_hook_cb(uc, address, size, &state_arc);
+        block_hook_cb(uc, address, size, &state_rc);
     };
-    emu.add_block_hook(block_hook_closure)
+    emu.add_block_hook(1, 0, block_hook_closure)
         .expect("failed to add block hook");
 
     Ok(())
@@ -291,7 +294,7 @@ fn initialize_block_hook(emu: &mut Unicorn<()>, state_arc: &Arc<State>) -> io::R
 
 fn initialize_end_hook<'a, 'b: 'a>(
     emu: &mut Unicorn<'a, ()>,
-    state_arc: &Arc<State>,
+    state_rc: &Rc<State>,
     config: &PyDict,
     first_endpoint: u64,
     memorydump: &'b Vec<HashMap<&str, u64>>,
@@ -302,16 +305,16 @@ fn initialize_end_hook<'a, 'b: 'a>(
         let address: u64 = end.get_item("address").unwrap().extract()?;
         let counter: u32 = end.get_item("counter").unwrap().extract()?;
 
-        let state_arc = Arc::clone(state_arc);
+        let state_rc = Rc::clone(state_rc);
 
-        let mut endpoints = state_arc.endpoints.write().unwrap();
+        let mut endpoints = state_rc.endpoints.write().unwrap();
         endpoints.insert(address, counter);
         drop(endpoints);
 
-        let state_arc = Arc::clone(&state_arc);
+        let state_rc = Rc::clone(&state_rc);
 
         let end_hook_closure = move |uc: &mut Unicorn<'_, ()>, address: u64, size: u32| {
-            end_hook_cb(uc, address, size, &state_arc, first_endpoint, memorydump);
+            end_hook_cb(uc, address, size, &state_rc, first_endpoint, memorydump);
         };
         emu.add_code_hook(address, address, end_hook_closure)
             .expect("failed to add end hook");
@@ -322,20 +325,20 @@ fn initialize_end_hook<'a, 'b: 'a>(
 
 fn initialize_fault_hook(
     emu: &mut Unicorn<()>,
-    state_arc: &Arc<State>,
+    state_rc: &Rc<State>,
     faults: &Vec<Fault>,
 ) -> io::Result<()> {
     for fault in faults {
-        let state_arc = Arc::clone(state_arc);
+        let state_rc = Rc::clone(state_rc);
 
-        let mut state_faults = state_arc.faults.write().unwrap();
+        let mut state_faults = state_rc.faults.write().unwrap();
         state_faults.insert(fault.trigger.address, *fault);
         drop(state_faults);
 
-        let state_arc = Arc::clone(&state_arc);
+        let state_rc = Rc::clone(&state_rc);
 
         let fault_hook_closure = move |uc: &mut Unicorn<'_, ()>, address: u64, size: u32| {
-            fault_hook_cb(uc, address, size, &state_arc);
+            fault_hook_cb(uc, address, size, &state_rc);
         };
         emu.add_code_hook(
             fault.trigger.address,
@@ -350,21 +353,15 @@ fn initialize_fault_hook(
 
 pub fn initialize_hooks<'a, 'b: 'a>(
     emu: &mut Unicorn<'a, ()>,
-    state_arc: &Arc<State>,
+    state_rc: &Rc<State>,
     faults: &Vec<Fault>,
     memorydump: &'b Vec<HashMap<&str, u64>>,
     config: &PyDict,
 ) -> io::Result<()> {
-    initialize_mem_hook(emu, state_arc)?;
-    initialize_block_hook(emu, state_arc)?;
-    initialize_end_hook(
-        emu,
-        state_arc,
-        config,
-        faults[0].trigger.address,
-        memorydump,
-    )?;
-    initialize_fault_hook(emu, state_arc, faults)?;
+    initialize_mem_hook(emu, state_rc)?;
+    initialize_block_hook(emu, state_rc)?;
+    initialize_end_hook(emu, state_rc, config, faults[0].trigger.address, memorydump)?;
+    initialize_fault_hook(emu, state_rc, faults)?;
 
     Ok(())
 }
