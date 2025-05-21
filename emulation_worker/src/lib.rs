@@ -62,8 +62,8 @@ fn run_unicorn(
         .extract()?;
     let arch: Architecture = match arch_str {
         "arm" => Architecture::Arm,
-        "riscv64" => Architecture::Riscv,
-        _ => panic!("Unsupported architecture"),
+        "riscv64" => Architecture::Riscv64,
+        _ => panic!("Unsupported architecture!"),
     };
 
     let memorydump: Vec<HashMap<&str, u64>> = config
@@ -73,8 +73,14 @@ fn run_unicorn(
     let arch_operator = ArchitectureDependentOperator { architecture: arch };
     let emu = &mut arch_operator.initialize_unicorn();
 
+    let register_table_name = match arch_str {
+        arch_str if arch_str.starts_with("arm") => "armregisters",
+        arch_str if arch_str.starts_with("riscv") => "riscvregisters",
+        _ => panic!("Unsupported architecture!"),
+    };
+
     let registerdumps: &PyList = pregoldenrun_data
-        .get_item(String::from(arch_str) + "registers")
+        .get_item(register_table_name)
         .unwrap()
         .extract()?;
     let start: HashMap<String, u64> = config.get_item("start").unwrap().extract()?;
