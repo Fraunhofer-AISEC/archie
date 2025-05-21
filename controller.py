@@ -320,6 +320,41 @@ def check_backup(args, current_config, backup_config):
     return True
 
 
+def backup_read_registers(backup, hdf_group):
+    # Process goldenrun registers
+    if "riscvregisters" in hdf_group:
+        register_backup_name = "riscvregisters"
+        register_type = Register.RISCV
+        reg_size = 32
+        reg_name = "x"
+        rows = hdf_group.riscvregisters.iterrows()
+    elif "armregisters" in hdf_group:
+        register_backup_name = "armregisters"
+        register_type = Register.ARM
+        reg_size = 16
+        reg_name = "r"
+        rows = hdf_group.armregisters.iterrows()
+    else:
+        raise tables.NoSuchNodeError(
+            "No supported register architecture could be found in the HDF5 file, run with the overwrite flag to overwrite"
+        )
+
+    backup[register_backup_name] = []
+
+    for reg in rows:
+        registers = {"pc": reg["pc"], "tbcounter": reg["tbcounter"]}
+        for i in range(0, reg_size):
+            registers[f"{reg_name}{i}"] = reg[f"{reg_name}{i}"]
+
+        # Last element of register_values is XPSR for Arm, PC for RISCV
+        if register_type == Register.ARM:
+            registers["xpsr"] = reg["xpsr"]
+        elif register_type == Register.RISCV:
+            registers[f"{reg_name}{reg_size}"] = reg[f"{reg_name}{reg_size}"]
+
+        backup[register_backup_name].append(registers)
+
+
 def read_backup(hdf5_file):
     """
     :param hdf5_file: path to hdf5
@@ -373,6 +408,46 @@ def read_backup(hdf5_file):
         backup_config["hash"]["kernel_hash"] = hdf5_hashes["kernel_hash"][0]
         backup_config["hash"]["bios_hash"] = hdf5_hashes["bios_hash"][0]
 
+        # Process pre-goldenrun data
+        backup_pregoldenrun = {
+            "index": -2,
+            "architecture": f_in.root.Pregoldenrun._v_attrs["architecture"],
+        }
+
+        backup_pregoldenrun["memmaplist"] = [
+            {"address": memory_region["address"], "size": memory_region["size"]}
+            for memory_region in f_in.root.Pregoldenrun.memory_map.iterrows()
+        ]
+
+        memdumps = {}
+        for dump in f_in.root.Pregoldenrun.memdumps:
+            if dump.name == "memdumps":
+                continue
+            _, address, size, index = dump.name.split("_")
+            address = int(address, 16)
+            size = int(size)
+            print(address, size, index)
+            address_key = (address << 64) + size
+            if address_key in memdumps:
+                memdumps[address_key].append(dump.read()[0])
+            else:
+                memdumps[address_key] = [list(dump.read()[0])]
+
+        backup_pregoldenrun["memdumplist"] = []
+        for k, dumps in memdumps.items():
+            address = k >> 64
+            size = k & 0xFFFFFFFFFFFFFFFF
+            backup_pregoldenrun["memdumplist"].append(
+                {
+                    "address": address,
+                    "size": size,
+                    "dumps": dumps,
+                    "numdumps": len(dumps),
+                }
+            )
+
+        backup_read_registers(backup_pregoldenrun, f_in.root.Pregoldenrun)
+
         # Process goldenrun data
         backup_goldenrun = {"index": -1}
 
@@ -421,38 +496,7 @@ def read_backup(hdf5_file):
                 for mem in f_in.root.Goldenrun.meminfo.iterrows()
             ]
 
-        # Process goldenrun registers
-        if "riscvregisters" in f_in.root.Goldenrun:
-            register_backup_name = "riscvregisters"
-            register_type = Register.RISCV
-            reg_size = 32
-            reg_name = "x"
-            rows = f_in.root.Goldenrun.riscvregisters.iterrows()
-        elif "armregisters" in f_in.root.Goldenrun:
-            register_backup_name = "armregisters"
-            register_type = Register.ARM
-            reg_size = 16
-            reg_name = "r"
-            rows = f_in.root.Goldenrun.armregisters.iterrows()
-        else:
-            raise tables.NoSuchNodeError(
-                "No supported register architecture could be found in the HDF5 file, run with the overwrite flag to overwrite"
-            )
-
-        backup_goldenrun[register_backup_name] = []
-
-        for reg in rows:
-            registers = {"pc": reg["pc"], "tbcounter": reg["tbcounter"]}
-            for i in range(0, reg_size):
-                registers[f"{reg_name}{i}"] = reg[f"{reg_name}{i}"]
-
-            # Last element of register_values is XPSR for Arm, PC for RISCV
-            if register_type == Register.ARM:
-                registers["xpsr"] = reg["xpsr"]
-            elif register_type == Register.RISCV:
-                registers[f"{reg_name}{reg_size}"] = reg[f"{reg_name}{reg_size}"]
-
-            backup_goldenrun[register_backup_name].append(registers)
+        backup_read_registers(backup_goldenrun, f_in.root.Goldenrun)
 
         # Process expanded faults
         if (
@@ -492,7 +536,12 @@ def read_backup(hdf5_file):
             exp_n = exp_n + 1
             backup_expanded_faults.append(backup_exp)
 
-    return [backup_expanded_faults, backup_config, backup_goldenrun]
+    return [
+        backup_expanded_faults,
+        backup_config,
+        backup_pregoldenrun,
+        backup_goldenrun,
+    ]
 
 
 def read_simulated_faults(hdf5_file):
@@ -601,6 +650,7 @@ def controller(
             [
                 backup_expanded_faultlist,
                 backup_config,
+                backup_pregoldenrun_data,
                 backup_goldenrun_data,
             ] = read_backup(hdf5_file)
         except NameError:
@@ -626,6 +676,7 @@ def controller(
 
         faultlist = backup_expanded_faultlist
         config_qemu["max_instruction_count"] = backup_config["max_instruction_count"]
+        pregoldenrun_data = backup_pregoldenrun_data
         goldenrun_data = backup_goldenrun_data
 
         goldenrun = False
