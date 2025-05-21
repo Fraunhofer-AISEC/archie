@@ -67,7 +67,7 @@ static ARM_REGISTERS: &[(&str, u8)] = &[
 #[derive(Clone, Copy)]
 pub enum Architecture {
     Arm,
-    Riscv,
+    Riscv64,
 }
 
 pub trait ArchitectureDependentOperations {
@@ -98,7 +98,7 @@ impl ArchitectureDependentOperations for ArchitectureDependentOperator {
             Architecture::Arm => {
                 Unicorn::new(Arch::ARM, Mode::THUMB).expect("failed to initialize Unicorn instance")
             }
-            Architecture::Riscv => Unicorn::new(Arch::RISCV, Mode::RISCV64)
+            Architecture::Riscv64 => Unicorn::new(Arch::RISCV, Mode::RISCV64)
                 .expect("failed to initialize Unicorn instance"),
         }
     }
@@ -118,7 +118,7 @@ impl ArchitectureDependentOperations for ArchitectureDependentOperator {
                                                           // significant bit of pc if T-bit is set
                                                           // in xpsr register
             }
-            Architecture::Riscv => registers = RISCV_REGISTERS,
+            Architecture::Riscv64 => registers = RISCV_REGISTERS,
         }
         for (name, reg) in registers {
             uc.reg_write(
@@ -136,7 +136,7 @@ impl ArchitectureDependentOperations for ArchitectureDependentOperator {
                 .mode(capstone::arch::arm::ArchMode::Thumb)
                 .build()
                 .unwrap(),
-            Architecture::Riscv => Capstone::new()
+            Architecture::Riscv64 => Capstone::new()
                 .riscv()
                 .mode(capstone::arch::riscv::ArchMode::RiscV64)
                 .extra_mode(std::iter::once(
@@ -156,7 +156,7 @@ impl ArchitectureDependentOperations for ArchitectureDependentOperator {
         let mut dump = HashMap::new();
         let registers = match self.architecture {
             Architecture::Arm => ARM_REGISTERS,
-            Architecture::Riscv => RISCV_REGISTERS,
+            Architecture::Riscv64 => RISCV_REGISTERS,
         };
         for (name, reg) in registers {
             dump.insert(name.to_string(), uc.reg_read(*reg).unwrap());
