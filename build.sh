@@ -94,7 +94,7 @@ if [[ ! -e $build_dir ]]; then
 	mkdir -p $build_dir
 fi
 cd $build_dir
-../configure --target-list=arm-softmmu,riscv64-softmmu --enable-plugins
+../configure --target-list=arm-softmmu,aarch64-softmmu,riscv64-softmmu --enable-plugins
 make -j $(nproc --all)
 
 echo "Building faultplugin"
