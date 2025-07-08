@@ -1,0 +1,8 @@
+{
+	"qemu" : "../../qemu/build/qemu-system-aarch64",
+	"bios" : "",
+	"kernel" : "minimal.elf",
+	"plugin" : "../../faultplugin/libfaultplugin.so",
+	"machine" : "stm32vldiscovery",
+	"additional_qemu_args" : ""
+}
