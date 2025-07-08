@@ -93,6 +93,17 @@ int add_new_registerdump(uint64_t tbcount)
 		readout_arm_registers(current);
 		current->pc = current->regs[15];
 	}
+	if(arch == ARM64)
+	{
+		current = malloc(sizeof(registerdump_t) + sizeof(uint64_t[N_ARM64_REGISTERS]) );
+		if(current == NULL)
+		{
+			qemu_plugin_outs("failed\n[ERROR]: Malloc error for registerdump_t");
+			return -1;
+		}
+		readout_arm64_registers(current);
+		current->pc = current->regs[N_ARM64_CORE_INT_REGISTERS+1];
+	}
 	if(arch == RISCV)
 	{
 		current = malloc(sizeof(registerdump_t) + sizeof(uint64_t[N_RISCV_REGISTERS + 1]));
@@ -132,6 +143,20 @@ void readout_arm_registers(registerdump_t * current)
 	current->regs[16] = qemu_plugin_read_reg(25);
 }
 
+void readout_arm64_registers(registerdump_t * current)
+{
+	// read x0 - x30
+	for(int i = 0; i < N_ARM64_CORE_INT_REGISTERS; i++)
+	{
+		current->regs[i] = 0;
+		current->regs[i] = qemu_plugin_read_reg(i);
+	}
+	// read XPSR
+	current->regs[N_ARM64_CORE_INT_REGISTERS] = qemu_plugin_read_reg(31); // SP
+	current->regs[N_ARM64_CORE_INT_REGISTERS+1] = qemu_plugin_read_reg(32); // PC -> is a pseudo reg from qemu code ptr
+	current->regs[N_ARM64_CORE_INT_REGISTERS+2] = qemu_plugin_read_reg(33); // CPSR
+}
+
 size_t get_register_dump_count(void)
 {
 	size_t size = 0;
@@ -165,6 +190,14 @@ int read_registers(Archie__RegisterInfo* protobuf_reg_info)
 
 		// Extra register carries the XPSR register
 		n_registers = N_ARM_REGISTERS + 1;
+	}
+	if(arch == ARM64)
+	{
+		qemu_plugin_outs("[DEBUG]: start reading arm registerdumps\n");
+		protobuf_reg_info->arch_type = ARM;
+
+		// Extra register carries the XPSR register
+		n_registers = N_ARM64_REGISTERS;
 	}
 	else if(arch == RISCV)
 	{
