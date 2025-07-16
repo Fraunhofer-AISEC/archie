@@ -98,6 +98,7 @@ class Timeout:
 class Register(IntEnum):
     ARM = 0
     RISCV = 1
+    ARM64 = 2
 
 
 class Trigger:
@@ -515,6 +516,9 @@ def readout_registers(data_protobuf):
     elif reg_type == Register.RISCV:
         reg_size = 32
         reg_name = "x"
+    elif reg_type == Register.ARM64:
+        reg_size = 31 #integer only
+        reg_name = "x"
 
     for reg_dump in data_protobuf.register_info.register_dumps:
         register = {"pc": reg_dump.pc, "tbcounter": reg_dump.tb_count}
@@ -526,6 +530,10 @@ def readout_registers(data_protobuf):
             register["xpsr"] = reg_dump.register_values[reg_size]
         elif reg_type == Register.RISCV:
             register[f"{reg_name}{reg_size}"] = reg_dump.register_values[reg_size]
+        elif reg_type == Register.ARM64:
+            register["sp"] = reg_dump.register_values[31]
+            register["cpsr"] = reg_dump.register_values[32]
+            # TODO add NEON and FPU vector registers dump
 
         register_list.append(register)
 
@@ -627,6 +635,9 @@ def readout_data(
         registerlist = readout_registers(data_protobuf)
     elif data_protobuf.register_info.arch_type == Register.RISCV:
         regtype = "riscv"
+        registerlist = readout_registers(data_protobuf)
+    elif data_protobuf.register_info.arch_type == Register.ARM64:
+        regtype = "aarch64"
         registerlist = readout_registers(data_protobuf)
 
     if len(data_protobuf.faulted_datas) != 0:
