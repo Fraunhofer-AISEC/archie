@@ -123,7 +123,7 @@ QEMU will wait unil the GDB session is attached. The debugging mode is only suit
 Instead of QEMU, the unicorn engine can be used for emulating the experiments.
 This feature can be used interchangeably with the QEMU emulation without the need to adjust any of the configuration files.
 One exception for this are register faults, which have different target addresses between the two versions.
-The mapping for the registers can be looked up in the source code of unicorn's [Rust bindings](https://github.com/unicorn-engine/unicorn/tree/master/bindings/rust/src).
+The mapping for the registers can be looked up in the documentation of unicorn's [Rust bindings](https://docs.rs/unicorn-engine/latest/unicorn_engine/unicorn_const/index.html).
 To enable this feature the *--unicorn* flag can be set.
 
 Using the unicorn engine can result in a substantial increase in performance.
