@@ -355,7 +355,7 @@ def backup_read_registers(backup, hdf_group):
         backup[register_backup_name].append(registers)
 
 
-def read_backup(hdf5_file):
+def read_backup(hdf5_file, unicorn_emulation):
     """
     :param hdf5_file: path to hdf5
     :return: backup_raw_faults, backup_expanded_faults, backup_config, backup_goldenrun
@@ -408,44 +408,48 @@ def read_backup(hdf5_file):
         backup_config["hash"]["kernel_hash"] = hdf5_hashes["kernel_hash"][0]
         backup_config["hash"]["bios_hash"] = hdf5_hashes["bios_hash"][0]
 
-        # Process pre-goldenrun data
-        backup_pregoldenrun = {
-            "index": -2,
-            "architecture": f_in.root.Pregoldenrun._v_attrs["architecture"],
-        }
+        backup_pregoldenrun = None
+        # No need to parse Pregoldenrun backup if we are not using unicorn for emulation
+        if unicorn_emulation:
+            assert "Pregoldenrun" in f_in.root
+            # Process pre-goldenrun data
+            backup_pregoldenrun = {
+                "index": -2,
+                "architecture": f_in.root.Pregoldenrun._v_attrs["architecture"],
+            }
 
-        backup_pregoldenrun["memmaplist"] = [
-            {"address": memory_region["address"], "size": memory_region["size"]}
-            for memory_region in f_in.root.Pregoldenrun.memory_map.iterrows()
-        ]
+            backup_pregoldenrun["memmaplist"] = [
+                {"address": memory_region["address"], "size": memory_region["size"]}
+                for memory_region in f_in.root.Pregoldenrun.memory_map.iterrows()
+            ]
 
-        memdumps = {}
-        for dump in f_in.root.Pregoldenrun.memdumps:
-            if dump.name == "memdumps":
-                continue
-            _, address, size, index = dump.name.split("_")
-            address = int(address, 16)
-            size = int(size)
-            address_key = (address << 64) + size
-            if address_key in memdumps:
-                memdumps[address_key].append(dump.read()[0])
-            else:
-                memdumps[address_key] = [list(dump.read()[0])]
+            memdumps = {}
+            for dump in f_in.root.Pregoldenrun.memdumps:
+                if dump.name == "memdumps":
+                    continue
+                _, address, size, index = dump.name.split("_")
+                address = int(address, 16)
+                size = int(size)
+                address_key = (address << 64) + size
+                if address_key in memdumps:
+                    memdumps[address_key].append(dump.read()[0])
+                else:
+                    memdumps[address_key] = [list(dump.read()[0])]
 
-        backup_pregoldenrun["memdumplist"] = []
-        for k, dumps in memdumps.items():
-            address = k >> 64
-            size = k & 0xFFFFFFFFFFFFFFFF
-            backup_pregoldenrun["memdumplist"].append(
-                {
-                    "address": address,
-                    "size": size,
-                    "dumps": dumps,
-                    "numdumps": len(dumps),
-                }
-            )
+            backup_pregoldenrun["memdumplist"] = []
+            for k, dumps in memdumps.items():
+                address = k >> 64
+                size = k & 0xFFFFFFFFFFFFFFFF
+                backup_pregoldenrun["memdumplist"].append(
+                    {
+                        "address": address,
+                        "size": size,
+                        "dumps": dumps,
+                        "numdumps": len(dumps),
+                    }
+                )
 
-        backup_read_registers(backup_pregoldenrun, f_in.root.Pregoldenrun)
+            backup_read_registers(backup_pregoldenrun, f_in.root.Pregoldenrun)
 
         # Process goldenrun data
         backup_goldenrun = {"index": -1}
@@ -650,7 +654,7 @@ def controller(
                 backup_config,
                 backup_pregoldenrun_data,
                 backup_goldenrun_data,
-            ] = read_backup(hdf5_file)
+            ] = read_backup(hdf5_file, unicorn_emulation)
         except NameError:
             clogger.warning(
                 "Backup could not be found in the HDF5 file, run with the overwrite flag to overwrite!"
