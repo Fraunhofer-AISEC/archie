@@ -895,7 +895,6 @@ void plugin_end_information_dump(GString *end_reason)
 	    g_hash_table_foreach(accessed_pages, memmap_dump_register_page, NULL);
 	}
 
-	int *error = NULL;
 	if(end_point->location.trignum == 4)
 	{
 		msg->end_point = 1;
