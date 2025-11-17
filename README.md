@@ -43,15 +43,15 @@ Checkout git submodule qemu, which should checkout tcg_plugin_dev of the git. Se
 
 ```sh
 git submodule update --init
-mkdir -p qemu/build/debug
-cd qemu/build/debug
-./../../configure --target-list=arm-softmmu --enable-debug --enable-plugins --disable-sdl --disable-gtk --disable-curses --disable-vnc
+mkdir -p qemu/build
+cd qemu/build
+../configure --target-list=arm-softmmu --enable-plugins
 make -j $(nproc)
-cd ../../../faultplugin/
+cd ../../faultplugin/
 make
 ```
 
-With this, *archie-qemu* is build in qemu/build/debug/ and the plugin is build in *faultplugin/*
+With this, *archie-qemu* is build in qemu/build/ and the plugin is build in *faultplugin/*
 If you change the build directory for *archie-qemu*, please change the path in the [Makefile](faultplugin/Makefile) in the *faultplugin/* folder for building the plugin.
 
 ## In [archie](https://github.com/Fraunhofer-AISEC/archie)

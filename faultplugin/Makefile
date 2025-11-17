@@ -8,7 +8,7 @@
 
 #BUILD_DIR := $(CURDIR)/../../../build/release
 SRC_PATH := $(CURDIR)/../qemu
-BUILD_DIR := $(SRC_PATH)/build/debug
+BUILD_DIR := $(SRC_PATH)/build
 
 NAMES :=
 #NAMES += bb

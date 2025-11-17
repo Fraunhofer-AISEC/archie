@@ -2,7 +2,7 @@
 
 set -Eeuo pipefail
 
-build_dir="build/debug"
+build_dir="build"
 
 install_qemu_packages() {
 	echo "Install QEMU dependencies"
@@ -94,11 +94,11 @@ if [[ ! -e $build_dir ]]; then
 	mkdir -p $build_dir
 fi
 cd $build_dir
-./../../configure --target-list=arm-softmmu,riscv64-softmmu --enable-debug --enable-plugins --disable-sdl --disable-gtk --disable-curses --disable-vnc
+../configure --target-list=arm-softmmu,riscv64-softmmu --enable-plugins
 make -j $(nproc --all)
 
 echo "Building faultplugin"
-cd ../../../faultplugin/
+cd ../../faultplugin/
 make clean && make
 cd ..
 

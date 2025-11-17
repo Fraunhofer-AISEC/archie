@@ -1,5 +1,5 @@
 {
-	"qemu" : "../../qemu/build/debug/qemu-system-riscv64",
+	"qemu" : "../../qemu/build/qemu-system-riscv64",
 	"bios" : "none",
 	"kernel" : "minimal.elf",
 	"plugin" : "../../faultplugin/libfaultplugin.so",
