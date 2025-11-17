@@ -426,7 +426,6 @@ def read_backup(hdf5_file):
             _, address, size, index = dump.name.split("_")
             address = int(address, 16)
             size = int(size)
-            print(address, size, index)
             address_key = (address << 64) + size
             if address_key in memdumps:
                 memdumps[address_key].append(dump.read()[0])
@@ -626,7 +625,6 @@ def controller(
     total_start_time = time.time()
 
     hdf5path = args.hdf5file
-    engine_output = args.debug
 
     m = Manager()
     m2 = Manager()
@@ -734,7 +732,6 @@ def controller(
                         "dumps": [list(segment_data)],
                     }
                 )
-                break
 
     p_logger = Process(
         target=logger,
