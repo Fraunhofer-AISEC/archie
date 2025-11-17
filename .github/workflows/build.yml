@@ -24,7 +24,7 @@ jobs:
       run: git submodule update --init
 
     - name: Build QEMU
-      run: mkdir -p qemu/build/debug; cd qemu/build/debug;  ./../../configure --target-list=arm-softmmu,riscv64-softmmu --enable-debug --enable-plugins --disable-sdl --disable-gtk --disable-curses --disable-vnc; make -j $(nproc --all); echo "done"
+      run: mkdir -p qemu/build; cd qemu/build; ../configure --target-list=arm-softmmu,riscv64-softmmu --enable-plugins; make -j $(nproc --all); echo "done"
 
     - name: Build Faultplugin
       run: cd faultplugin; make -j; echo "done"
