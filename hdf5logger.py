@@ -557,6 +557,7 @@ def hdf5collector(
             while groupname.format(index) in fault_group:
                 index = index + 1
             exp_group = f.create_group(fault_group, groupname.format(index))
+            exp_group._v_attrs["architecture"] = exp["architecture"]
             if exp["index"] != index:
                 logger.warning(
                     "The index provided was already used. found new one: {}".format(
@@ -581,6 +582,7 @@ def hdf5collector(
             exp_group = f.create_group(
                 "/", "Goldenrun", "Group containing all information about goldenrun"
             )
+            exp_group._v_attrs["architecture"] = exp["architecture"]
             log_goldenrun = False
         elif exp["index"] == -3 and log_config:
             if "backup" in f.root:
