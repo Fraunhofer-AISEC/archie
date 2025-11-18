@@ -45,7 +45,7 @@ Checkout git submodule qemu, which should checkout tcg_plugin_dev of the git. Se
 git submodule update --init
 mkdir -p qemu/build
 cd qemu/build
-../configure --target-list=arm-softmmu --enable-plugins
+../configure --target-list=arm-softmmu,aarch64-softmmu --enable-plugins
 make -j $(nproc)
 cd ../../faultplugin/
 make
