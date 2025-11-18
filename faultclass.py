@@ -932,5 +932,3 @@ def python_worker_unicorn(
     logger.info(
         "Python worker for experiment {} done. Took {}s".format(index, time.time() - t0)
     )
-
-    return
