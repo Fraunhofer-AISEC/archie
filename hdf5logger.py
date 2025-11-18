@@ -279,7 +279,7 @@ def process_aarch64_registers(f, group, aarch64registers_list, myfilter):
         aarch64mregsrow["tbcounter"] = regs["tbcounter"]
         for i in range(0, 31):
             aarch64mregsrow[f"x{i}"] = regs[f"x{i}"]
-        aarch64mregsrow["cpsr"] = regs["sp"]
+        aarch64mregsrow["sp"] = regs["sp"]
         aarch64mregsrow["cpsr"] = regs["cpsr"]
         aarch64mregsrow.append()
     aarch64registerstable.flush()
