@@ -49,9 +49,12 @@ cd qemu/build/debug
 make -j $(nproc)
 cd ../../../faultplugin/
 make
+cd emulation_worker
+cargo build --release
+cp target/release/libemulation_worker.so ../emulation_worker.so
 ```
 
-With this, *archie-qemu* is build in qemu/build/debug/ and the plugin is build in *faultplugin/*
+With this, *archie-qemu* is built in qemu/build/debug/, the plugin is built in *faultplugin/* and the unicorn emulation worker is built and moved to the project's root directory.
 If you change the build directory for *archie-qemu*, please change the path in the [Makefile](faultplugin/Makefile) in the *faultplugin/* folder for building the plugin.
 
 ## In [archie](https://github.com/Fraunhofer-AISEC/archie)
@@ -60,11 +63,14 @@ If you change the build directory for *archie-qemu*, please change the path in t
 
 For the Python3 program, the following libraries are needed
 ```
-pandas (tested 0.25.3)
-tables (tested 3.6.1)
-python-prctl (tested 1.6.1)
-numpy (tested 1.17.4)
-json (tested 2.0.9), or json5 (tested 0.9.6)
+pandas (tested 2.2)
+python-prctl (tested 1.8)
+tables (tested 3.10)
+json (tested 2.0.9), or json5 (tested 0.12)
+protobuf (tested 6.31)
+tqdm (tested 4.67)
+psutil (tested 7.0)
+pyelftools (tested 0.32)
 ```
 These python3 libraries can either be installed using your linux-distribution's installation method or by using pip3.
 JSON5 is strongly recommended as it allows integers to be represented as hexadecimal numbers.
@@ -111,3 +117,14 @@ To connect from GDB to the QEMU session use
 targ rem:localhost:1234
 ```
 QEMU will wait unil the GDB session is attached. The debugging mode is only suitable for the analysis of a low number of faults. Stepping through a large amount of faults is cumbersome. This should be considered when adjusting the JSON files.
+
+#### Unicorn Engine
+
+Instead of QEMU, the unicorn engine can be used for emulating the experiments.
+This feature can be used interchangeably with the QEMU emulation without the need to adjust any of the configuration files.
+One exception for this are register faults, which have different target addresses between the two versions.
+The mapping for the registers can be looked up in the documentation of unicorn's [Rust bindings](https://docs.rs/unicorn-engine/latest/unicorn_engine/unicorn_const/index.html).
+To enable this feature the *--unicorn* flag can be set.
+
+Using the unicorn engine can result in a substantial increase in performance.
+However, this mode is not capable of emulating any features related to the hardware of the target platform such as interrupts or communication with devices.

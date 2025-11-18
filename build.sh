@@ -37,7 +37,7 @@ install_python3_distro() {
 	if [ "${ID:-linux}" = "debian" ] || [ "${ID_LIKE#*debian*}" != "${ID_LIKE}" ]
 	then
 		echo "Looks like Debian!"
-		sudo apt-get install python3-tables python3-pandas python3-prctl python3-protobuf python3-tqdm python3-psutil python3-json5 python3-setuptools
+		sudo apt-get install python3-tables python3-pandas python3-prctl python3-protobuf python3-tqdm python3-psutil python3-json5 python3-setuptools python3-pyelftools
 
 		echo "Rebuild protobuf files to support the installed package versions"
 		cd protobuf
@@ -102,6 +102,12 @@ cd ../../../faultplugin/
 make clean && make
 cd ..
 
+echo "Building emulation worker"
+cd emulation_worker
+cargo build --release
+cp target/release/libemulation_worker.so ../emulation_worker.so
+cd -
+
 echo "Test ARCHIE"
 cd examples/stm32
 ./run.sh
@@ -119,4 +125,4 @@ select yn in "YES" "NO"; do
 	esac
 	echo "Please type the number corresponding to Yes or No"
 done
-echo "Archie was build and tested successfully"
+echo "Archie was built and tested successfully"

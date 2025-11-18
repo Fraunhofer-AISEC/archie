@@ -26,6 +26,8 @@ import time
 import pandas as pd
 import prctl
 
+from emulation_worker import run_unicorn
+
 import protobuf.control_pb2 as control_pb2
 import protobuf.data_pb2 as data_pb2
 import protobuf.fault_pb2 as fault_pb2
@@ -545,6 +547,13 @@ def readout_tb_faulted(data_protobuf):
     return tb_faulted_list
 
 
+def readout_memmap(data_protobuf):
+    memmap = []
+    for mm_info in data_protobuf.mem_map_infos:
+        memmap.append({"address": mm_info.address, "size": mm_info.size})
+    return memmap
+
+
 def readout_data(
     pipe,
     index,
@@ -567,6 +576,7 @@ def readout_data(
     memdumplist = []
     registerlist = []
     tbfaultedlist = []
+    memmaplist = []
     tbinfo = 0
     tbexec = 0
     meminfo = 0
@@ -594,6 +604,9 @@ def readout_data(
     if len(data_protobuf.mem_infos) != 0:
         meminfo = 1
         memlist = readout_meminfo(data_protobuf)
+
+    if len(data_protobuf.mem_map_infos) != 0:
+        memmaplist = readout_memmap(data_protobuf)
 
     if tbinfo == 1 and meminfo == 1:
         connect_meminfo_tb(memlist, tblist)
@@ -661,6 +674,10 @@ def readout_data(
     output["faultlist"] = faultlist
     output["endpoint"] = endpoint
     output["end_reason"] = end_reason
+    output["architecture"] = data_protobuf.architecture
+
+    if len(memmaplist) != 0:
+        output["memmaplist"] = memmaplist
 
     max_ram_usage = gather_process_ram_usage(queue_ram_usage, max_ram_usage)
 
@@ -715,7 +732,7 @@ def delete_fifos():
     os.rmdir(path)
 
 
-def configure_qemu(control, config_qemu, num_faults, memorydump_list, goldenrun):
+def configure_qemu(control, config_qemu, num_faults, memorydump_list, index):
     """
     Creates a protobuf message instance and writes it to the control pipe
     """
@@ -742,12 +759,12 @@ def configure_qemu(control, config_qemu, num_faults, memorydump_list, goldenrun)
             new_end_point.counter = end_loc["counter"]
 
     # If enabled, use the ring buffer for all runs except for the goldenrun
-    if config_qemu["ring_buffer"] is True and goldenrun is False:
-        control_message.tb_exec_list_ring_buffer = True
-    else:
-        control_message.tb_exec_list_ring_buffer = False
+    control_message.tb_exec_list_ring_buffer = config_qemu["ring_buffer"] and index >= 0
 
-    if memorydump_list is not None:
+    control_message.memmap_dump = index == -2
+    control_message.full_mem_dump = index == -2
+
+    if index != -2 and memorydump_list is not None:
         for memorydump in memorydump_list:
             memory_region = control_message.memorydumps.add()
 
@@ -771,7 +788,7 @@ def python_worker(
     config_qemu,
     index,
     queue_output,
-    qemu_output,
+    engine_output,
     goldenrun_data=None,
     change_nice=False,
     queue_ram_usage=None,
@@ -805,7 +822,7 @@ def python_worker(
                 paths["config"],
                 paths["data"],
                 config_qemu,
-                qemu_output,
+                engine_output,
                 index,
                 qemu_custom_paths,
             ),
@@ -822,14 +839,8 @@ def python_worker(
         else:
             memorydump = None
         logger.debug("Start configuring")
-        if goldenrun_data is None:
-            goldenrun = True
-        else:
-            goldenrun = False
 
-        configure_qemu(
-            control_fifo, config_qemu, len(fault_list), memorydump, goldenrun
-        )
+        configure_qemu(control_fifo, config_qemu, len(fault_list), memorydump, index)
 
         logger.debug("Started QEMU")
         # Write faults to config pipe
@@ -870,3 +881,54 @@ def python_worker(
         p_qemu.terminate()
         p_qemu.join()
         logger.warning("Terminate Worker {}".format(index))
+
+
+def python_worker_unicorn(
+    fault_list,
+    config_qemu,
+    index,
+    queue_output,
+    engine_output,
+    pregoldenrun_data,
+    goldenrun_data,
+    change_nice=False,
+):
+    t0 = time.time()
+    if change_nice:
+        os.nice(19)
+
+    logs = run_unicorn(pregoldenrun_data, fault_list, config_qemu, index, engine_output)
+    logger.info(f"Ended unicorn for exp {index}! Took {time.time() - t0}")
+
+    output = {}
+
+    output["index"] = index
+    output["faultlist"] = fault_list
+    output["endpoint"] = logs["endpoint"]
+    output["end_reason"] = logs["end_reason"]
+    output["memdumplist"] = logs["memdumplist"]
+    output["meminfo"] = logs["meminfo"]
+
+    pdtbexeclist = pd.DataFrame(logs["tbexec"])
+    [pdtbexeclist, tblist] = filter_tb(
+        pdtbexeclist,
+        logs["tbinfo"],
+        goldenrun_data["tbexec"],
+        goldenrun_data["tbinfo"],
+        index,
+    )
+    output["tbexec"] = write_output_wrt_goldenrun(
+        "tbexec", pdtbexeclist, goldenrun_data
+    )
+    output["tbinfo"] = write_output_wrt_goldenrun("tbinfo", tblist, goldenrun_data)
+
+    regtype = pregoldenrun_data["architecture"]
+    output[f"{regtype}registers"] = pd.DataFrame(
+        logs["registerlist"], dtype="UInt64"
+    ).to_dict("records")
+
+    queue_output.put(output)
+
+    logger.info(
+        "Python worker for experiment {} done. Took {}s".format(index, time.time() - t0)
+    )

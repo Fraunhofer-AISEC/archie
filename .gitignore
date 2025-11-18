@@ -1,6 +1,6 @@
 # ARCHIE specific debug files
 *.hdf5
-log_*
+log*.txt
 
 # C
 ## Prerequisites

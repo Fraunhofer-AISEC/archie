@@ -53,32 +53,11 @@ def run_goldenrun(
     if "memorydump" in config_qemu:
         goldenrun_config["memorydump"] = config_qemu["memorydump"]
 
-    experiments = []
-    if "start" in config_qemu:
-        pre_goldenrun = {"type": "pre_goldenrun", "index": -2, "data": {}}
-        experiments.append(pre_goldenrun)
-    goldenrun = {"type": "goldenrun", "index": -1, "data": {}}
-    experiments.append(goldenrun)
-
-    for experiment in experiments:
-        if experiment["type"] == "pre_goldenrun":
-            goldenrun_config["end"] = [config_qemu["start"]]
-            # Set max_insn_count to ridiculous high number to never reach it
-            goldenrun_config["max_instruction_count"] = 10000000000000
-
-        elif experiment["type"] == "goldenrun":
-            if "start" in config_qemu:
-                goldenrun_config["start"] = config_qemu["start"]
-            if "end" in config_qemu:
-                goldenrun_config["end"] = config_qemu["end"]
-            if "start" in config_qemu and "end" in config_qemu:
-                # Set max_insn_count to ridiculous high number to never reach it
-                goldenrun_config["max_instruction_count"] = 10000000000000
-
+    def run_experiment(experiment, config, faultconfig):
         logger.info(f"{experiment['type']} started...")
         python_worker(
             dummyfaultlist,
-            goldenrun_config,
+            config,
             experiment["index"],
             queue_output,
             qemu_output,
@@ -103,7 +82,7 @@ def run_goldenrun(
         data_queue.put(experiment["data"])
 
         if experiment["type"] != "goldenrun":
-            continue
+            return experiment["data"]
 
         tbexec = pd.DataFrame(experiment["data"]["tbexec"])
         tbinfo = pd.DataFrame(experiment["data"]["tbinfo"])
@@ -121,7 +100,33 @@ def run_goldenrun(
                 )
             )
 
-    return [config_qemu["max_instruction_count"], experiment["data"], faultconfig]
+        return experiment["data"]
+
+    pregoldenrun_data = None
+    if "start" in config_qemu:
+        pre_goldenrun = {"type": "pre_goldenrun", "index": -2, "data": {}}
+        goldenrun_config["end"] = [config_qemu["start"]]
+        # Set max_insn_count to ridiculous high number to never reach it
+        goldenrun_config["max_instruction_count"] = 10000000000000
+        pregoldenrun_data = run_experiment(pre_goldenrun, goldenrun_config, faultconfig)
+
+    goldenrun = {"type": "goldenrun", "index": -1, "data": {}}
+    if "start" in config_qemu:
+        goldenrun_config["start"] = config_qemu["start"]
+    if "end" in config_qemu:
+        goldenrun_config["end"] = config_qemu["end"]
+    if "start" in config_qemu and "end" in config_qemu:
+        # Set max_insn_count to ridiculous high number to never reach it
+        goldenrun_config["max_instruction_count"] = 10000000000000
+
+    goldenrun_data = run_experiment(goldenrun, goldenrun_config, faultconfig)
+
+    return [
+        config_qemu["max_instruction_count"],
+        pregoldenrun_data,
+        goldenrun_data,
+        faultconfig,
+    ]
 
 
 def find_insn_addresses_in_tb(insn_address, data):

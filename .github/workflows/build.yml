@@ -20,6 +20,11 @@ jobs:
         sudo apt install -y build-essential ninja-build libglib2.0-dev libfdt-dev libpixman-1-dev zlib1g-dev libprotobuf-c-dev protobuf-compiler protobuf-c-compiler libcap-dev
         pip install -r requirements.txt
 
+    - name: Install latest stable Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+          toolchain: stable
+
     - name: Checkout submodules
       run: git submodule update --init
 
@@ -28,6 +33,9 @@ jobs:
 
     - name: Build Faultplugin
       run: cd faultplugin; make -j; echo "done"
+
+    - name: Build Emulation Worker
+      run: cd emulation_worker; cargo build --release; mv target/release/libemulation_worker.so ../emulation_worker.so; echo "done"
 
     - name: Run ARCHIE
       run: cd examples/stm32; ./run.sh; cd ../riscv64; ./run.sh; cd ../stm32-timeout-wfi; ./run.sh
@@ -46,6 +54,28 @@ jobs:
           examples/stm32/*.hdf5
           examples/stm32-timeout-wfi/*.txt
           examples/stm32-timeout-wfi/*.hdf5
+
+    - name: Clean test results
+      run: |
+        rm examples/*/log*.txt
+        rm examples/*/output.hdf5
+
+    - name: Run ARCHIE Unicorn
+      run: cd examples/stm32; ./run.sh --unicorn; cd ../riscv64; ./run.sh --unicorn
+
+    - name: Synchronize cached writes for artifact storage
+      run: sync
+
+    - name: Upload test artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-artifacts-unicorn
+        path: |
+          examples/riscv64/*.txt
+          examples/riscv64/*.hdf5
+          examples/stm32/*.txt
+          examples/stm32/*.hdf5
+
 
   build_with_script:
     name: Test build.sh Script
@@ -77,15 +107,26 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: test-artifacts
-          path : .
+          path : test-artifacts
+
+      - name: Download unicorn test artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: test-artifacts-unicorn
+          path : test-artifacts-unicorn
 
       - name: Verify stm32 results
         run: |
-          cat stm32/log_-2.txt | grep -A8 800006a | tail -8 | grep 'Reached end point'
-          cat stm32/log_-1.txt | grep -A8 8000056 | tail -8 | grep 'Reached end point'
-          cat stm32/log_0.txt | grep -A8 8000070 | tail -8 | grep 'Reached end point'
-          cat stm32/log_1.txt | grep -A8 8000070 | tail -8 | grep 'Reached end point'
-          cat stm32/log_2.txt | grep -A8 8000070 | tail -8 | grep 'Reached end point'
+          cat test-artifacts/stm32/log_-2.txt | grep -A8 800006a | tail -8 | grep 'Reached end point'
+          cat test-artifacts/stm32/log_-1.txt | grep -A8 8000056 | tail -8 | grep 'Reached end point'
+          cat test-artifacts/stm32/log_0.txt | grep -A8 8000070 | tail -8 | grep 'Reached end point'
+          cat test-artifacts/stm32/log_1.txt | grep -A8 8000070 | tail -8 | grep 'Reached end point'
+          cat test-artifacts/stm32/log_2.txt | grep -A8 8000070 | tail -8 | grep 'Reached end point'
+          cat test-artifacts-unicorn/stm32/log_-2.txt | grep -A8 800006a | tail -8 | grep 'Reached end point'
+          cat test-artifacts-unicorn/stm32/log_-1.txt | grep -A8 8000056 | tail -8 | grep 'Reached end point'
+          cat test-artifacts-unicorn/stm32/log_0.txt | grep 'Reached endpoint at 0x8000070'
+          cat test-artifacts-unicorn/stm32/log_1.txt | grep 'Reached endpoint at 0x8000070'
+          cat test-artifacts-unicorn/stm32/log_2.txt | grep 'Reached endpoint at 0x8000070'
 
   verify_stm32-timeout-wfi:
     name: Verify results of stm32-timeout-wfi experiment
@@ -97,15 +138,21 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: test-artifacts
-          path : .
+          path : test-artifacts
+
+      - name: Download unicorn test artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: test-artifacts-unicorn
+          path : test-artifacts-unicorn
 
       - name: Verify stm32-timeout-wfi results
         run: |
-          cat stm32-timeout-wfi/log_-2.txt | grep -A8 800006a | tail -8 | grep 'Reached end point'
-          cat stm32-timeout-wfi/log_-1.txt | grep -A8 8000056 | tail -8 | grep 'Reached end point'
-          cat stm32-timeout-wfi/log.txt | grep 'Experiment 0 ran into timeout'
-          cat stm32-timeout-wfi/log.txt | grep 'Experiment 1 ran into timeout'
-          cat stm32-timeout-wfi/log.txt | grep 'Experiment 2 ran into timeout'
+          cat test-artifacts/stm32-timeout-wfi/log_-2.txt | grep -A8 800006a | tail -8 | grep 'Reached end point'
+          cat test-artifacts/stm32-timeout-wfi/log_-1.txt | grep -A8 8000056 | tail -8 | grep 'Reached end point'
+          cat test-artifacts/stm32-timeout-wfi/log.txt | grep 'Experiment 0 ran into timeout'
+          cat test-artifacts/stm32-timeout-wfi/log.txt | grep 'Experiment 1 ran into timeout'
+          cat test-artifacts/stm32-timeout-wfi/log.txt | grep 'Experiment 2 ran into timeout'
 
   verify_riscv64:
     name: Verify results of riscv64 experiment
@@ -117,12 +164,23 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: test-artifacts
-          path : .
+          path : test-artifacts
+
+      - name: Download unicorn test artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: test-artifacts-unicorn
+          path : test-artifacts-unicorn
 
       - name: Verify riscv64 results
         run: |
-          cat riscv64/log_-2.txt | grep -A8 80000014 | tail -8 | grep 'Reached end point'
-          cat riscv64/log_-1.txt | grep -A8 8000002a | tail -8 | grep 'Reached end point'
-          cat riscv64/log_0.txt | grep -A8 8000003c| tail -8 | grep 'Reached end point'
-          cat riscv64/log_1.txt | grep -A8 8000003c | tail -8 | grep 'Reached end point'
-          cat riscv64/log_2.txt | grep -A8 8000003c | tail -8 | grep 'Reached end point'
+          cat test-artifacts/riscv64/log_-2.txt | grep -A8 80000014 | tail -8 | grep 'Reached end point'
+          cat test-artifacts/riscv64/log_-1.txt | grep -A8 8000002a | tail -8 | grep 'Reached end point'
+          cat test-artifacts/riscv64/log_0.txt | grep -A8 8000003c| tail -8 | grep 'Reached end point'
+          cat test-artifacts/riscv64/log_1.txt | grep -A8 8000003c | tail -8 | grep 'Reached end point'
+          cat test-artifacts/riscv64/log_2.txt | grep -A8 8000003c | tail -8 | grep 'Reached end point'
+          cat test-artifacts-unicorn/riscv64/log_-2.txt | grep -A8 80000014 | tail -8 | grep 'Reached end point'
+          cat test-artifacts-unicorn/riscv64/log_-1.txt | grep -A8 8000002a | tail -8 | grep 'Reached end point'
+          cat test-artifacts-unicorn/riscv64/log_0.txt | grep 'Reached endpoint at 0x8000003c'
+          cat test-artifacts-unicorn/riscv64/log_1.txt | grep 'Reached endpoint at 0x8000003c'
+          cat test-artifacts-unicorn/riscv64/log_2.txt | grep 'Reached endpoint at 0x8000003c'
