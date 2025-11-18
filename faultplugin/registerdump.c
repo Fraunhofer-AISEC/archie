@@ -162,9 +162,8 @@ void readout_aarch64_registers(registerdump_t * current)
 		current->regs[i] = qemu_plugin_read_reg(i);
 	}
 	// read XPSR
-	current->regs[N_ARM64_CORE_INT_REGISTERS] = qemu_plugin_read_reg(31); // SP
-	//current->regs[N_ARM64_CORE_INT_REGISTERS+1] = qemu_plugin_read_reg(32); // PC -> is a pseudo reg from qemu code ptr
-	current->regs[N_ARM64_CORE_INT_REGISTERS+1] = qemu_plugin_read_reg(33); // CPSR
+	current->regs[N_ARM64_CORE_INT_REGISTERS] = qemu_plugin_read_reg(AARCH64_QEMU_GDB_ID__SP); // SP
+	current->regs[N_ARM64_CORE_INT_REGISTERS+1] = qemu_plugin_read_reg(AARCH64_QEMU_GDB_ID__CPSR); // CPSR
 }
 
 size_t get_register_dump_count(void)
