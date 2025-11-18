@@ -3,6 +3,6 @@
 	"bios" : "",
 	"kernel" : "minimal.elf",
 	"plugin" : "../../faultplugin/libfaultplugin.so",
-	"machine" : "stm32vldiscovery",
-	"additional_qemu_args" : ""
+	"machine" : "virt",
+	"additional_qemu_args" : "-cpu cortex-a53"
 }
