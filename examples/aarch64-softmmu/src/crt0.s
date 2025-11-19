@@ -4,7 +4,8 @@
 
 _start:
     // Set up stack pointer
-    ldr     sp, =__stack_top
+    ldr     x9, =__stack_top
+    mov     sp, x9
     mov     fp, sp      // x29 = frame pointer (fp)
 
     bl      main
