@@ -24,13 +24,13 @@ jobs:
       run: git submodule update --init
 
     - name: Build QEMU
-      run: mkdir -p qemu/build; cd qemu/build; ../configure --target-list=arm-softmmu,riscv64-softmmu --enable-plugins; make -j $(nproc --all); echo "done"
+      run: mkdir -p qemu/build; cd qemu/build; ../configure --target-list=arm-softmmu,aarch64-softmmu,riscv64-softmmu --enable-plugins; make -j $(nproc --all); echo "done"
 
     - name: Build Faultplugin
       run: cd faultplugin; make -j; echo "done"
 
     - name: Run ARCHIE
-      run: cd examples/stm32; ./run.sh; cd ../riscv64; ./run.sh; cd ../stm32-timeout-wfi; ./run.sh
+      run: cd examples/stm32; ./run.sh; cd ../riscv64; ./run.sh; cd ../stm32-timeout-wfi; ./run.sh; cd ../aarch64-softmmu; ./run.sh
 
     - name: Synchronize cached writes for artifact storage
       run: sync
@@ -46,6 +46,8 @@ jobs:
           examples/stm32/*.hdf5
           examples/stm32-timeout-wfi/*.txt
           examples/stm32-timeout-wfi/*.hdf5
+          examples/aarch64-softmmu/*.txt
+          examples/aarch64-softmmu/*.hdf5
 
   build_with_script:
     name: Test build.sh Script
@@ -126,3 +128,23 @@ jobs:
           cat riscv64/log_0.txt | grep -A8 8000003c| tail -8 | grep 'Reached end point'
           cat riscv64/log_1.txt | grep -A8 8000003c | tail -8 | grep 'Reached end point'
           cat riscv64/log_2.txt | grep -A8 8000003c | tail -8 | grep 'Reached end point'
+
+  verify_aarch64-softmmu:
+    name: Verify results of aarch64-softmmu experiment
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download test artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: test-artifacts
+          path : .
+
+      - name: Verify aarch64-softmmu results
+        run: |
+          cat aarch64-softmmu/log_-2.txt | grep -A8 40000044 | tail -8 | grep 'Reached end point'
+          cat aarch64-softmmu/log_-1.txt | grep -A8 40000068 | tail -8 | grep 'Reached end point'
+          cat aarch64-softmmu/log_0.txt | grep -A8 40000084| tail -8 | grep 'Reached end point'
+          cat aarch64-softmmu/log_1.txt | grep -A8 40000084 | tail -8 | grep 'Reached end point'
+          cat aarch64-softmmu/log_2.txt | grep -A8 40000084 | tail -8 | grep 'Reached end point'
