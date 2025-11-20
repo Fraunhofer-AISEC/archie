@@ -1465,6 +1465,10 @@ QEMU_PLUGIN_EXPORT int qemu_plugin_install(qemu_plugin_id_t id,
 	g_string_printf(out, "QEMU Injection Plugin\n Current Target is %s\n", info->target_name);
 	g_string_append_printf(out, "Current Version of QEMU Plugin is %i, Min Version is %i\n", info->version.cur, info->version.min);
 	int valid_architecture = -1;
+	if(strcmp(info->target_name, "aarch64") == 0)
+	{
+		valid_architecture = ARM64;
+	}
 	if(strcmp(info->target_name, "arm") == 0)
 	{
 		valid_architecture = ARM;

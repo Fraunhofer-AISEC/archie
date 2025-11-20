@@ -54,6 +54,15 @@ void readout_arm_registers(registerdump_t * current);
 void readout_riscv_registers(registerdump_t * current);
 
 /**
+ * readout_aarch64_registers
+ *
+ * readout aarch64 registers from QEMU.
+ *
+ * @params current the current registerdump_t struct. It fills the regs part
+ */
+void readout_aarch64_registers(registerdump_t * current);
+
+/**
  * read_registers
  *
  * update protobuf message with register information
@@ -92,6 +101,18 @@ int add_new_registerdump(uint64_t tbcount)
 		}
 		readout_arm_registers(current);
 		current->pc = current->regs[15];
+	}
+	if(arch == ARM64)
+	{
+		current = malloc(sizeof(registerdump_t) + sizeof(uint64_t[N_ARM64_REGISTERS + 1]) );
+		if(current == NULL)
+		{
+			qemu_plugin_outs("failed\n[ERROR]: Malloc error for registerdump_t");
+			return -1;
+		}
+		readout_aarch64_registers(current);
+
+		current->pc = qemu_plugin_read_reg(AARCH64_QEMU_GDB_ID__PC); //current->regs[N_ARM64_CORE_INT_REGISTERS+1];
 	}
 	if(arch == RISCV)
 	{
@@ -132,6 +153,19 @@ void readout_arm_registers(registerdump_t * current)
 	current->regs[16] = qemu_plugin_read_reg(25);
 }
 
+void readout_aarch64_registers(registerdump_t * current)
+{
+	// read x0 - x30
+	for(int i = 0; i < N_ARM64_CORE_INT_REGISTERS; i++)
+	{
+		current->regs[i] = 0;
+		current->regs[i] = qemu_plugin_read_reg(i);
+	}
+	// read XPSR
+	current->regs[N_ARM64_CORE_INT_REGISTERS] = qemu_plugin_read_reg(AARCH64_QEMU_GDB_ID__SP); // SP
+	current->regs[N_ARM64_CORE_INT_REGISTERS+1] = qemu_plugin_read_reg(AARCH64_QEMU_GDB_ID__CPSR); // CPSR
+}
+
 size_t get_register_dump_count(void)
 {
 	size_t size = 0;
@@ -165,6 +199,14 @@ int read_registers(Archie__RegisterInfo* protobuf_reg_info)
 
 		// Extra register carries the XPSR register
 		n_registers = N_ARM_REGISTERS + 1;
+	}
+	else if(arch == ARM64)
+	{
+		qemu_plugin_outs("[DEBUG]: start reading aarch64 registerdumps\n");
+		protobuf_reg_info->arch_type = ARM64;
+
+		// Extra register carries the XPSR register
+		n_registers = N_ARM64_REGISTERS + 1;
 	}
 	else if(arch == RISCV)
 	{

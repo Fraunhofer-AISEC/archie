@@ -129,6 +129,44 @@ class riscv_registers_table(tables.IsDescription):
     x32 = tables.UInt64Col()
 
 
+class aarch64_registers_table(tables.IsDescription):
+    pc = tables.UInt64Col()
+    tbcounter = tables.UInt64Col()
+    x0 = tables.UInt64Col()
+    x1 = tables.UInt64Col()
+    x2 = tables.UInt64Col()
+    x3 = tables.UInt64Col()
+    x4 = tables.UInt64Col()
+    x5 = tables.UInt64Col()
+    x6 = tables.UInt64Col()
+    x7 = tables.UInt64Col()
+    x8 = tables.UInt64Col()
+    x9 = tables.UInt64Col()
+    x10 = tables.UInt64Col()
+    x11 = tables.UInt64Col()
+    x12 = tables.UInt64Col()
+    x13 = tables.UInt64Col()
+    x14 = tables.UInt64Col()
+    x15 = tables.UInt64Col()
+    x16 = tables.UInt64Col()
+    x17 = tables.UInt64Col()
+    x18 = tables.UInt64Col()
+    x19 = tables.UInt64Col()
+    x20 = tables.UInt64Col()
+    x21 = tables.UInt64Col()
+    x22 = tables.UInt64Col()
+    x23 = tables.UInt64Col()
+    x24 = tables.UInt64Col()
+    x25 = tables.UInt64Col()
+    x26 = tables.UInt64Col()
+    x27 = tables.UInt64Col()
+    x28 = tables.UInt64Col()
+    x29 = tables.UInt64Col()
+    x30 = tables.UInt64Col()
+    sp = tables.UInt64Col()
+    cpsr = tables.UInt64Col()
+
+
 class config_table(tables.IsDescription):
     qemu = tables.StringCol(1000)
     kernel = tables.StringCol(1000)
@@ -226,6 +264,28 @@ def process_arm_registers(f, group, armregisters_list, myfilter):
         armregsrow.append()
     armregisterstable.flush()
     armregisterstable.close()
+
+
+def process_aarch64_registers(f, group, aarch64registers_list, myfilter):
+    aarch64registerstable = f.create_table(
+        group,
+        "aarch64registers",
+        aarch64_registers_table,
+        "Table contains aarch64 registers at specific points.",
+        expectedrows=(len(aarch64registers_list)),
+        filters=myfilter,
+    )
+    aarch64mregsrow = aarch64registerstable.row
+    for regs in aarch64registers_list:
+        aarch64mregsrow["pc"] = regs["pc"]
+        aarch64mregsrow["tbcounter"] = regs["tbcounter"]
+        for i in range(0, 31):
+            aarch64mregsrow[f"x{i}"] = regs[f"x{i}"]
+        aarch64mregsrow["sp"] = regs["sp"]
+        aarch64mregsrow["cpsr"] = regs["cpsr"]
+        aarch64mregsrow.append()
+    aarch64registerstable.flush()
+    aarch64registerstable.close()
 
 
 def process_dumps(f, group, memdumplist, myfilter):
@@ -578,6 +638,7 @@ def hdf5collector(
         datasets.append((process_dumps, "memdumplist"))
         datasets.append((process_arm_registers, "armregisters"))
         datasets.append((process_riscv_registers, "riscvregisters"))
+        datasets.append((process_aarch64_registers, "aarch64registers"))
         datasets.append((process_tb_faulted, "tbfaulted"))
 
         for fn_ptr, keyword in datasets:

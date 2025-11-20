@@ -29,10 +29,18 @@
 /**
  * This enum is the internal value for all available architectures supported
  */
-enum architecture {ARM = 0, RISCV = 1};
+enum architecture {ARM = 0, RISCV = 1, ARM64 = 2};
 
 #define N_ARM_REGISTERS 16
 #define N_RISCV_REGISTERS 32
+#define N_ARM64_CORE_INT_REGISTERS 31
+#define N_ARM64_REGISTERS N_ARM64_CORE_INT_REGISTERS /*X0-X30*/ \
+                          + 1 /*SP*/ \
+                          + 1 /*CPSR/PSTATE*/
+// TODO: We need to add SVE/NEON/FPU register readouts but those are 128-bit wide each... +32*2 /*NEON|FPU SIMD regs 32*128bit */
+#define AARCH64_QEMU_GDB_ID__SP 31
+#define AARCH64_QEMU_GDB_ID__PC 32
+#define AARCH64_QEMU_GDB_ID__CPSR 33
 
 /**
  * init_register_module
