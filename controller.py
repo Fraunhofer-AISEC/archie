@@ -438,7 +438,7 @@ def read_backup(hdf5_file):
             register_type = Register.ARM64
             reg_size = 31
             reg_name = "x"
-            rows = f_in.root.Goldenrun.aarch64registers.iterrows()            
+            rows = f_in.root.Goldenrun.aarch64registers.iterrows()
         else:
             raise tables.NoSuchNodeError(
                 "No supported register architecture could be found in the HDF5 file, run with the overwrite flag to overwrite"
@@ -705,7 +705,14 @@ def controller(
     mem_max = max_ram / 2
     mem_list.append(max_ram / (num_workers))
 
-    keywords = ["tbexec", "tbinfo", "meminfo", "armregisters", "riscvregisters", "aarch64registers"]
+    keywords = [
+        "tbexec",
+        "tbinfo",
+        "meminfo",
+        "armregisters",
+        "riscvregisters",
+        "aarch64registers",
+    ]
     for keyword in keywords:
         if keyword not in goldenrun_data:
             continue
