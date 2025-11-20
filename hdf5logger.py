@@ -128,6 +128,7 @@ class riscv_registers_table(tables.IsDescription):
     x31 = tables.UInt64Col()
     x32 = tables.UInt64Col()
 
+
 class aarch64_registers_table(tables.IsDescription):
     pc = tables.UInt64Col()
     tbcounter = tables.UInt64Col()
@@ -264,6 +265,7 @@ def process_arm_registers(f, group, armregisters_list, myfilter):
     armregisterstable.flush()
     armregisterstable.close()
 
+
 def process_aarch64_registers(f, group, aarch64registers_list, myfilter):
     aarch64registerstable = f.create_table(
         group,
@@ -284,6 +286,7 @@ def process_aarch64_registers(f, group, aarch64registers_list, myfilter):
         aarch64mregsrow.append()
     aarch64registerstable.flush()
     aarch64registerstable.close()
+
 
 def process_dumps(f, group, memdumplist, myfilter):
     memdumpsgroup = f.create_group(group, "memdumps")

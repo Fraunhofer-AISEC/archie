@@ -517,7 +517,7 @@ def readout_registers(data_protobuf):
         reg_size = 32
         reg_name = "x"
     elif reg_type == Register.ARM64:
-        reg_size = 31 #integer only
+        reg_size = 31  # integer only
         reg_name = "x"
 
     for reg_dump in data_protobuf.register_info.register_dumps:
