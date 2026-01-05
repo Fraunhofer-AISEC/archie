@@ -641,6 +641,7 @@ def readout_data(
                     index,
                 )
 
+    output["memdumplist"] = []
     if len(data_protobuf.mem_dump_infos) != 0:
         memdumplist = readout_memdump(data_protobuf)
         output["memdumplist"] = memdumplist

@@ -63,6 +63,7 @@ fn run_unicorn(
     let arch: Architecture = match arch_str {
         "arm" => Architecture::Arm,
         "riscv64" => Architecture::Riscv64,
+        "aarch64" => Architecture::Aarch64,
         _ => panic!("Unsupported architecture!"),
     };
 
@@ -76,6 +77,7 @@ fn run_unicorn(
     let register_table_name = match arch_str {
         arch_str if arch_str.starts_with("arm") => "armregisters",
         arch_str if arch_str.starts_with("riscv") => "riscvregisters",
+        arch_str if arch_str.starts_with("aarch64") => "aarch64registers",
         _ => panic!("Unsupported architecture!"),
     };
 
