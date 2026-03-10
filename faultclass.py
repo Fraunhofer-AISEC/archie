@@ -853,7 +853,7 @@ def python_worker(
 
         # From here Qemu has started execution. Now prepare for
         # data extraction
-        (mem, timeout_raised) = readout_data(
+        mem, timeout_raised = readout_data(
             data_fifo,
             index,
             queue_output,
