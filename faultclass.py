@@ -235,15 +235,17 @@ def run_qemu(
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
         )
-        while ps.poll() is None:
-            tmp = ps.stdout.read()
-            if qemu_output is True:
-                with open(f"log_{index}.txt", "wt", encoding="utf-8") as f:
-                    f.write(tmp.decode("utf-8"))
-                qlogger.debug(tmp.decode("utf-8"))
+
+        stdout_output, _ = ps.communicate()
+        if qemu_output is True:
+            with open(f"log_{index}.txt", "wt", encoding="utf-8") as f:
+                f.write(stdout_output.decode("utf-8"))
+            qlogger.debug(stdout_output.decode("utf-8"))
         qlogger.debug(f"Ended qemu for exp {index}! Took {time.time() - t0}")
     except KeyboardInterrupt:
-        ps.kill()
+        if ps is not None:
+            ps.kill()
+            ps.communicate()
         logger.warning(f"Terminate QEMU {index}")
 
 

@@ -32,9 +32,6 @@ jobs:
     - name: Run ARCHIE
       run: cd examples/stm32; ./run.sh; cd ../riscv64; ./run.sh; cd ../stm32-timeout-wfi; ./run.sh; cd ../aarch64-softmmu; ./run.sh
 
-    - name: Synchronize cached writes for artifact storage
-      run: sync
-
     - name: Upload test artifacts
       uses: actions/upload-artifact@v4
       with:
