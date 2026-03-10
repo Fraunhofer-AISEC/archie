@@ -51,7 +51,6 @@ cd ../../faultplugin/
 make
 cd emulation_worker
 cargo build --release
-cp target/release/libemulation_worker.so ../emulation_worker.so
 ```
 
 With this, *archie-qemu* is built in qemu/build/, the plugin is built in *faultplugin/* and the unicorn emulation worker is built and moved to the project's root directory.

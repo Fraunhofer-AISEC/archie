@@ -105,7 +105,6 @@ cd ..
 echo "Building emulation worker"
 cd emulation_worker
 cargo build --release
-cp target/release/libemulation_worker.so ../emulation_worker.so
 cd -
 
 echo "Test ARCHIE"

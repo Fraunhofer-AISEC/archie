@@ -26,8 +26,6 @@ import time
 import pandas as pd
 import prctl
 
-from emulation_worker import run_unicorn
-
 import protobuf.control_pb2 as control_pb2
 import protobuf.data_pb2 as data_pb2
 import protobuf.fault_pb2 as fault_pb2
@@ -37,6 +35,8 @@ TB_EXEC_LIST_CHUNK_SIZE = 10000
 
 logger = logging.getLogger(__name__)
 qlogger = logging.getLogger("QEMU-" + __name__)
+
+run_unicorn = None
 
 
 def detect_type(fault_type):
@@ -907,6 +907,26 @@ def python_worker_unicorn(
     goldenrun_data,
     change_nice=False,
 ):
+    global run_unicorn
+
+    # load unicorn module on demand
+    if not run_unicorn:
+        import importlib.util
+        from pathlib import Path
+
+        so_path = (
+            Path(__file__).parent
+            / "emulation_worker/target/release/libemulation_worker.so"
+        )
+
+        spec = importlib.util.spec_from_file_location(
+            "emulation_worker", so_path.resolve()
+        )
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+
+        run_unicorn = mod.run_unicorn
+
     t0 = time.time()
     if change_nice:
         os.nice(19)

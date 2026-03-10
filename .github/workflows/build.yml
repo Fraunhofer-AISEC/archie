@@ -35,7 +35,7 @@ jobs:
       run: cd faultplugin; make -j; echo "done"
 
     - name: Build Emulation Worker
-      run: cd emulation_worker; cargo build --release; mv target/release/libemulation_worker.so ../emulation_worker.so; echo "done"
+      run: cd emulation_worker; cargo build --release; echo "done"
 
     - name: Run ARCHIE
       run: cd examples/stm32; ./run.sh; cd ../riscv64; ./run.sh; cd ../stm32-timeout-wfi; ./run.sh; cd ../aarch64-softmmu; ./run.sh
