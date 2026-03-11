@@ -647,6 +647,10 @@ def controller(
     prctl.set_name("Controller")
     prctl.set_proctitle("Python_Controller")
 
+    if unicorn_emulation and "start" not in config_qemu:
+        clogger.error("No start address specified while in Unicorn mode")
+        return config_qemu
+
     log_config = True
     log_goldenrun = True
     overwrite_faults = False
