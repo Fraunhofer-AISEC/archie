@@ -3,14 +3,16 @@ syntax = "proto3";
 package archie;
 
 message Data {
-  int32 end_point = 1;
-  string end_reason = 2;
-  repeated TbInformation tb_informations = 3;
-  repeated TbExecOrder tb_exec_orders = 4;
-  repeated MemInfo mem_infos = 5;
-  RegisterInfo register_info = 6;
-  repeated FaultedData faulted_datas = 7;
-  repeated MemDumpInfo mem_dump_infos = 8;
+  string architecture = 1;
+  int32 end_point = 2;
+  string end_reason = 3;
+  repeated TbInformation tb_informations = 4;
+  repeated TbExecOrder tb_exec_orders = 5;
+  repeated MemInfo mem_infos = 6;
+  RegisterInfo register_info = 7;
+  repeated FaultedData faulted_datas = 8;
+  repeated MemDumpInfo mem_dump_infos = 9;
+  repeated MemMapInfo mem_map_infos = 10;
 }
 
 message TbInformation {
@@ -60,4 +62,9 @@ message RegisterDump {
 message FaultedData {
   uint64 trigger_address = 1;
   string assembler = 2;
+}
+
+message MemMapInfo {
+  uint64 address = 1;
+  uint64 size = 2;
 }

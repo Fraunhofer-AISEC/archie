@@ -32,6 +32,7 @@ import time
 import pandas as pd
 import prctl
 from tqdm import tqdm
+from elftools.elf.elffile import ELFFile
 
 try:
     import json5 as json
@@ -43,7 +44,7 @@ except ModuleNotFoundError:
     pass
 
 from faultclass import detect_type, detect_model, Fault, Trigger
-from faultclass import python_worker
+from faultclass import python_worker, python_worker_unicorn
 from faultclass import Register
 from hdf5logger import hdf5collector
 from goldenrun import run_goldenrun
@@ -319,7 +320,51 @@ def check_backup(args, current_config, backup_config):
     return True
 
 
-def read_backup(hdf5_file):
+def backup_read_registers(backup, hdf_group):
+    # Process goldenrun registers
+    if "riscvregisters" in hdf_group:
+        register_backup_name = "riscvregisters"
+        register_type = Register.RISCV
+        reg_size = 32
+        reg_name = "x"
+        rows = hdf_group.riscvregisters.iterrows()
+    elif "armregisters" in hdf_group:
+        register_backup_name = "armregisters"
+        register_type = Register.ARM
+        reg_size = 16
+        reg_name = "r"
+        rows = hdf_group.armregisters.iterrows()
+    elif "aarch64registers" in hdf_group:
+        register_backup_name = "aarch64registers"
+        register_type = Register.ARM64
+        reg_size = 31
+        reg_name = "x"
+        rows = hdf_group.aarch64registers.iterrows()
+    else:
+        raise tables.NoSuchNodeError(
+            "No supported register architecture could be found in the HDF5 file, run with the overwrite flag to overwrite"
+        )
+
+    backup[register_backup_name] = []
+
+    for reg in rows:
+        registers = {"pc": reg["pc"], "tbcounter": reg["tbcounter"]}
+        for i in range(0, reg_size):
+            registers[f"{reg_name}{i}"] = reg[f"{reg_name}{i}"]
+
+        # Last element of register_values is XPSR for Arm, PC for RISCV
+        if register_type == Register.ARM:
+            registers["xpsr"] = reg["xpsr"]
+        elif register_type == Register.RISCV:
+            registers[f"{reg_name}{reg_size}"] = reg[f"{reg_name}{reg_size}"]
+        elif register_type == Register.ARM64:
+            registers["sp"] = reg["sp"]
+            registers["cpsr"] = reg["cpsr"]
+
+        backup[register_backup_name].append(registers)
+
+
+def read_backup(hdf5_file, unicorn_emulation):
     """
     :param hdf5_file: path to hdf5
     :return: backup_raw_faults, backup_expanded_faults, backup_config, backup_goldenrun
@@ -372,6 +417,49 @@ def read_backup(hdf5_file):
         backup_config["hash"]["kernel_hash"] = hdf5_hashes["kernel_hash"][0]
         backup_config["hash"]["bios_hash"] = hdf5_hashes["bios_hash"][0]
 
+        backup_pregoldenrun = None
+        # No need to parse Pregoldenrun backup if we are not using unicorn for emulation
+        if unicorn_emulation:
+            assert "Pregoldenrun" in f_in.root
+            # Process pre-goldenrun data
+            backup_pregoldenrun = {
+                "index": -2,
+                "architecture": f_in.root.Pregoldenrun._v_attrs["architecture"],
+            }
+
+            backup_pregoldenrun["memmaplist"] = [
+                {"address": memory_region["address"], "size": memory_region["size"]}
+                for memory_region in f_in.root.Pregoldenrun.memory_map.iterrows()
+            ]
+
+            memdumps = {}
+            for dump in f_in.root.Pregoldenrun.memdumps:
+                if dump.name == "memdumps":
+                    continue
+                _, address, size, index = dump.name.split("_")
+                address = int(address, 16)
+                size = int(size)
+                address_key = (address << 64) + size
+                if address_key in memdumps:
+                    memdumps[address_key].append(dump.read()[0])
+                else:
+                    memdumps[address_key] = [list(dump.read()[0])]
+
+            backup_pregoldenrun["memdumplist"] = []
+            for k, dumps in memdumps.items():
+                address = k >> 64
+                size = k & 0xFFFFFFFFFFFFFFFF
+                backup_pregoldenrun["memdumplist"].append(
+                    {
+                        "address": address,
+                        "size": size,
+                        "dumps": dumps,
+                        "numdumps": len(dumps),
+                    }
+                )
+
+            backup_read_registers(backup_pregoldenrun, f_in.root.Pregoldenrun)
+
         # Process goldenrun data
         backup_goldenrun = {"index": -1}
 
@@ -420,46 +508,7 @@ def read_backup(hdf5_file):
                 for mem in f_in.root.Goldenrun.meminfo.iterrows()
             ]
 
-        # Process goldenrun registers
-        if "riscvregisters" in f_in.root.Goldenrun:
-            register_backup_name = "riscvregisters"
-            register_type = Register.RISCV
-            reg_size = 32
-            reg_name = "x"
-            rows = f_in.root.Goldenrun.riscvregisters.iterrows()
-        elif "armregisters" in f_in.root.Goldenrun:
-            register_backup_name = "armregisters"
-            register_type = Register.ARM
-            reg_size = 16
-            reg_name = "r"
-            rows = f_in.root.Goldenrun.armregisters.iterrows()
-        elif "aarch64registers" in f_in.root.Goldenrun:
-            register_backup_name = "aarch64registers"
-            register_type = Register.ARM64
-            reg_size = 31
-            reg_name = "x"
-            rows = f_in.root.Goldenrun.aarch64registers.iterrows()
-        else:
-            raise tables.NoSuchNodeError(
-                "No supported register architecture could be found in the HDF5 file, run with the overwrite flag to overwrite"
-            )
-
-        backup_goldenrun[register_backup_name] = []
-
-        for reg in rows:
-            registers = {"pc": reg["pc"], "tbcounter": reg["tbcounter"]}
-            for i in range(0, reg_size):
-                registers[f"{reg_name}{i}"] = reg[f"{reg_name}{i}"]
-
-            # Last element of register_values is XPSR for Arm, PC for RISCV
-            if register_type == Register.ARM:
-                registers["xpsr"] = reg["xpsr"]
-            elif register_type == Register.RISCV:
-                registers[f"{reg_name}{reg_size}"] = reg[f"{reg_name}{reg_size}"]
-            elif register_type == Register.ARM64:
-                registers["sp"] = reg["sp"]
-                registers["cpsr"] = reg["cpsr"]
-            backup_goldenrun[register_backup_name].append(registers)
+        backup_read_registers(backup_goldenrun, f_in.root.Goldenrun)
 
         # Process expanded faults
         if (
@@ -499,7 +548,12 @@ def read_backup(hdf5_file):
             exp_n = exp_n + 1
             backup_expanded_faults.append(backup_exp)
 
-    return [backup_expanded_faults, backup_config, backup_goldenrun]
+    return [
+        backup_expanded_faults,
+        backup_config,
+        backup_pregoldenrun,
+        backup_goldenrun,
+    ]
 
 
 def read_simulated_faults(hdf5_file):
@@ -566,11 +620,13 @@ def controller(
     compressionlevel,
     missing_only,
     goldenrun_only,
+    engine_output,
     goldenrun=True,
     logger=hdf5collector,
     qemu_pre=None,
     qemu_post=None,
     logger_postprocess=None,
+    unicorn_emulation=False,
 ):
     """
     This function builds the unrolled fault structure, performs golden run and
@@ -582,7 +638,6 @@ def controller(
     total_start_time = time.time()
 
     hdf5path = args.hdf5file
-    qemu_output = args.debug
 
     m = Manager()
     m2 = Manager()
@@ -592,10 +647,15 @@ def controller(
     prctl.set_name("Controller")
     prctl.set_proctitle("Python_Controller")
 
+    if unicorn_emulation and "start" not in config_qemu:
+        clogger.error("No start address specified while in Unicorn mode")
+        return config_qemu
+
     log_config = True
     log_goldenrun = True
     overwrite_faults = False
 
+    pregoldenrun_data = {}
     goldenrun_data = {}
 
     hdf5_file = Path(hdf5path)
@@ -605,8 +665,9 @@ def controller(
             [
                 backup_expanded_faultlist,
                 backup_config,
+                backup_pregoldenrun_data,
                 backup_goldenrun_data,
-            ] = read_backup(hdf5_file)
+            ] = read_backup(hdf5_file, unicorn_emulation)
         except NameError:
             clogger.warning(
                 "Backup could not be found in the HDF5 file, run with the overwrite flag to overwrite!"
@@ -630,6 +691,7 @@ def controller(
 
         faultlist = backup_expanded_faultlist
         config_qemu["max_instruction_count"] = backup_config["max_instruction_count"]
+        pregoldenrun_data = backup_pregoldenrun_data
         goldenrun_data = backup_goldenrun_data
 
         goldenrun = False
@@ -641,10 +703,11 @@ def controller(
     if goldenrun:
         [
             config_qemu["max_instruction_count"],
+            pregoldenrun_data,
             goldenrun_data,
             faultlist,
         ] = run_goldenrun(
-            config_qemu, qemu_output, queue_output, faultlist, qemu_pre, qemu_post
+            config_qemu, engine_output, queue_output, faultlist, qemu_pre, qemu_post
         )
 
         create_backup(args, queue_output, config_qemu, faultlist)
@@ -672,6 +735,20 @@ def controller(
             clogger.info(f"{len(faultlist)} faults are missing and will be simulated")
         else:
             clogger.info("All faults are already simulated")
+
+    if unicorn_emulation:
+        elffile = ELFFile(open(config_qemu["kernel"], "rb"))
+        for segment in elffile.iter_segments():
+            if segment["p_type"] == "PT_LOAD":
+                segment_data = segment.data()
+                pregoldenrun_data["memdumplist"].append(
+                    {
+                        "address": segment["p_vaddr"],
+                        "len": len(segment_data),
+                        "numpdumps": 1,
+                        "dumps": [list(segment_data)],
+                    }
+                )
 
     p_logger = Process(
         target=logger,
@@ -752,22 +829,39 @@ def controller(
             faults = faultlist[itter]
             itter += 1
 
-            p = Process(
-                name=f"worker_{faults['index']}",
-                target=python_worker,
-                args=(
-                    faults["faultlist"],
-                    config_qemu,
-                    faults["index"],
-                    queue_output,
-                    qemu_output,
-                    goldenrun_data,
-                    True,
-                    queue_ram_usage,
-                    qemu_pre,
-                    qemu_post,
-                ),
-            )
+            if unicorn_emulation:
+                p = Process(
+                    name=f"worker_{faults['index']}",
+                    target=python_worker_unicorn,
+                    args=(
+                        faults["faultlist"],
+                        config_qemu,
+                        faults["index"],
+                        queue_output,
+                        engine_output,
+                        pregoldenrun_data,
+                        goldenrun_data,
+                        True,
+                    ),
+                )
+            else:
+                p = Process(
+                    name=f"worker_{faults['index']}",
+                    target=python_worker,
+                    args=(
+                        faults["faultlist"],
+                        config_qemu,
+                        faults["index"],
+                        queue_output,
+                        engine_output,
+                        goldenrun_data,
+                        True,
+                        queue_ram_usage,
+                        qemu_pre,
+                        qemu_post,
+                    ),
+                )
+
             p.start()
             p_list.append({"process": p, "start_time": time.time(), "faults": faults})
             clogger.debug(f"Started worker {faults['index']}. Running: {len(p_list)}.")
@@ -939,6 +1033,11 @@ def get_argument_parser():
         "--enable-ram-mgmt",
         help="Use with caution, may lead to drastic performance decrease",
         action="store_true",
+    )
+    parser.add_argument(
+        "--unicorn",
+        action="store_true",
+        help="Enables emulation through unicorn engine instead of QEMU",
         required=False,
     )
     return parser
@@ -968,6 +1067,8 @@ def process_arguments(args):
     parguments["compressionlevel"] = args.compressionlevel
     if args.compressionlevel is None:
         parguments["compressionlevel"] = 1
+
+    parguments["unicorn_emulation"] = args.unicorn
 
     hdf5file = Path(args.hdf5file)
     if hdf5file.parent.exists() is False:
@@ -1100,9 +1201,11 @@ if __name__ == "__main__":
         parguments["compressionlevel"],  # compressionlevel
         parguments["missing_only"],  # missing_only flag
         parguments["goldenrun_only"],  # goldenrun_only flag
+        args.debug,  # engine_output
         parguments["goldenrun"],  # goldenrun
         hdf5collector,  # logger
         None,  # qemu_pre
         None,  # qemu_post
         None,  # logger_postprocess
+        parguments["unicorn_emulation"],  # enable unicorn emulation
     )
