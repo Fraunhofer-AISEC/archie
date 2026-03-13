@@ -11,9 +11,8 @@ mod util;
 use util::{apply_model, calculate_fault_size, dump_memory, log_tb_exec, log_tb_info, undo_faults};
 
 fn block_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, size: u32, state: &Rc<State>) {
-    // Save current tbid for meminfo logs
-    let mut last_tbid = state.last_tbid.write().unwrap();
-    *last_tbid = address;
+    *state.last_tbid.write().unwrap() = address;
+    *state.last_tb_size.write().unwrap() = size;
     *state.tbcounter.write().unwrap() += 1;
 
     let live_faults = state.live_faults.read().unwrap();
@@ -221,6 +220,19 @@ fn fault_hook_cb(uc: &mut Unicorn<'_, ()>, address: u64, _size: u32, state: &Rc<
                 // since they might not have any effect otherwise
                 uc.ctl_remove_cache(fault.address, fault.address + fault_size as u64)
                     .unwrap();
+
+                // Only stop and re-enter if the faulted instruction is in the currently
+                // executing TB, since Unicorn will not reload the current TB even after flushing
+                let tb_start = *state.last_tbid.read().unwrap();
+                let tb_size = *state.last_tb_size.read().unwrap();
+                if fault.address >= tb_start && fault.address < tb_start + tb_size as u64 {
+                    info!(
+                        "Instruction fault at 0x{:x} is in current TB [0x{:x}..0x{:x}), re-entering",
+                        fault.address, tb_start, tb_start + tb_size as u64
+                    );
+                    *state.reenter_address.write().unwrap() = Some(address);
+                    uc.emu_stop().expect("failed stopping emulation");
+                }
             }
             dump_memory(
                 uc,

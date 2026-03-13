@@ -111,18 +111,16 @@ pub enum Architecture {
 pub trait ArchitectureDependentOperations {
     fn initialize_unicorn(&self) -> Unicorn<'_, ()>;
     fn initialize_cs_engine(&self) -> Capstone;
-    fn initialize_registers(
-        &self,
-        uc: &mut Unicorn<()>,
-        registerdump: &PyDict,
-        start_address: &mut u64,
-    );
+    fn initialize_registers(&self, uc: &mut Unicorn<()>, registerdump: &PyDict);
     fn dump_registers(
         &self,
         uc: &mut Unicorn<()>,
         registerlist: RwLockWriteGuard<Vec<HashMap<String, u64>>>,
         tbcounter: u64,
     );
+    /// Returns 1 if the CPU is currently in Thumb mode, 0 otherwise.
+    /// Always returns 0 for non-ARM architectures.
+    fn get_thumb_bit(&self, uc: &mut Unicorn<()>) -> u64;
 }
 
 #[derive(Clone)]
@@ -148,20 +146,12 @@ impl ArchitectureDependentOperations for ArchitectureDependentOperator {
         self: &ArchitectureDependentOperator,
         uc: &mut Unicorn<()>,
         registerdump: &PyDict,
-        start_address: &mut u64,
     ) {
-        let registers;
-        match self.architecture {
-            Architecture::Aarch64 => registers = AARCH64_REGISTERS,
-            Architecture::Arm => {
-                registers = ARM_REGISTERS;
-                let xpsr_value: u64 = registerdump.get_item("xpsr").unwrap().extract().unwrap();
-                *start_address |= (xpsr_value >> 24) & 1; // Activate thumb mode by setting least
-                                                          // significant bit of pc if T-bit is set
-                                                          // in xpsr register
-            }
-            Architecture::Riscv64 => registers = RISCV_REGISTERS,
-        }
+        let registers = match self.architecture {
+            Architecture::Aarch64 => AARCH64_REGISTERS,
+            Architecture::Arm => ARM_REGISTERS,
+            Architecture::Riscv64 => RISCV_REGISTERS,
+        };
         for (name, reg) in registers {
             uc.reg_write(
                 *reg,
@@ -211,5 +201,15 @@ impl ArchitectureDependentOperations for ArchitectureDependentOperator {
         }
         dump.insert("tbcounter".to_string(), tbcounter);
         registerlist.push(dump);
+    }
+
+    fn get_thumb_bit(self: &ArchitectureDependentOperator, uc: &mut Unicorn<()>) -> u64 {
+        match self.architecture {
+            Architecture::Arm => {
+                let xpsr = uc.reg_read(RegisterARM::XPSR as i32).unwrap();
+                (xpsr >> 24) & 1
+            }
+            _ => 0,
+        }
     }
 }

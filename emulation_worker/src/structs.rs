@@ -196,6 +196,8 @@ impl ToPyObject for Logs {
 
 pub struct State {
     pub last_tbid: RwLock<u64>,
+    pub last_tb_size: RwLock<u32>,
+    pub reenter_address: RwLock<Option<u64>>,
     pub tbcounter: RwLock<u64>,
     pub endpoints: RwLock<HashMap<u64, u32>>,
     pub faults: RwLock<HashMap<u64, Fault>>,
