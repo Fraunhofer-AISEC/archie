@@ -85,13 +85,10 @@ fn run_unicorn(
         .get_item(register_table_name)
         .unwrap()
         .extract()?;
+    arch_operator.initialize_registers(emu, registerdumps.get_item(0).unwrap().extract()?);
+
     let start: HashMap<String, u64> = config.get_item("start").unwrap().extract()?;
-    let mut start_address = *start.get("address").unwrap();
-    arch_operator.initialize_registers(
-        emu,
-        registerdumps.get_item(0).unwrap().extract()?,
-        &mut start_address,
-    );
+    let start_address = *start.get("address").unwrap() | arch_operator.get_thumb_bit(emu);
 
     let memmaplist: &PyList = pregoldenrun_data
         .get_item("memmaplist")
@@ -149,6 +146,8 @@ fn run_unicorn(
 
     let state = State {
         last_tbid: RwLock::new(0),
+        last_tb_size: RwLock::new(0),
+        reenter_address: RwLock::new(None),
         tbcounter: RwLock::new(0),
         endpoints: RwLock::new(HashMap::new()),
         faults: RwLock::new(HashMap::new()),
@@ -172,6 +171,24 @@ fn run_unicorn(
     info!("Starting emulation at 0x{:x}", start_address);
     emu.emu_start(start_address, 0, 0, max_instruction_count)
         .unwrap_or_else(|_| error!("failed to emulate code at 0x{:x}", emu.pc_read().unwrap()));
+
+    // Re-enter if a fault hook stopped emulation early to invalidate and replay the TB.
+    loop {
+        let reenter = state_rc.reenter_address.read().unwrap();
+        if let Some(addr) = *reenter {
+            drop(reenter);
+            *state_rc.reenter_address.write().unwrap() = None;
+            let thumb_bit = arch_operator.get_thumb_bit(emu);
+            let reenter_addr = addr | thumb_bit;
+            info!("Re-entering emulation at 0x{:x}", reenter_addr);
+            emu.emu_start(reenter_addr, 0, 0, max_instruction_count)
+                .unwrap_or_else(|_| {
+                    error!("failed to emulate code at 0x{:x}", emu.pc_read().unwrap())
+                });
+        } else {
+            break;
+        }
+    }
 
     {
         let state = Rc::clone(&state_rc);
